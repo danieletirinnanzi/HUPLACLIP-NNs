@@ -1,0 +1,15 @@
+*.egg-info
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore files in the /data folder
+data
+src.egg-info
+
+# Ignore temporary files produced by ML pipelines with PyTorch
+*.pth
+*.pt
+*.pkl

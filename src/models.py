@@ -1,3 +1,5 @@
+import torch.nn as nn
 
-class MLP(nn.Model):
+
+class MLP(nn.Module):
     pass

@@ -11,16 +11,40 @@ import torch.nn.functional as F  # needed in CNN training loop
 import os  # needed to save models
 
 
-from src.models import MLP
-from src.utils import train_model
 from src.utils import load_config
+from src.utils import load_model
 
-# config = load_config("config.yaml")
+# from src.utils import train_model
 
-# model = get_model(config['model_name'])
+# loading experiment configuration file:
+config = load_config("docs\MLP_experiment_configuration.yml")
+graph_size = config["graph_size"]
+# config = load_config("docs\MLP_CNN_experiment_configuration.yml")
 
-# for tensorboard visualization
-from torch.utils.tensorboard import SummaryWriter
+# loading, training, and testing all models:
+for model_specs in config["models"]:
 
-writer = SummaryWriter()
-# train_model(model=model)
+    # printing model name
+    print(model_specs["model_name"])
+
+    # loading model
+    model = load_model(model_specs["model_name"], graph_size)
+
+    print(model)
+
+    # training model
+    # train_model(model, model_specs["hyperparameters"])
+
+    # testing model and saving results
+
+
+# once training is done, fitting data and comparing models:
+
+
+# # for tensorboard visualization
+# from torch.utils.tensorboard import SummaryWriter
+
+# writer = SummaryWriter()
+
+
+# # train_model(model=model)

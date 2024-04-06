@@ -1,6 +1,36 @@
 import numpy as np
+import yaml
+
+# for tensorboard visualization during training
+from torch.utils.tensorboard import SummaryWriter
+
+# importing Models class from models.py
+from .models import Models
+
+# importing graphs_generation.py
+# import src.graphs_generation as gen_graphs
 
 
+# -----------------------------------------
+# Loading experiment configuration file:
+def load_config(path):
+    with open(path, "r") as stream:
+        config = yaml.safe_load(stream)
+    return config
+
+
+# Loading model based on model name:
+def load_model(model_name, graph_size):
+    match model_name:
+        case "MLP":
+            return Models.mlp(graph_size)
+        case "CNN":
+            return Models.cnn(graph_size)
+        case _:
+            raise ValueError("Model not found")
+
+
+# -----------------------------------------
 # TRAINING FUNCTIONS:
 
 
@@ -42,25 +72,33 @@ def early_stopper(
         return False
 
 
-# -----------------------------------------
+# Training function:
+def train_model(model, config_file):
 
+    # "model is the loaded model"
+    # configuration file contains all hyperparameters for training
 
-def load_config(path):
-    with open(path, "r") as stream:
-        config = yaml.safe_load(stream)
-    return config
+    # dynamically clique sizes of training:
+    start_clique_size = round(
+        config_file["graph_size"] * 0.60
+    )  # 60% of graph size rounded to closest integer
+    min_clique_size = round(
+        config_file["graph_size"] * 0.40
+    )  # 40% of graph size rounded to closest integer
+    jump = 5
+    save_step = 5
 
-
-def get_model(model_name):
-    match model_name:
-        case "MLP":
-            model = MLP()
-        case _:
-            model = None
-    return model
-
-
-def train_model(model_name):
-    model = get_model(model_name)
     model.train()
+
     return model
+
+
+# Testing function:
+def test_model(model):
+
+    # SHOULD RETURN THE RESULTS OF THE TESTING IN A FORMAT THAT CAN BE REPORTED IN PLOTS
+
+    pass
+
+
+# -----------------------------------------

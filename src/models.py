@@ -1,17 +1,13 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 
 class Models:
     @staticmethod
     def mlp(graph_size, l1=1000, l2=500, l3=100, dropout_prob=0.1):
 
-        # Define device
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         # NOTE:
-        # - layer sizes should be defined dynamically based on graph_size
+        # - layer (and layer sizes) should be defined dynamically based on graph_size
         # - with bigger graph_size, Rudy was using an additional block of 3 layers -> define dynamically
 
         # Define MLP architecture here
@@ -32,11 +28,6 @@ class Models:
             nn.BatchNorm1d(2),
             nn.ReLU(),
         )
-
-        # TO BE DEFINED IN CONFIGURATION FILES?
-        optim = torch.optim.Adam(model.parameters())  # optimization with Adam
-        criterion = nn.CrossEntropyLoss()  # criterion = Cross Entropy
-        model.to(device)
 
         return model
 

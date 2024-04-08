@@ -1,15 +1,23 @@
 graph_size: 100
 
 models:
+
+  # each instance of "models" will be trained and tested with the hyperparameters specified
+  
   - model_name: MLP
     hyperparameters:
       # training cycles (TO BE INCREASED):
       num_epochs: 10
-      training_steps: 40
+      num_training_steps: 40
       # training, validation and test set sizes (TO BE INCREASED):
       num_train: 16
       num_val: 16
-      num_train: 16
-      # other hyperparameters (TO BE INCREASED):
+      num_test: 16
+      # other hyperparameters:
       learning_rate: 0.01
       dropout: 0.2
+      # training structure:
+      max_clique_size_proportion: 0.6
+      min_clique_size_proportion: 0.4
+      jump: 5
+      save_step: 5

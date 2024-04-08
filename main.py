@@ -13,13 +13,12 @@ import os  # needed to save models
 
 from src.utils import load_config
 from src.utils import load_model
+from src.utils import train_model
 
 # from src.utils import train_model
 
 # loading experiment configuration file:
 config = load_config("docs\MLP_experiment_configuration.yml")
-graph_size = config["graph_size"]
-# config = load_config("docs\MLP_CNN_experiment_configuration.yml")
 
 # loading, training, and testing all models:
 for model_specs in config["models"]:
@@ -28,12 +27,10 @@ for model_specs in config["models"]:
     print(model_specs["model_name"])
 
     # loading model
-    model = load_model(model_specs["model_name"], graph_size)
-
-    print(model)
+    model = load_model(model_specs["model_name"], config["graph_size"])
 
     # training model
-    # train_model(model, model_specs["hyperparameters"])
+    train_model(model, model_specs["hyperparameters"], config["graph_size"])
 
     # testing model and saving results
 

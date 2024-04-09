@@ -24,4 +24,4 @@ models:
       max_clique_size_proportion: 0.6
       min_clique_size_proportion: 0.4
       jump: 5
-      save_step: 5
+      save_step: 10

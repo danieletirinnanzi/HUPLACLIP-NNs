@@ -16,7 +16,6 @@ from src.utils import load_config
 from src.utils import load_model
 from src.utils import train_model
 
-# from src.utils import train_model
 
 # loading experiment configuration file:
 config = load_config("docs\MLP_experiment_configuration.yml")

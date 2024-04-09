@@ -9,7 +9,7 @@ import torch.nn as nn
 # for tensorboard visualization during training
 from torch.utils.tensorboard import SummaryWriter
 
-writer = SummaryWriter()
+writer = SummaryWriter()  # TODO: customize name of folder that is created
 
 # importing Models class from models.py
 from .models import Models
@@ -115,15 +115,24 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
     min_clique_size = int(
         training_hyperparameters["min_clique_size_proportion"] * graph_size
     )
+    # calculating array of clique sizes for all training curriculum:
+    clique_sizes = np.arange(
+        max_clique_size, min_clique_size - 1, -training_hyperparameters["jump"]
+    ).astype(int)
 
     # training loop:
     # Loop for decreasing clique sizes
-    for current_clique_size in range(
-        max_clique_size, min_clique_size - 1, -training_hyperparameters["jump"]
-    ):
+    for current_clique_size in clique_sizes:
 
         # printing value of clique size when it changes:
         print("Clique size is now: ", current_clique_size)
+        # printing data type of current_clique_size:
+        print(
+            "Data type of current_clique_size: ", type(current_clique_size.astype(int))
+        )
+        # data type of graph_size:
+        print("Data type of graph_size: ", type(graph_size))
+
         # storing values needed for final plot:
         k_over_sqrt_n.append(1.0 * current_clique_size / math.sqrt(graph_size))
         clique_sizes_array.append(current_clique_size)
@@ -154,49 +163,47 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
                 # Saving errors (both training and validation) and plotting at regular intervals (indicated by "save_step"):
                 if training_step % training_hyperparameters["save_step"] == 0:
 
-                    print(
-                        "Epoch number ",
-                        (epoch),
-                        ". Percentage of training completed = ",
-                        100.0
-                        * training_step
-                        / training_hyperparameters["num_training_steps"],
-                        "%",
-                    )
+                    # increasing saved_steps: this will be the x axis of the tensorboard plots
+                    saved_steps += 1
 
-                    # Storing training error
+                    # Storing training error (refers to current task version)
                     train_error.append(train_loss.item())
-
-                    # Generating validation graphs:
-                    val = gen_graphs.generate_graphs(
-                        training_hyperparameters["num_val"],
-                        graph_size,
-                        current_clique_size,
-                        p_correction_type,
+                    # Tensorboard: plotting training loss for current task version
+                    writer.add_scalar(
+                        f"Loss/train_task_{current_clique_size}",
+                        train_loss.item(),
+                        saved_steps,
                     )
-                    # Compute loss on validation set:
-                    val_pred = model(val[0].to(device))
-                    val_loss = criterion(
-                        val_pred.to(device),
-                        torch.Tensor(val[1]).type(torch.long).to(device),
-                    )
-                    # Storing validation error
-                    val_error.append(val_loss.item())
 
-                    # Storing training and validation losses for Tensorboard visualization:
-                    saved_steps += 1  # increasing saved_step: this will be the x axis of the tensorboard plots
-                    writer.add_scalar("Loss/train", train_loss.item(), saved_steps)
-                    writer.add_scalar("Loss/val", val_loss.item(), saved_steps)
+                    # At each save_step, generate validation set for all the task versions and compute validation error:
+                    for current_clique_size_val in clique_sizes:
 
-                # # Plotting error curves
-                # fig, ax = plt.subplots()
-                # ax.plot(x_axis, train_error, 'r', label='training err')
-                # ax.plot(x_axis, val_error, 'b', label='validation err')
-                # title = f"Epoch number  {epoch}, training step  {training_step} / {training_steps}"
-                # ax.set_title(title, fontsize=14)  # Setting title
-                # ax.legend()
-                # plt.show()
-                # print('--------------------------------------------')
+                        # Generating validation graphs:
+                        val = gen_graphs.generate_graphs(
+                            training_hyperparameters["num_val"],
+                            graph_size,
+                            current_clique_size_val,
+                            p_correction_type,
+                        )
+                        # Compute loss on validation set:
+                        val_pred = model(val[0].to(device))
+                        val_loss = criterion(
+                            val_pred.to(device),
+                            torch.Tensor(val[1]).type(torch.long).to(device),
+                        )
+                        # Storing validation error (only when validating the current task version, needed for early stopping)
+                        if current_clique_size_val == current_clique_size:
+                            val_error.append(val_loss.item())
+
+                        # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
+                        writer.add_scalar(
+                            f"Loss/val_task_{current_clique_size_val}",
+                            val_loss.item(),
+                            saved_steps,
+                        )
+
+                    # Flush the writer to make sure all data is written to disk
+                    writer.flush()
 
                 # Backward pass
                 train_loss.backward()
@@ -233,6 +240,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
         # After clique size has finished training (here we are inside the clique size decreasing loop):
 
         # 1. Testing the network with test data
+        # CAN BE REMOVED? TESTING IS DONE AFTER TRAINING IS COMPLETED, WITH A SEPARATE FUNCTION
         test = gen_graphs.generate_graphs(
             training_hyperparameters["num_test"],
             graph_size,
@@ -275,27 +283,27 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
         )
         print("==========================================")
 
-    # After training is completed, plotting generalization errors for all trained clique sizes:
-    # - Creating subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+    # # After training is completed, plotting generalization errors for all trained clique sizes:
+    # # - Creating subplots
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
 
-    # - Plotting on the first subplot
-    ax1.plot(clique_sizes_array, generalization)
-    ax1.set_title("Test Set Performance vs. Clique Size", fontsize=16)
-    ax1.set_xlabel("Clique Size", fontsize=14)
-    ax1.set_ylabel("Test Set Performance (%)", fontsize=14)
+    # # - Plotting on the first subplot
+    # ax1.plot(clique_sizes_array, generalization)
+    # ax1.set_title("Test Set Performance vs. Clique Size", fontsize=16)
+    # ax1.set_xlabel("Clique Size", fontsize=14)
+    # ax1.set_ylabel("Test Set Performance (%)", fontsize=14)
 
-    # - Plotting on the second subplot
-    ax2.plot(k_over_sqrt_n, generalization)
-    ax2.set_title("Test Set Performance vs. k/sqrt{n}", fontsize=16)
-    ax2.set_xlabel("k/sqrt{n}", fontsize=14)
-    ax2.set_ylabel("Test Set Performance (%)", fontsize=14)
+    # # - Plotting on the second subplot
+    # ax2.plot(k_over_sqrt_n, generalization)
+    # ax2.set_title("Test Set Performance vs. k/sqrt{n}", fontsize=16)
+    # ax2.set_xlabel("k/sqrt{n}", fontsize=14)
+    # ax2.set_ylabel("Test Set Performance (%)", fontsize=14)
 
-    # - Adjusting layout
-    plt.tight_layout()
+    # # - Adjusting layout
+    # plt.tight_layout()
 
-    # - Displaying the plot
-    plt.show()
+    # # - Displaying the plot
+    # plt.show()
 
     # Closing the writer:
     writer.close()

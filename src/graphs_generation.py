@@ -1,5 +1,6 @@
 import math
 import torch
+import numpy as np
 
 
 def plant_clique(graph, clique_size, graph_size):
@@ -45,11 +46,14 @@ def generate_graphs(
 
     # Testing validity of input parameters (these bounds are needed for the "p_reduce" correction)
     if (
-        not isinstance(graph_size, int)
-        or not isinstance(clique_size, int)
+        not isinstance(graph_size, (int, np.int32))  # also int32 values are accepted
+        or not isinstance(
+            clique_size, (int, np.int32)
+        )  # also int32 values are accepted
         or graph_size <= 0
         or clique_size <= 0
     ):
+
         raise ValueError("Graph size and clique size must be positive integers")
     elif (p_nodes <= 0 or p_nodes > 1) or (p_clique <= 0 or p_clique > 1):
         raise ValueError(

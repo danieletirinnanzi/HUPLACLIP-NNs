@@ -1,15 +1,15 @@
 # Description: Main file to run the project
 
-# NOT USED HERE, REMOVE?
-import torch
-import torchvision
-import torch.nn as nn
-import torch.optim as optim
-import matplotlib.pyplot as plt
-import numpy as np
-import math
-import torch.nn.functional as F  # needed in CNN training loop
-import os  # needed to save models
+# # NOT USED HERE, ADD IN SCRIPTS?
+# import torch
+# import torchvision
+# import torch.nn as nn
+# import torch.optim as optim
+# import matplotlib.pyplot as plt
+# import numpy as np
+# import math
+# import torch.nn.functional as F  # needed in CNN training loop
+# import os  # needed to save models
 
 
 from src.utils import load_config

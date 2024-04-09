@@ -1,5 +1,6 @@
 # Description: Main file to run the project
 
+# NOT USED HERE, REMOVE?
 import torch
 import torchvision
 import torch.nn as nn
@@ -30,7 +31,12 @@ for model_specs in config["models"]:
     model = load_model(model_specs["model_name"], config["graph_size"])
 
     # training model
-    train_model(model, model_specs["hyperparameters"], config["graph_size"])
+    train_model(
+        model,
+        model_specs["hyperparameters"],
+        config["graph_size"],
+        config["p_correction_type"],
+    )
 
     # testing model and saving results
 

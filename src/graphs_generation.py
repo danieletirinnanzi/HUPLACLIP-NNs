@@ -21,15 +21,21 @@ def plant_clique(graph, clique_size, graph_size):
 
 
 def generate_graphs(
-    number_of_graphs, graph_size, clique_size, p_nodes=0.5, p_clique=0.5
+    number_of_graphs,
+    graph_size,
+    clique_size,
+    p_correction_type,
+    p_nodes=0.5,
+    p_clique=0.5,
 ):
     """
-    Generates multiple graphs (new correction).
+    Generates multiple graphs with specified correction.
 
     Args:
         number_of_graphs (int): Number of graphs to generate.
         graph_size (int): Number of nodes in each graph.
         clique_size (int): Size of the planted clique.
+        p_correction_type (str): Type of p correction to apply.
         p_nodes (float): Probability of an edge being present between two nodes.
         p_clique (float): Probability of a graph having a planted clique.
 
@@ -37,7 +43,7 @@ def generate_graphs(
         tuple: A tuple containing the generated graphs and the on_off flag for each graph.
     """
 
-    # Testing validity of input parameters
+    # Testing validity of input parameters (these bounds are needed for the "p_reduce" correction)
     if (
         not isinstance(graph_size, int)
         or not isinstance(clique_size, int)
@@ -57,33 +63,78 @@ def generate_graphs(
             "Decrease the clique size to avoid having a negative corrected probability of association between nodes"
         )
 
+    # Generating the graphs
     on_off = torch.bernoulli(p_clique * torch.ones(number_of_graphs))
     data = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
-    for i in range(number_of_graphs):
-        # generating lower triangle of the adjacency matrix
-        if not on_off[i]:
-            # clique not present (no need to correct)
-            adjacency_matrix = torch.bernoulli(
-                p_nodes * torch.ones(graph_size, graph_size)
-            )
-        else:
-            # clique present (new correction acts on the reduction of p before adding the clique):
-            # - computing the new probability of association
-            p_corrected = (
-                p_nodes * graph_size * (graph_size - 1)
-                - clique_size * (clique_size - 1)
-            ) / ((graph_size - clique_size) * (graph_size + clique_size - 1))
-            # - creating the new random graph with the probability just computed
-            adjacency_matrix = torch.bernoulli(
-                p_corrected * torch.ones(graph_size, graph_size)
-            )  # regular graph without clique
-            # adding clique to adjacency matrix
-            adjacency_matrix = plant_clique(adjacency_matrix, clique_size, graph_size)
-        # generating upper triangular matrix
-        upper_triangular = torch.triu(adjacency_matrix)
-        adjacency_matrix = upper_triangular + torch.transpose(upper_triangular, 0, 1)
-        adjacency_matrix.fill_diagonal_(1)
-        # adding graph to the matrix of graphs
-        data[i, 0] = adjacency_matrix
 
+    # differentiating between the two types of correction:
+    if p_correction_type == "p_increase":
+        # (OLD CORRECTION) increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
+        for i in range(number_of_graphs):
+            # generating lower triangle of the adjacency matrix
+            if not on_off[i]:
+                # clique not present
+                p_corrected = p_nodes + (1 - p_nodes) * (
+                    (clique_size * (clique_size - 1)) / (graph_size * (graph_size - 1))
+                )
+                adjacency_matrix = torch.bernoulli(
+                    p_corrected * torch.ones(graph_size, graph_size)
+                )
+            else:
+                # clique present
+                adjacency_matrix = torch.bernoulli(
+                    p_nodes * torch.ones(graph_size, graph_size)
+                )  # regular graph without clique
+                # adding clique to adjacency matrix
+                adjacency_matrix = plant_clique(
+                    adjacency_matrix, clique_size, graph_size
+                )
+            # generating upper triangular matrix
+            upper_triangular = torch.triu(adjacency_matrix)
+            adjacency_matrix = upper_triangular + torch.transpose(
+                upper_triangular, 0, 1
+            )
+            adjacency_matrix.fill_diagonal_(1)
+            # adding graph to the matrix of graphs
+            data[i, 0] = adjacency_matrix
+
+    elif p_correction_type == "p_reduce":
+        # (NEW CORRECTION) reducing the p value of the graph where the clique will be added
+        for i in range(number_of_graphs):
+            # generating lower triangle of the adjacency matrix
+            if not on_off[i]:
+                # clique not present (no need to correct)
+                adjacency_matrix = torch.bernoulli(
+                    p_nodes * torch.ones(graph_size, graph_size)
+                )
+            else:
+                # clique present (new correction acts on the reduction of p before adding the clique):
+                # - computing the new probability of association
+                p_corrected = (
+                    p_nodes * graph_size * (graph_size - 1)
+                    - clique_size * (clique_size - 1)
+                ) / ((graph_size - clique_size) * (graph_size + clique_size - 1))
+                # - creating the new random graph with the probability just computed
+                adjacency_matrix = torch.bernoulli(
+                    p_corrected * torch.ones(graph_size, graph_size)
+                )  # regular graph without clique
+                # adding clique to adjacency matrix
+                adjacency_matrix = plant_clique(
+                    adjacency_matrix, clique_size, graph_size
+                )
+            # generating upper triangular matrix
+            upper_triangular = torch.triu(adjacency_matrix)
+            adjacency_matrix = upper_triangular + torch.transpose(
+                upper_triangular, 0, 1
+            )
+            adjacency_matrix.fill_diagonal_(1)
+            # adding graph to the matrix of graphs
+            data[i, 0] = adjacency_matrix
+
+    else:
+        raise ValueError(
+            "Invalid p_correction_type. Must be either 'p_increease' or 'p_reduce'"
+        )
+
+    # returning the generated graphs and the on_off flag
     return data, on_off.tolist()

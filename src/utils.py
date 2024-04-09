@@ -91,7 +91,7 @@ def early_stopper(
 
 
 # Training function:
-def train_model(model, training_hyperparameters, graph_size):
+def train_model(model, training_hyperparameters, graph_size, p_correction_type):
 
     # - "model" is the loaded model
     # - configuration file contains all hyperparameters for training
@@ -106,6 +106,7 @@ def train_model(model, training_hyperparameters, graph_size):
     generalization = []
     k_over_sqrt_n = []
     clique_sizes_array = []
+    saved_steps = 0  # will increase every time we save a step, and will be on the x axis of tensorboard plots (global graphs with training and validation losses over all training)
 
     # calculating min clique size and max clique size (proportion of graph size):
     max_clique_size = int(
@@ -140,6 +141,7 @@ def train_model(model, training_hyperparameters, graph_size):
                     training_hyperparameters["num_train"],
                     graph_size,
                     current_clique_size,
+                    p_correction_type,
                 )
                 # Forward pass on training data
                 train_pred = model(train[0].to(device))
@@ -170,6 +172,7 @@ def train_model(model, training_hyperparameters, graph_size):
                         training_hyperparameters["num_val"],
                         graph_size,
                         current_clique_size,
+                        p_correction_type,
                     )
                     # Compute loss on validation set:
                     val_pred = model(val[0].to(device))
@@ -180,9 +183,10 @@ def train_model(model, training_hyperparameters, graph_size):
                     # Storing validation error
                     val_error.append(val_loss.item())
 
-                    # Storing training and validation errors for Tensorboard visualization:
-                    writer.add_scalar("Loss/train", train_loss, epoch)
-                    writer.add_scalar("Loss/val", val_loss, epoch)
+                    # Storing training and validation losses for Tensorboard visualization:
+                    saved_steps += 1  # increasing saved_step: this will be the x axis of the tensorboard plots
+                    writer.add_scalar("Loss/train", train_loss.item(), saved_steps)
+                    writer.add_scalar("Loss/val", val_loss.item(), saved_steps)
 
                 # # Plotting error curves
                 # fig, ax = plt.subplots()
@@ -230,7 +234,10 @@ def train_model(model, training_hyperparameters, graph_size):
 
         # 1. Testing the network with test data
         test = gen_graphs.generate_graphs(
-            training_hyperparameters["num_test"], graph_size, current_clique_size
+            training_hyperparameters["num_test"],
+            graph_size,
+            current_clique_size,
+            p_correction_type,
         )  # generating test data
         hard_output = torch.zeros(
             [training_hyperparameters["num_test"], 2]

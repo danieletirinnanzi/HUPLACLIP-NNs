@@ -73,6 +73,9 @@ def early_stopper(
     training_length = training_loss.shape[0]
 
     # Checking if average value of validation and training losses in the last "memory" epochs allows early stopping:
+
+    # NOTE: VALIDATION EXIT ARRAY IS NOT CHECKED CORRECTLY, FIX!!
+
     if (
         np.mean(validation_loss[val_length - memory :]) < validation_exit_error
         and np.mean(training_loss[training_length - memory :]) < training_exit_error
@@ -275,31 +278,6 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
         )
         print("==========================================")
 
-        # # 4. Drawing a vertical line at the level of saved_steps, in the same Tensorboard plot to separate different clique sizes:
-        # writer.add_scalars("Log", {"Vertical_line": 0}, saved_steps)
-
-    # # After training is completed, plotting generalization errors for all trained clique sizes:
-    # # - Creating subplots
-    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-
-    # # - Plotting on the first subplot
-    # ax1.plot(clique_sizes_array, generalization)
-    # ax1.set_title("Test Set Performance vs. Clique Size", fontsize=16)
-    # ax1.set_xlabel("Clique Size", fontsize=14)
-    # ax1.set_ylabel("Test Set Performance (%)", fontsize=14)
-
-    # # - Plotting on the second subplot
-    # ax2.plot(k_over_sqrt_n, generalization)
-    # ax2.set_title("Test Set Performance vs. k/sqrt{n}", fontsize=16)
-    # ax2.set_xlabel("k/sqrt{n}", fontsize=14)
-    # ax2.set_ylabel("Test Set Performance (%)", fontsize=14)
-
-    # # - Adjusting layout
-    # plt.tight_layout()
-
-    # # - Displaying the plot
-    # plt.show()
-
     # Closing the writer:
     writer.close()
 
@@ -309,7 +287,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
 # Testing function:
 def test_model(model):
 
-    # SHOULD RETURN THE RESULTS OF THE TESTING IN A FORMAT THAT CAN BE REPORTED IN PLOTS
+    # SHOULD RETURN THE RESULTS OF THE TESTING IN A FORMAT THAT CAN BE REPORTED IN PLOTS AND FITTED
 
     pass
 

@@ -36,6 +36,9 @@ print(experiment_dir)
 
 writer = SummaryWriter(log_dir=experiment_dir)
 
+# opening Tensorboard in the terminal:
+# tensorboard --logdir=runs
+
 # loading, training, and testing all models:
 for model_specs in config["models"]:
 

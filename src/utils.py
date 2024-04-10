@@ -1,20 +1,12 @@
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 import yaml
 import torch
 import torch.optim as optim
 import torch.nn as nn
 
-# for tensorboard visualization during training
-from torch.utils.tensorboard import SummaryWriter
-
-writer = SummaryWriter()  # TODO: customize name of folder that is created
-
-# importing Models class from models.py
+# custom imports
 from .models import Models
-
-# importing graphs_generation.py
 import src.graphs_generation as gen_graphs
 
 # defining device
@@ -91,10 +83,12 @@ def early_stopper(
 
 
 # Training function:
-def train_model(model, training_hyperparameters, graph_size, p_correction_type):
+def train_model(model, training_hyperparameters, graph_size, p_correction_type, writer):
 
+    #  NOTES FOR WRITING DOCUMENTATION:
     # - "model" is the loaded model
     # - configuration file contains all hyperparameters for training
+    # - writer is the Tensorboard writer
 
     # TO BE SPECIFIED IN CONFIGURATION FILES AND SIMPLY READ HERE?
     optim = torch.optim.Adam(model.parameters())  # optimization with Adam
@@ -126,12 +120,6 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
 
         # printing value of clique size when it changes:
         print("Clique size is now: ", current_clique_size)
-        # printing data type of current_clique_size:
-        print(
-            "Data type of current_clique_size: ", type(current_clique_size.astype(int))
-        )
-        # data type of graph_size:
-        print("Data type of graph_size: ", type(graph_size))
 
         # storing values needed for final plot:
         k_over_sqrt_n.append(1.0 * current_clique_size / math.sqrt(graph_size))
@@ -160,20 +148,18 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
                     torch.Tensor(train[1]).type(torch.long).to(device),
                 )
 
-                # Saving errors (both training and validation) and plotting at regular intervals (indicated by "save_step"):
+                # Saving errors (both training and validation) at regular intervals and printing to Tensorboard:
                 if training_step % training_hyperparameters["save_step"] == 0:
 
-                    # increasing saved_steps: this will be the x axis of the tensorboard plots
+                    # At each training step that has to be saved:
+                    # - increasing saved_steps: this will be the x axis of the tensorboard plots
                     saved_steps += 1
 
-                    # Storing training error (refers to current task version)
+                    # - storing training error (refers to current task version)
                     train_error.append(train_loss.item())
-                    # Tensorboard: plotting training loss for current task version
-                    writer.add_scalar(
-                        f"Loss/train_task_{current_clique_size}",
-                        train_loss.item(),
-                        saved_steps,
-                    )
+
+                    # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
+                    val_dict = {"train_error": train_loss.item()}
 
                     # At each save_step, generate validation set for all the task versions and compute validation error:
                     for current_clique_size_val in clique_sizes:
@@ -191,16 +177,22 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
                             val_pred.to(device),
                             torch.Tensor(val[1]).type(torch.long).to(device),
                         )
+
                         # Storing validation error (only when validating the current task version, needed for early stopping)
                         if current_clique_size_val == current_clique_size:
                             val_error.append(val_loss.item())
 
-                        # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
-                        writer.add_scalar(
-                            f"Loss/val_task_{current_clique_size_val}",
-                            val_loss.item(),
-                            saved_steps,
+                        # creating dictionary to store validation losses for all task versions:
+                        val_dict[f"val_error_{current_clique_size_val}"] = (
+                            val_loss.item()
                         )
+
+                    # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
+                    writer.add_scalars(
+                        "Log",
+                        val_dict,
+                        saved_steps,
+                    )
 
                     # Flush the writer to make sure all data is written to disk
                     writer.flush()
@@ -282,6 +274,9 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type):
             generalization,
         )
         print("==========================================")
+
+        # # 4. Drawing a vertical line at the level of saved_steps, in the same Tensorboard plot to separate different clique sizes:
+        # writer.add_scalars("Log", {"Vertical_line": 0}, saved_steps)
 
     # # After training is completed, plotting generalization errors for all trained clique sizes:
     # # - Creating subplots

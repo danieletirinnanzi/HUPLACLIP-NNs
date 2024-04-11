@@ -58,15 +58,3 @@ for model_specs in config["models"]:
     )
 
     # testing model and saving results
-
-
-# once training is done, fitting data and comparing models:
-
-
-# # for tensorboard visualization
-# from torch.utils.tensorboard import SummaryWriter
-
-# writer = SummaryWriter()
-
-
-# # train_model(model=model)

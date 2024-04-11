@@ -30,6 +30,7 @@ nest-asyncio==1.6.0
 networkx==3.2.1
 numpy==1.26.4
 packaging==24.0
+pandas==2.2.1
 parso==0.8.3
 pillow==10.3.0
 platformdirs==4.2.0
@@ -40,18 +41,22 @@ pure-eval==0.2.2
 Pygments==2.17.2
 pyparsing==3.1.2
 python-dateutil==2.9.0.post0
+pytz==2024.1
 pywin32==306
+PyYAML==6.0.1
 pyzmq==25.1.2
 six==1.16.0
--e git+https://github.com/danieletirinnanzi/HUPLACLIP-NNs.git@84828d336ee57a450b2037b97690cef3f3a80d64#egg=src
+-e git+https://github.com/danieletirinnanzi/HUPLACLIP-NNs.git@507b6006d637af0e76e8efe7f4d2182752e1b92b#egg=src
 stack-data==0.6.3
 sympy==1.12
 tensorboard==2.16.2
 tensorboard-data-server==0.7.2
 torch==2.2.2
+torch-tb-profiler==0.4.3
 torchvision==0.17.2
 tornado==6.4
 traitlets==5.14.2
 typing_extensions==4.10.0
+tzdata==2024.1
 wcwidth==0.2.13
 Werkzeug==3.0.2

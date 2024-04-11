@@ -185,7 +185,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
                         if current_clique_size_val == current_clique_size:
                             val_error.append(val_loss.item())
 
-                        # creating dictionary to store validation losses for all task versions:
+                        # updating dictionary with validation losses for all task versions:
                         val_dict[f"val_error_{current_clique_size_val}"] = (
                             val_loss.item()
                         )
@@ -278,8 +278,24 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
         )
         print("==========================================")
 
+        # 4. Printing a vertical bar of 4 points in the plot, to separate the different task versions:
+        # Generate the values with increments of 0.10
+        spacing_values = np.arange(0, 1.1, 0.10)
+
+        # Create the dictionary for adding scalars
+        scalar_values = {
+            f"vert_line_{round(value,2)}_{current_clique_size}": value
+            for value in spacing_values
+        }
+
+        # Your existing code for adding scalars
+        writer.add_scalars("Log", scalar_values, saved_steps)
+
     # Closing the writer:
     writer.close()
+
+    # Notify completion of training
+    print("Model trained successfully.")
 
     return model
 

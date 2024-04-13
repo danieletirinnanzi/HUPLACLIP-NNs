@@ -9,8 +9,8 @@ __pycache__/
 data
 src.egg-info
 
-# # Ignore files in the /runs folder
-# runs
+# Ignore files in the /runs folder
+runs
 
 # Ignore temporary files produced by ML pipelines with PyTorch
 *.pth

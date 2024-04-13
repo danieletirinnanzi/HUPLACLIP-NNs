@@ -84,10 +84,35 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     # - configuration file contains all hyperparameters for training
     # - writer is the Tensorboard writer
 
+    ## START OF TESTS
+    # TODO: MOVE TO A "tests.py" FILE?
+
+    # Check if model is provided
+    if model is None:
+        raise ValueError("Model is not provided.")
+
+    # Check if training_hyperparameters is a dictionary
+    if not isinstance(training_hyperparameters, dict):
+        raise ValueError("training_hyperparameters should be a dictionary.")
+
+    # Check if graph_size is a positive integer
+    if not isinstance(graph_size, int) or graph_size <= 0:
+        raise ValueError("graph_size should be a positive integer.")
+
+    # Check if p_correction_type is a string
+    if not isinstance(p_correction_type, str):
+        raise ValueError("p_correction_type should be a string.")
+
+    # Check if writer is provided
+    if writer is None:
+        raise ValueError("Writer is not provided.")
+
+    ## END OF TESTS
+
     # Notify start of training:
     print("||| Started training...")
 
-    # TO BE SPECIFIED IN CONFIGURATION FILES AND SIMPLY READ HERE?
+    # TODO: TO BE SPECIFIED IN CONFIGURATION FILES AND SIMPLY READ HERE?
     optim = torch.optim.Adam(model.parameters())  # optimization with Adam
     criterion = nn.CrossEntropyLoss()  # criterion = Cross Entropy
 
@@ -233,7 +258,9 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     # - close the writer:
     writer.close()
     # - notify completion of training function execution:
-    print("Model trained successfully.")
+    print("- Model trained successfully.")
+
+    # TODO: STORING MODEL?
 
     return model
 
@@ -241,7 +268,8 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
 # # Testing function:
 # def test_model(model):
 
-#     # SHOULD RETURN THE RESULTS OF THE TESTING IN A FORMAT THAT CAN BE REPORTED IN PLOTS AND FITTED
+#    # SHOULD RETURN THE RESULTS as dataframe/dictionary, figure out what is best and more manageable:
+#    # - N300 = {K200: 90, K150: 85, K100: 75 ...}
 
 #     generalization = []
 #     k_over_sqrt_n = []

@@ -36,7 +36,7 @@ def load_model(model_name, graph_size):
 
     # - sending model to device:
     model.to(device)
-    print("Model loaded successfully.")
+    print("- Model loaded successfully.")
     return model
 
 
@@ -46,20 +46,18 @@ def load_model(model_name, graph_size):
 
 # Early stopping function:
 def early_stopper(
-    validation_loss,
     training_loss,
+    validation_loss,
     memory=3,
     validation_exit_error=0.2,
     training_exit_error=0.2,
 ):
     """
-    Implements early stopping based on validation and training losses. If both are below the "exit_error" values defined above, then training is interrupted.
+    Implements early stopping based on stored training and validation losses. Training and validation losses are stored every "saved_steps". If the AVERAGE value of the last "memory" losses is below the "exit_error" values defined above, then training is interrupted and the next task version is trained.
 
     Args:
-        validation_loss (numpy.array): Array containing validation loss values.
-        training_loss (numpy.array): Array containing training loss values.
-        counter (int): Current count of epochs where validation loss increases.
-        min_validation_loss (float): Minimum validation loss encountered so far.
+        training_loss (numpy.array): Array containing training loss values (stored every 10 training steps).
+        validation_loss (numpy.array): Array containing validation loss values (stored every 10 training steps).
         memory (int): Number of previous epochs to consider for calculating average validation and training losses.
         validation_exit_error (float): Validation error below which we can stop early
         training_exit_error (float): Training error below which we can stop early
@@ -68,17 +66,10 @@ def early_stopper(
         tuple: A boolean indicating whether to stop early.
     """
 
-    # Computing length of validation and training losses
-    val_length = validation_loss.shape[0]
-    training_length = training_loss.shape[0]
-
-    # Checking if average value of validation and training losses in the last "memory" epochs allows early stopping:
-
-    # NOTE: VALIDATION EXIT ARRAY IS NOT CHECKED CORRECTLY, FIX!!
-
     if (
-        np.mean(validation_loss[val_length - memory :]) < validation_exit_error
-        and np.mean(training_loss[training_length - memory :]) < training_exit_error
+        np.mean(training_loss[training_loss.shape[0] - memory :]) < training_exit_error
+        and np.mean(validation_loss[validation_loss.shape[0] - memory :])
+        < validation_exit_error
     ):
         return True
     else:
@@ -93,6 +84,9 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     # - configuration file contains all hyperparameters for training
     # - writer is the Tensorboard writer
 
+    # Notify start of training:
+    print("||| Started training...")
+
     # TO BE SPECIFIED IN CONFIGURATION FILES AND SIMPLY READ HERE?
     optim = torch.optim.Adam(model.parameters())  # optimization with Adam
     criterion = nn.CrossEntropyLoss()  # criterion = Cross Entropy
@@ -100,9 +94,6 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     # Initializations
     train_error = []
     val_error = []
-    generalization = []
-    k_over_sqrt_n = []
-    clique_sizes_array = []
     saved_steps = 0  # will increase every time we save a step, and will be on the x axis of tensorboard plots (global graphs with training and validation losses over all training)
 
     # calculating min clique size and max clique size (proportion of graph size):
@@ -122,11 +113,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     for current_clique_size in clique_sizes:
 
         # printing value of clique size when it changes:
-        print("Clique size is now: ", current_clique_size)
-
-        # storing values needed for final plot:
-        k_over_sqrt_n.append(1.0 * current_clique_size / math.sqrt(graph_size))
-        clique_sizes_array.append(current_clique_size)
+        print("||| Clique size is now: ", current_clique_size)
 
         # Training epochs loop:
         for epoch in range(training_hyperparameters["num_epochs"]):
@@ -151,7 +138,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
                     torch.Tensor(train[1]).type(torch.long).to(device),
                 )
 
-                # Saving errors (both training and validation) at regular intervals and printing to Tensorboard:
+                # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
                 if training_step % training_hyperparameters["save_step"] == 0:
 
                     # At each training step that has to be saved:
@@ -164,7 +151,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
                     # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
                     val_dict = {"train_error": train_loss.item()}
 
-                    # At each save_step, generate validation set for all the task versions and compute validation error:
+                    # At each save_step, generate validation set and compute validation error for all the task versions:
                     for current_clique_size_val in clique_sizes:
 
                         # Generating validation graphs:
@@ -209,103 +196,106 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
 
             # At the end of the epoch:
 
-            # 1. checking if early stopping condition is met (based on the validation and training error in the last 3 training steps)
-            early_exit = early_stopper(np.array(val_error), np.array(train_error))
+            # 1. checking if early stopping condition is met (based on the validation and training error in the last 3 "save_steps")
+            early_exit = early_stopper(np.array(train_error), np.array(val_error))
             if early_exit:
 
-                # printing training and validation errors to check that Early exit is working properly
-                # NOTE: training and validation errors are saved every "save_step" steps. Validation set is generated and tested every 5 steps, while training error is always calculated, but saved every 5 steps as well
-                print(
-                    "Exiting early, validation error array: ",
-                    np.array(val_error[-5:]),
-                    ". Training error array: ",
-                    np.array(train_error[-5:]),
-                )  # printing out last 5 elements, to check that early stopping criterior is really met
-
-                # clearing lists storing training and validation errors before breaking out:
+                # if early stopping, clearing lists storing training and validation errors before breaking out of the epoch loop:
                 train_error = []
                 val_error = []
 
                 break
 
-            # 2. clearing lists storing training and validation errors before starting new epoch:
+            # 2. If no early stop, clearing lists storing training and validation errors before starting new epoch:
             train_error = []
             val_error = []
 
         # After clique size has finished training (here we are inside the clique size decreasing loop):
 
-        # 1. Testing the network with test data
-        # CAN BE REMOVED? TESTING IS DONE AFTER TRAINING IS COMPLETED, WITH A SEPARATE FUNCTION
-        test = gen_graphs.generate_graphs(
-            training_hyperparameters["num_test"],
-            graph_size,
-            current_clique_size,
-            p_correction_type,
-        )  # generating test data
-        hard_output = torch.zeros(
-            [training_hyperparameters["num_test"], 2]
-        )  # initializing tensor to store hard predictions
-        soft_output = model(test[0].to(device))  # performing forward pass on test data
-        # Converting soft predictions to hard predictions:
-        for index in range(training_hyperparameters["num_test"]):
-            if soft_output[index][0] > soft_output[index][1]:
-                hard_output[index][0] = 1.0
-            else:
-                hard_output[index][1] = 1.0
-        predicted_output = hard_output
-
-        # 2. Computing and storing the generalization error for the current clique size:
-        generalization.append(
-            100
-            * (
-                1
-                - torch.sum(
-                    torch.square(
-                        torch.Tensor(test[1])
-                        - torch.transpose(predicted_output, 1, 0)[1]
-                    )
-                ).item()
-                / (1.0 * training_hyperparameters["num_test"])
-            )
-        )
-
-        # 3. Printing the current k/sqrt(n) and the corresponding test error:
-        print(
-            "Completed training for clique = ",
-            current_clique_size,
-            ". % correct on test set =",
-            generalization,
-        )
-        print("==========================================")
-
-        # 4. Printing a vertical bar of 4 points in the plot, to separate the different task versions:
-        # Generate the values with increments of 0.10
+        # 1. Tensorboard: printing a vertical bar of 4 points in the plot, to separate the different task versions
+        # - spacing values for the vertical lines:
         spacing_values = np.arange(0, 1.1, 0.10)
-
-        # Create the dictionary for adding scalars
+        # - dictionary with scalar values for the vertical lines:
         scalar_values = {
             f"vert_line_{round(value,2)}_{current_clique_size}": value
             for value in spacing_values
         }
-
-        # Your existing code for adding scalars
+        # - add the scalars to the writer
         writer.add_scalars("Log", scalar_values, saved_steps)
 
-    # Closing the writer:
-    writer.close()
+        # 2. Printing a message to indicate the end of training for the current task version:
+        print("||| Completed training for clique = ", current_clique_size)
+        print("||| ==========================================")
 
-    # Notify completion of training
+    # After all task versions have been trained:
+    # - notify completion of training:
+    print("||| Finished training.")
+    # - close the writer:
+    writer.close()
+    # - notify completion of training function execution:
     print("Model trained successfully.")
 
     return model
 
 
-# Testing function:
-def test_model(model):
+# # Testing function:
+# def test_model(model):
 
-    # SHOULD RETURN THE RESULTS OF THE TESTING IN A FORMAT THAT CAN BE REPORTED IN PLOTS AND FITTED
+#     # SHOULD RETURN THE RESULTS OF THE TESTING IN A FORMAT THAT CAN BE REPORTED IN PLOTS AND FITTED
 
-    pass
+#     generalization = []
+#     k_over_sqrt_n = []
+#     clique_sizes_array = []
+
+#             # storing values needed for final plot:
+#         k_over_sqrt_n.append(1.0 * current_clique_size / math.sqrt(graph_size))
+#         clique_sizes_array.append(current_clique_size)
+
+#     # 1. Testing the network with test data
+#         # CAN BE REMOVED? TESTING IS DONE AFTER TRAINING IS COMPLETED, WITH A SEPARATE FUNCTION
+#         test = gen_graphs.generate_graphs(
+#             training_hyperparameters["num_test"],
+#             graph_size,
+#             current_clique_size,
+#             p_correction_type,
+#         )  # generating test data
+#         hard_output = torch.zeros(
+#             [training_hyperparameters["num_test"], 2]
+#         )  # initializing tensor to store hard predictions
+#         soft_output = model(test[0].to(device))  # performing forward pass on test data
+#         # Converting soft predictions to hard predictions:
+#         for index in range(training_hyperparameters["num_test"]):
+#             if soft_output[index][0] > soft_output[index][1]:
+#                 hard_output[index][0] = 1.0
+#             else:
+#                 hard_output[index][1] = 1.0
+#         predicted_output = hard_output
+
+#         # 2. Computing and storing the generalization error for the current clique size:
+#         generalization.append(
+#             100
+#             * (
+#                 1
+#                 - torch.sum(
+#                     torch.square(
+#                         torch.Tensor(test[1])
+#                         - torch.transpose(predicted_output, 1, 0)[1]
+#                     )
+#                 ).item()
+#                 / (1.0 * training_hyperparameters["num_test"])
+#             )
+#         )
+
+#         # 3. Printing the current k/sqrt(n) and the corresponding test error:
+#         print(
+#             "Completed training for clique = ",
+#             current_clique_size,
+#             ". % correct on test set =",
+#             generalization,
+#         )
+#         print("==========================================")
+
+#     pass
 
 
 # -----------------------------------------

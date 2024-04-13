@@ -137,7 +137,7 @@ def generate_graphs(
 
     else:
         raise ValueError(
-            "Invalid p_correction_type. Must be either 'p_increease' or 'p_reduce'"
+            "Invalid p_correction_type. Must be either 'p_increase' or 'p_reduce'"
         )
 
     # returning the generated graphs and the on_off flag

@@ -7,7 +7,7 @@ p_correction_type: p_reduce
 
 models:
 
-  # each instance of "models" will be trained and tested with the hyperparameters specified
+  # each instance of "models" will be trained and tested with the specified hyperparameters
   
   - model_name: MLP
     hyperparameters:
@@ -22,7 +22,7 @@ models:
       learning_rate: 0.01
       dropout: 0.2
       # training structure:
-      max_clique_size_proportion: 0.6
-      min_clique_size_proportion: 0.4
+      max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
+      min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
       jump: 5
       save_step: 10

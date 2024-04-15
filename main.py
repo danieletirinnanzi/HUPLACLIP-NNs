@@ -19,6 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.utils import load_config
 from src.utils import load_model
 from src.utils import train_model
+from src.utils import test_model
 
 
 # loading experiment configuration file:
@@ -26,13 +27,17 @@ config = load_config("docs\MLP_experiment_configuration.yml")
 
 # Tensorboard:
 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-exp_name_with_time = f"{config['exp_name']}_{current_time}"
+exp_name_with_time = f"{config['exp_name']}_N{config['graph_size']}_{current_time}"
 current_dir = os.path.dirname(os.path.realpath(__file__))
 runs_dir = os.path.join(current_dir, "runs")
 # create a new directory for each experiment
 experiment_dir = os.path.join(runs_dir, exp_name_with_time)
 # create writer and point to log directory
 writer = SummaryWriter(log_dir=experiment_dir)
+
+# creating folder in "results" folder to save the results of the experiment
+results_dir = os.path.join(current_dir, "results", exp_name_with_time)
+os.makedirs(results_dir)
 
 # loading, training, and testing all models:
 for model_specs in config["models"]:
@@ -53,3 +58,10 @@ for model_specs in config["models"]:
     )
 
     # testing model and saving results
+    test_model(
+        model,
+        model_specs["hyperparameters"],
+        config["graph_size"],
+        config["p_correction_type"],
+        results_dir,
+    )

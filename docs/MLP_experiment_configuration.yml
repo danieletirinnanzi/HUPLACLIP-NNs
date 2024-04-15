@@ -11,13 +11,14 @@ models:
   
   - model_name: MLP
     hyperparameters:
+      
+      # TRAINING HYPERPARAMETERS:
       # training cycles (TO BE INCREASED):
       num_epochs: 10
       num_training_steps: 40
-      # training, validation and test set sizes (TO BE INCREASED):
+      # training and validation set sizes (TO BE INCREASED):
       num_train: 16
       num_val: 16
-      num_test: 16
       # other hyperparameters:
       learning_rate: 0.01
       dropout: 0.2
@@ -26,3 +27,12 @@ models:
       min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
       jump: 5
       save_step: 10
+      # optimizer and loss function:
+      optimizer: Adam
+      loss_function: CrossEntropyLoss
+
+      # TESTING HYPERPARAMETERS:
+      max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
+      num_test: 16  # (TO BE INCREASED) number of graphs in each test iteration
+      jump_test: 1  # increase in clique size between test iterations
+      test_iterations: 15 # number of times for which a single clique size is tested

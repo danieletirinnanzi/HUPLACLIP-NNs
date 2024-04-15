@@ -4,6 +4,7 @@ import yaml
 import torch
 import torch.optim as optim
 import torch.nn as nn
+import csv
 
 # custom imports
 from .models import Models
@@ -112,9 +113,26 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     # Notify start of training:
     print("||| Started training...")
 
-    # TODO: TO BE SPECIFIED IN CONFIGURATION FILES AND SIMPLY READ HERE?
-    optim = torch.optim.Adam(model.parameters())  # optimization with Adam
-    criterion = nn.CrossEntropyLoss()  # criterion = Cross Entropy
+    # Defining optimizer:
+    if training_hyperparameters["optimizer"] == "Adam":
+        optim = torch.optim.Adam(model.parameters())
+    elif training_hyperparameters["optimizer"] == "SGD":
+        optim = torch.optim.SGD(
+            model.parameters(),
+            lr=training_hyperparameters["learning_rate"],
+            momentum=0.9,
+        )  # DEFINE DYNAMICALLY?
+    # ADD MORE OPTIMIZERS?
+    else:
+        raise ValueError("Optimizer not found")
+    # Defining loss function:
+    if training_hyperparameters["loss_function"] == "CrossEntropyLoss":
+        criterion = nn.CrossEntropyLoss()  # criterion = Cross Entropy
+    elif training_hyperparameters["loss_function"] == "MSELoss":
+        criterion = nn.MSELoss()
+    # ADD MORE LOSS FUNCTIONS?
+    else:
+        raise ValueError("Loss function not found")
 
     # Initializations
     train_error = []
@@ -265,65 +283,92 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
     return model
 
 
-# # Testing function:
-# def test_model(model):
+# Testing function:
+def test_model(
+    model, training_hyperparameters, graph_size, p_correction_type, results_dir
+):
 
-#    # SHOULD RETURN THE RESULTS as dataframe/dictionary, figure out what is best and more manageable:
-#    # - N300 = {K200: 90, K150: 85, K100: 75 ...}
+    # Notify start of testing:
+    print("||| Started testing...")
 
-#     generalization = []
-#     k_over_sqrt_n = []
-#     clique_sizes_array = []
+    # returns the results of testing for N=300 as a dictionary:
+    # { K: fraction correct, ...}
 
-#             # storing values needed for final plot:
-#         k_over_sqrt_n.append(1.0 * current_clique_size / math.sqrt(graph_size))
-#         clique_sizes_array.append(current_clique_size)
+    # creating empty dictionary:
+    results = {}
 
-#     # 1. Testing the network with test data
-#         # CAN BE REMOVED? TESTING IS DONE AFTER TRAINING IS COMPLETED, WITH A SEPARATE FUNCTION
-#         test = gen_graphs.generate_graphs(
-#             training_hyperparameters["num_test"],
-#             graph_size,
-#             current_clique_size,
-#             p_correction_type,
-#         )  # generating test data
-#         hard_output = torch.zeros(
-#             [training_hyperparameters["num_test"], 2]
-#         )  # initializing tensor to store hard predictions
-#         soft_output = model(test[0].to(device))  # performing forward pass on test data
-#         # Converting soft predictions to hard predictions:
-#         for index in range(training_hyperparameters["num_test"]):
-#             if soft_output[index][0] > soft_output[index][1]:
-#                 hard_output[index][0] = 1.0
-#             else:
-#                 hard_output[index][1] = 1.0
-#         predicted_output = hard_output
+    # calculating max clique size (proportion of graph size):
+    max_clique_size = int(
+        training_hyperparameters["max_clique_size_proportion_test"] * graph_size
+    )
+    # calculating array of clique sizes for all test curriculum:
+    clique_sizes = np.arange(
+        max_clique_size, 0, -training_hyperparameters["jump_test"]
+    ).astype(int)
 
-#         # 2. Computing and storing the generalization error for the current clique size:
-#         generalization.append(
-#             100
-#             * (
-#                 1
-#                 - torch.sum(
-#                     torch.square(
-#                         torch.Tensor(test[1])
-#                         - torch.transpose(predicted_output, 1, 0)[1]
-#                     )
-#                 ).item()
-#                 / (1.0 * training_hyperparameters["num_test"])
-#             )
-#         )
+    # Loop for decreasing clique sizes
+    for current_clique_size in clique_sizes:
 
-#         # 3. Printing the current k/sqrt(n) and the corresponding test error:
-#         print(
-#             "Completed training for clique = ",
-#             current_clique_size,
-#             ". % correct on test set =",
-#             generalization,
-#         )
-#         print("==========================================")
+        # Loop for testing iterations:
+        for test_iter in range(training_hyperparameters["test_iterations"]):
 
-#     pass
+            # Testing the network with test data
+            test = gen_graphs.generate_graphs(
+                training_hyperparameters["num_test"],
+                graph_size,
+                current_clique_size,
+                p_correction_type,
+            )  # generating test data
+            hard_output = torch.zeros(
+                [training_hyperparameters["num_test"], 2]
+            )  # initializing tensor to store hard predictions
+            soft_output = model(
+                test[0].to(device)
+            )  # performing forward pass on test data
+            # Converting soft predictions to hard predictions:
+            for index in range(training_hyperparameters["num_test"]):
+                if soft_output[index][0] > soft_output[index][1]:
+                    hard_output[index][0] = 1.0
+                else:
+                    hard_output[index][1] = 1.0
+            predicted_output = hard_output
+
+        # Calculating fraction of correct predictions on test set:
+        results[current_clique_size] = 1 - torch.sum(
+            torch.square(
+                torch.Tensor(test[1]) - torch.transpose(predicted_output, 1, 0)[1]
+            )
+        ).item() / (1.0 * training_hyperparameters["num_test"])
+
+        # Printing the size of the clique just tested and the corresponding test error:
+        print(
+            "|||Completed testing for clique = ",
+            current_clique_size,
+            ". Average fraction correct on test set =",
+            results[current_clique_size],
+        )
+        print("|||==========================================")
+
+    # After all task versions have been tested:
+    # - notify completion of testing:
+    print("||| Finished testing.")
+    # - notify completion of testing function execution:
+    print("- Model tested successfully.")
+
+    # Saving .csv file in "results" folder (already exists, created in main.py)
+    # - defining file name:
+    file_name = f"N{graph_size}_results"
+    # - defining file path:
+    file_path = f"{results_dir}/{file_name}.csv"
+
+    # - saving the dictionary as a .csv file:
+    with open(file_path, "w") as file:
+        writer = csv.writer(file)
+        writer.writerow(["clique size", "fraction correct"])  # Add column labels
+        for key, value in results.items():
+            writer.writerow([key, value])
+
+    print(f"- Results saved successfully in {file_path}.")
 
 
 # -----------------------------------------

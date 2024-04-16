@@ -26,7 +26,7 @@ from src.train_test import test_model
 
 
 # loading experiment configuration file:
-config = load_config("docs\CNN_experiment_configuration.yml")
+config = load_config("docs\VGG_experiment_configuration.yml")
 
 # Tensorboard:
 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -59,6 +59,7 @@ for model_specs in config["models"]:
         config["graph_size"],
         config["p_correction_type"],
         writer,
+        model_specs["model_name"],
     )
 
     # testing model
@@ -67,6 +68,7 @@ for model_specs in config["models"]:
         model_specs["hyperparameters"],
         config["graph_size"],
         config["p_correction_type"],
+        model_specs["model_name"],
     )
 
     # creating model subfolder in current experiment folder:

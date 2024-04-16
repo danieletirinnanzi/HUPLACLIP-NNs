@@ -46,12 +46,15 @@ def early_stopper(
 
 
 # Training function:
-def train_model(model, training_hyperparameters, graph_size, p_correction_type, writer):
+def train_model(
+    model, training_hyperparameters, graph_size, p_correction_type, writer, model_name
+):
 
     #  NOTES FOR WRITING DOCUMENTATION:
     # - "model" is the loaded model
     # - configuration file contains all hyperparameters for training
     # - writer is the Tensorboard writer
+    # - model_name is the name of the model, and is needed in the case of VGG -> 3D graphs are generated
 
     ## START OF TESTS
     # TODO: MOVE TO A "tests.py" FILE?
@@ -77,6 +80,12 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
         raise ValueError("Writer is not provided.")
 
     ## END OF TESTS
+
+    # if model is VGG, graphs will be 3D:
+    if model_name == "VGG16":
+        vgg_input = True
+    else:
+        vgg_input = False
 
     # Notify start of training:
     print("||| Started training...")
@@ -140,6 +149,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
                     graph_size,
                     current_clique_size,
                     p_correction_type,
+                    vgg_input,
                 )
                 # Forward pass on training data
                 train_pred = model(train[0].to(device))
@@ -171,6 +181,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
                             graph_size,
                             current_clique_size_val,
                             p_correction_type,
+                            vgg_input,
                         )
                         # Compute loss on validation set:
                         val_pred = model(val[0].to(device))
@@ -190,7 +201,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
 
                     # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
                     writer.add_scalars(
-                        "Log",
+                        f"Log_{model_name}",
                         val_dict,
                         saved_steps,
                     )
@@ -232,7 +243,7 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
             for value in spacing_values
         }
         # - add the scalars to the writer
-        writer.add_scalars("Log", scalar_values, saved_steps)
+        writer.add_scalars(f"Log_{model_name}", scalar_values, saved_steps)
 
         # 2. Printing a message to indicate the end of training for the current task version:
         print("||| Completed training for clique = ", current_clique_size)
@@ -252,7 +263,15 @@ def train_model(model, training_hyperparameters, graph_size, p_correction_type, 
 
 
 # TESTING FUNCTION:
-def test_model(model, training_hyperparameters, graph_size, p_correction_type):
+def test_model(
+    model, training_hyperparameters, graph_size, p_correction_type, model_name
+):
+
+    # if model is VGG, graphs will be 3D:
+    if model_name == "VGG16":
+        vgg_input = True
+    else:
+        vgg_input = False
 
     # Notify start of testing:
     print("||| Started testing...")
@@ -284,6 +303,7 @@ def test_model(model, training_hyperparameters, graph_size, p_correction_type):
                 graph_size,
                 current_clique_size,
                 p_correction_type,
+                vgg_input,
             )  # generating test data
             hard_output = torch.zeros(
                 [training_hyperparameters["num_test"], 2]

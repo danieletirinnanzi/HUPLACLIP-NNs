@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torchvision.models as models
 
 
 class Models:
@@ -100,10 +101,18 @@ class Models:
 
         return model
 
-    # def vgg16():
-    #     model = models.vgg16(pretrained=True)
-    #     model.classifier[6] = nn.Linear(4096, 2)
-    #     return model
+    @staticmethod
+    def vgg16():
+        model = models.vgg16(weights="DEFAULT")
+
+        # Freeze the architecture
+        for param in model.parameters():
+            param.requires_grad = False
+
+        # Modify the last layer for binary classification
+        model.classifier[6] = nn.Linear(4096, 2)
+
+        return model
 
     # def transformer():
     #     # importing the transformer model

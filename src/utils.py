@@ -27,6 +27,8 @@ def load_model(model_name, graph_size, hyperparameters):
             model = Models.mlp(graph_size, hyperparameters)
         case "CNN":
             model = Models.cnn(graph_size, hyperparameters)
+        case "VGG16":
+            model = Models.vgg16()
         case _:
             raise ValueError("Model not found")
 

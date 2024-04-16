@@ -26,6 +26,7 @@ def generate_graphs(
     graph_size,
     clique_size,
     p_correction_type,
+    vgg_input,
     p_nodes=0.5,
     p_clique=0.5,
 ):
@@ -37,8 +38,10 @@ def generate_graphs(
         graph_size (int): Number of nodes in each graph.
         clique_size (int): Size of the planted clique.
         p_correction_type (str): Type of p correction to apply.
+        vgg_input (bool): Whether the graph will be used as input for VGG16.If True, the graph will be 3-dimensional.
         p_nodes (float): Probability of an edge being present between two nodes.
         p_clique (float): Probability of a graph having a planted clique.
+
 
     Returns:
         tuple: A tuple containing the generated graphs and the on_off flag for each graph.
@@ -69,7 +72,11 @@ def generate_graphs(
 
     # Generating the graphs
     on_off = torch.bernoulli(p_clique * torch.ones(number_of_graphs))
-    data = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
+    # if graphs are input to VGG16, they must be 3-dimensional:
+    if vgg_input:
+        data = torch.zeros(number_of_graphs, 3, graph_size, graph_size)
+    else:
+        data = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
 
     # differentiating between the two types of correction:
     if p_correction_type == "p_increase":
@@ -99,8 +106,12 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # adding graph to the matrix of graphs
-            data[i, 0] = adjacency_matrix
+            # if the graph is used as input for VGG16, the adjacency matrix must be 3-dimensional:
+            if vgg_input:
+                adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)
+                data[i] = adjacency_matrix
+            else:
+                data[i, 0] = adjacency_matrix
 
     elif p_correction_type == "p_reduce":
         # (NEW CORRECTION) reducing the p value of the graph where the clique will be added
@@ -132,8 +143,12 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # adding graph to the matrix of graphs
-            data[i, 0] = adjacency_matrix
+            # if the graph is used as input for VGG16, the adjacency matrix must be 3-dimensional:
+            if vgg_input:
+                adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)
+                data[i] = adjacency_matrix
+            else:
+                data[i, 0] = adjacency_matrix
 
     else:
         raise ValueError(

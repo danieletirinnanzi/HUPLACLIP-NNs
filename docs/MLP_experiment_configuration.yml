@@ -14,7 +14,7 @@ models:
       
       # TRAINING HYPERPARAMETERS:
       # training cycles (TO BE INCREASED):
-      num_epochs: 10
+      num_cycles: 10
       num_training_steps: 40
       # training and validation set sizes (TO BE INCREASED):
       num_train: 16

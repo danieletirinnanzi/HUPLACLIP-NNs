@@ -16,10 +16,13 @@ import os
 
 from torch.utils.tensorboard import SummaryWriter
 
+# custom imports
 from src.utils import load_config
 from src.utils import load_model
-from src.utils import train_model
-from src.utils import test_model
+from src.utils import save_test_results
+from src.utils import save_trained_model
+from src.train_test import train_model
+from src.train_test import test_model
 
 
 # loading experiment configuration file:
@@ -35,11 +38,10 @@ experiment_dir = os.path.join(runs_dir, exp_name_with_time)
 # create writer and point to log directory
 writer = SummaryWriter(log_dir=experiment_dir)
 
-# creating folder in "results" folder to save the results of the experiment
+# creating folder in "results" folder to save the results of the whole experiment
 results_dir = os.path.join(current_dir, "results", exp_name_with_time)
-os.makedirs(results_dir)
 
-# loading, training, and testing all models:
+# loading, training, and testing models:
 for model_specs in config["models"]:
 
     # printing model name
@@ -49,7 +51,7 @@ for model_specs in config["models"]:
     model = load_model(model_specs["model_name"], config["graph_size"])
 
     # training model and visualizing it on Tensorboard
-    train_model(
+    trained_model = train_model(
         model,
         model_specs["hyperparameters"],
         config["graph_size"],
@@ -57,11 +59,27 @@ for model_specs in config["models"]:
         writer,
     )
 
-    # testing model and saving results
-    test_model(
-        model,
+    # testing model
+    test_results = test_model(
+        trained_model,
         model_specs["hyperparameters"],
         config["graph_size"],
         config["p_correction_type"],
-        results_dir,
+    )
+
+    # creating model subfolder in current experiment folder:
+    model_results_dir = os.path.join(results_dir, model_specs["model_name"])
+    os.makedirs(model_results_dir)
+
+    # - saving test results as csv file
+    save_test_results(
+        test_results, model_specs["model_name"], config["graph_size"], model_results_dir
+    )
+
+    # - saving the trained model (will not be synched with git due to size)
+    save_trained_model(
+        trained_model,
+        model_specs["model_name"],
+        config["graph_size"],
+        model_results_dir,
     )

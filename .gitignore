@@ -16,3 +16,6 @@ runs
 *.pth
 *.pt
 *.pkl
+
+# Ignore trained models due to size:
+*.pth

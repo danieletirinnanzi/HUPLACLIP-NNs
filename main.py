@@ -26,7 +26,7 @@ from src.train_test import test_model
 
 
 # loading experiment configuration file:
-config = load_config("docs\MLP_experiment_configuration.yml")
+config = load_config("docs\CNN_experiment_configuration.yml")
 
 # Tensorboard:
 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -48,7 +48,9 @@ for model_specs in config["models"]:
     print(model_specs["model_name"])
 
     # loading model
-    model = load_model(model_specs["model_name"], config["graph_size"])
+    model = load_model(
+        model_specs["model_name"], config["graph_size"], model_specs["hyperparameters"]
+    )
 
     # training model and visualizing it on Tensorboard
     trained_model = train_model(

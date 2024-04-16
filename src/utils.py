@@ -19,14 +19,14 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_name, graph_size):
+def load_model(model_name, graph_size, hyperparameters):
 
     # - building requested model
     match model_name:
         case "MLP":
-            model = Models.mlp(graph_size)
+            model = Models.mlp(graph_size, hyperparameters)
         case "CNN":
-            model = Models.cnn(graph_size)
+            model = Models.cnn(graph_size, hyperparameters)
         case _:
             raise ValueError("Model not found")
 

@@ -15,29 +15,24 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Early stopping function:
 def early_stopper(
-    training_loss,
     validation_loss,
-    memory=3,
+    memory=5,
     validation_exit_error=0.2,
-    training_exit_error=0.2,
 ):
     """
-    Implements early stopping based on stored training and validation losses. Training and validation losses are stored every "saved_steps". If the AVERAGE value of the last "memory" losses is below the "exit_error" values defined above, then training is interrupted and the next task version is trained.
+    Implements early stopping based on stored validation loss. Validation loss is stored every "saved_steps". If the AVERAGE value of the last "memory" losses is below the "exit_error" values defined above, then training is interrupted and the next task version is trained.
 
     Args:
-        training_loss (numpy.array): Array containing training loss values (stored every 10 training steps).
         validation_loss (numpy.array): Array containing validation loss values (stored every 10 training steps).
         memory (int): Number of previous cycles to consider for calculating average validation and training losses.
         validation_exit_error (float): Validation error below which we can stop early
-        training_exit_error (float): Training error below which we can stop early
 
     Returns:
         tuple: A boolean indicating whether to stop early.
     """
 
     if (
-        np.mean(training_loss[training_loss.shape[0] - memory :]) < training_exit_error
-        and np.mean(validation_loss[validation_loss.shape[0] - memory :])
+        np.mean(validation_loss[validation_loss.shape[0] - memory :])
         < validation_exit_error
     ):
         return True
@@ -218,8 +213,8 @@ def train_model(
 
             # At the end of the cycle:
 
-            # 1. checking if early stopping condition is met (based on the validation and training error in the last 3 "save_steps")
-            early_exit = early_stopper(np.array(train_error), np.array(val_error))
+            # 1. checking if early stopping condition is met (based on the validation error in the last 3 "save_steps")
+            early_exit = early_stopper(np.array(val_error))
             if early_exit:
 
                 # if early stopping, clearing lists storing training and validation errors before breaking out of the cycle loop:

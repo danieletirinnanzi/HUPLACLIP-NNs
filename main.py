@@ -52,6 +52,10 @@ for model_specs in config["models"]:
         model_specs["model_name"], config["graph_size"], model_specs["hyperparameters"]
     )
 
+    print(model)
+
+    # TEST THAT LOADED MODEL ONLY PREDICTS 0s/1s (not trained, so inaccurate predictions)
+
     # training model and visualizing it on Tensorboard
     trained_model = train_model(
         model,

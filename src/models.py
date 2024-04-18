@@ -26,9 +26,8 @@ class Models:
             nn.BatchNorm1d(hyperparameters["l3"]),
             nn.ReLU(),
             # output layer
-            nn.Linear(hyperparameters["l3"], 2),
-            nn.BatchNorm1d(2),
-            nn.Softmax(dim=1),  # NOTE: IT WAS RELU
+            nn.Linear(hyperparameters["l3"], 1),
+            nn.Sigmoid(),
         )
 
         return model
@@ -77,22 +76,22 @@ class Models:
             nn.Flatten(),
             nn.Linear(hyperparameters["c3"] * 3 * 3, hyperparameters["l3"]),
             nn.ReLU(),
-            nn.Linear(hyperparameters["l3"], 2),
-            nn.Softmax(dim=1),  # NOTE: IT WAS RELU
+            nn.Linear(hyperparameters["l3"], 1),
+            nn.Sigmoid(),
         )
 
         return model
 
     @staticmethod
     def vgg16():
-        model = models.vgg16(weights="DEFAULT")
+        model = models.vgg16(pretrained=True)
 
         # Freeze the architecture
         for param in model.parameters():
             param.requires_grad = False
 
-        # Modify the last layer for binary classification
-        model.classifier[6] = nn.Linear(4096, 2)
+        # Modify the classifier for binary classification (excluding FC layers)
+        model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
         return model
 

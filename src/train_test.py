@@ -7,6 +7,8 @@ import torch.nn as nn
 # custom import
 import src.graphs_generation as gen_graphs
 
+# TEST THAT GRAPHS ARE GENERATED CORRECTLY
+
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -97,9 +99,12 @@ def train_model(
     # ADD MORE OPTIMIZERS?
     else:
         raise ValueError("Optimizer not found")
+
     # Defining loss function:
-    if training_hyperparameters["loss_function"] == "CrossEntropyLoss":
-        criterion = nn.CrossEntropyLoss()  # criterion = Cross Entropy
+    if training_hyperparameters["loss_function"] == "BCELoss":
+        criterion = nn.BCELoss()
+    elif training_hyperparameters["loss_function"] == "CrossEntropyLoss":
+        criterion = nn.CrossEntropyLoss()
     elif training_hyperparameters["loss_function"] == "MSELoss":
         criterion = nn.MSELoss()
     # ADD MORE LOSS FUNCTIONS?

@@ -65,6 +65,9 @@ class ModelTest(unittest.TestCase):
             )[0].to(device)
         )
 
+        # checking that the output is one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+
         # checking that both predictions are between 0 and 1:
         self.assertTrue(torch.all(prediction >= 0))
         self.assertTrue(torch.all(prediction <= 1))
@@ -116,6 +119,9 @@ class ModelTest(unittest.TestCase):
             )[0].to(device)
         )
 
+        # checking that the output is one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+
         # checking that both predictions are between 0 and 1:
         self.assertTrue(torch.all(prediction >= 0))
         self.assertTrue(torch.all(prediction <= 1))
@@ -166,6 +172,9 @@ class ModelTest(unittest.TestCase):
                 True,
             )[0].to(device)
         )
+
+        # checking that the output is one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
 
         # checking that both predictions are between 0 and 1:
         self.assertTrue(torch.all(prediction >= 0))

@@ -153,6 +153,10 @@ def train_model(
                 )
                 # Forward pass on training data
                 train_pred = model(train[0].to(device))
+                train_pred = train_pred.squeeze()  # remove extra dimension
+
+                print(train_pred.size())
+
                 # Compute loss on training data
                 train_loss = criterion(
                     train_pred.type(torch.float).to(device),
@@ -187,6 +191,7 @@ def train_model(
                         )
                         # Compute loss on validation set:
                         val_pred = model(val[0].to(device))
+                        val_pred = val_pred.squeeze()  # remove extra dimension
                         val_loss = criterion(
                             val_pred.to(device),
                             torch.Tensor(val[1])
@@ -313,6 +318,7 @@ def test_model(
             soft_output = model(
                 test[0].to(device)
             )  # performing forward pass on test data
+            soft_output = soft_output.squeeze()  # remove extra dimension
             # Converting soft predictions to hard predictions:
             for index in range(training_hyperparameters["num_test"]):
                 if soft_output[index] > 0.5:

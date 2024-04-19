@@ -19,6 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 # custom imports
 from src.utils import load_config
 from src.utils import load_model
+from src.utils import save_exp_config
 from src.utils import save_test_results
 from src.utils import save_trained_model
 from src.train_test import train_model
@@ -26,7 +27,7 @@ from src.train_test import test_model
 
 
 # loading experiment configuration file:
-config = load_config("docs\VGG_experiment_configuration.yml")
+config = load_config("docs\MLP_CNN_VGG_experiment_configuration.yml")
 
 # Tensorboard:
 current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -40,6 +41,10 @@ writer = SummaryWriter(log_dir=experiment_dir)
 
 # creating folder in "results" folder to save the results of the whole experiment
 results_dir = os.path.join(current_dir, "results", exp_name_with_time)
+os.makedirs(results_dir)
+
+# saving copy of the configuration file in the experiment folder just created (to keep track of the experiment settings):
+save_exp_config(config, results_dir, exp_name_with_time)
 
 # loading, training, and testing models:
 for model_specs in config["models"]:

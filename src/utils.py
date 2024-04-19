@@ -1,6 +1,7 @@
 import yaml
 import torch
 import csv
+import os
 
 # custom imports
 from .models import Models
@@ -36,6 +37,26 @@ def load_model(model_name, graph_size, hyperparameters):
     model.to(device)
     print("- Model loaded successfully.")
     return model
+
+
+# save experiment configuration file in results folder:
+def save_exp_config(config, results_dir, exp_name_with_time):
+    """
+    Save a copy of the configuration file in the experiment folder.
+
+    Args:
+    config (dict): The configuration settings.
+    results_dir (str): The directory where the results will be saved.
+    exp_name_with_time (str): The name of the experiment with time.
+
+    Returns:
+    None
+    """
+    config_file_path = os.path.join(
+        results_dir, f"{exp_name_with_time}_configuration.yml"
+    )
+    with open(config_file_path, "w") as file:
+        yaml.dump(config, file)
 
 
 # Save results in csv file:

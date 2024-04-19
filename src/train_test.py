@@ -156,7 +156,9 @@ def train_model(
                 # Compute loss on training data
                 train_loss = criterion(
                     train_pred.type(torch.float).to(device),
-                    torch.Tensor(train[1]).type(torch.long).to(device),
+                    torch.Tensor(train[1])
+                    .type(torch.float)
+                    .to(device),  # labels should be float for BCELoss
                 )
 
                 # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
@@ -187,7 +189,9 @@ def train_model(
                         val_pred = model(val[0].to(device))
                         val_loss = criterion(
                             val_pred.to(device),
-                            torch.Tensor(val[1]).type(torch.long).to(device),
+                            torch.Tensor(val[1])
+                            .type(torch.float)
+                            .to(device),  # labels should be float for BCELoss
                         )
 
                         # Storing validation error (only when validating the current task version, needed for early stopping)
@@ -257,8 +261,6 @@ def train_model(
     # - notify completion of training function execution:
     print("- Model trained successfully.")
 
-    # TODO: STORING MODEL?
-
     return model
 
 
@@ -306,32 +308,31 @@ def test_model(
                 vgg_input,
             )  # generating test data
             hard_output = torch.zeros(
-                [training_hyperparameters["num_test"], 2]
+                [training_hyperparameters["num_test"]]
             )  # initializing tensor to store hard predictions
             soft_output = model(
                 test[0].to(device)
             )  # performing forward pass on test data
             # Converting soft predictions to hard predictions:
             for index in range(training_hyperparameters["num_test"]):
-                if soft_output[index][0] > soft_output[index][1]:
-                    hard_output[index][0] = 1.0
+                if soft_output[index] > 0.5:
+                    hard_output[index] = 1.0
                 else:
-                    hard_output[index][1] = 1.0
+                    hard_output[index] = 0.0
             predicted_output = hard_output
 
         # Calculating fraction of correct predictions on test set:
-        results[current_clique_size] = 1 - torch.sum(
-            torch.square(
-                torch.Tensor(test[1]) - torch.transpose(predicted_output, 1, 0)[1]
-            )
-        ).item() / (1.0 * training_hyperparameters["num_test"])
+        accuracy = (predicted_output == torch.Tensor(test[1])).sum().item() / (
+            1.0 * training_hyperparameters["num_test"]
+        )
+        results[current_clique_size] = accuracy
 
-        # Printing the size of the clique just tested and the corresponding test error:
+        # Printing the size of the clique just tested and the corresponding test accuracy:
         print(
             "|||Completed testing for clique = ",
             current_clique_size,
-            ". Average fraction correct on test set =",
-            results[current_clique_size],
+            ". Accuracy on test set =",
+            accuracy,
         )
         print("|||==========================================")
 

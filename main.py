@@ -64,7 +64,7 @@ for model_specs in config["models"]:
 
     # testing model
     test_results = test_model(
-        trained_model,
+        model,
         model_specs["hyperparameters"],
         config["graph_size"],
         config["p_correction_type"],

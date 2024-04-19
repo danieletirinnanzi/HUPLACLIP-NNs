@@ -155,8 +155,6 @@ def train_model(
                 train_pred = model(train[0].to(device))
                 train_pred = train_pred.squeeze()  # remove extra dimension
 
-                print(train_pred.size())
-
                 # Compute loss on training data
                 train_loss = criterion(
                     train_pred.type(torch.float).to(device),

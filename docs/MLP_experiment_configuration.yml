@@ -11,6 +11,14 @@ models:
   
   - model_name: MLP
     hyperparameters:
+
+      # ARCHITECTURE:
+      l1: 1000
+      l2: 500
+      l3: 100
+      l3: 100   
+      dropout_prob: 0.2
+      learning_rate: 0.01         
       
       # TRAINING HYPERPARAMETERS:
       # training cycles (TO BE INCREASED):

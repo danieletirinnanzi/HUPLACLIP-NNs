@@ -19,3 +19,6 @@ runs
 
 # Ignore trained models due to size:
 *.pth
+
+# Ignoring the .vscode folder:
+.vscode

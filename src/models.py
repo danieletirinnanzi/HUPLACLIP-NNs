@@ -84,7 +84,7 @@ class Models:
 
     @staticmethod
     def vgg16():
-        model = models.vgg16(pretrained=True)
+        model = models.vgg16(weights="DEFAULT")
 
         # Freeze the architecture
         for param in model.parameters():

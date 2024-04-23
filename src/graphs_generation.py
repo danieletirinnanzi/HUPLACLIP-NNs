@@ -2,6 +2,9 @@ import math
 import torch
 import numpy as np
 
+# import vgg transform
+from src.image_transforms import VGG16transform as transform
+
 
 def plant_clique(graph, clique_size, graph_size):
     """
@@ -106,8 +109,10 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for VGG16, the adjacency matrix must be 3-dimensional:
+            # if the graph is used as input for VGG16, the adjacency matrix must first be resized, and then made 3-dimensional:
             if vgg_input:
+                # NOTE: IF INPUT SIZE < 224, OTHERWISE DO NOTHING
+                adjacency_matrix = transform(adjacency_matrix)
                 adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)
                 data[i] = adjacency_matrix
             else:
@@ -143,8 +148,17 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for VGG16, the adjacency matrix must be 3-dimensional:
+            # if the graph is used as input for VGG16, the adjacency matrix must first be resized, and then made 3-dimensional:
             if vgg_input:
+
+                print("Pre-transform")
+                print(adjacency_matrix.shape)
+
+                adjacency_matrix = transform(adjacency_matrix)
+
+                print("Post-transform")
+                print(adjacency_matrix.shape)
+
                 adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)
                 data[i] = adjacency_matrix
             else:

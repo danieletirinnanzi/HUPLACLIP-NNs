@@ -24,6 +24,11 @@ from src.utils import save_test_results
 from src.utils import save_trained_model
 from src.train_test import train_model
 from src.train_test import test_model
+from src.tensorboard_save import (
+    tensorboard_save_images,
+    # ModelsWrapper, USED WHEN SAVING MULTIPLE MODELS (not working)
+    tensorboard_save_models,
+)
 
 
 # loading experiment configuration file:
@@ -38,6 +43,18 @@ runs_dir = os.path.join(current_dir, "runs")
 experiment_dir = os.path.join(runs_dir, exp_name_with_time)
 # create writer and point to log directory
 writer = SummaryWriter(log_dir=experiment_dir)
+
+# saving images to tensorboard:
+tensorboard_save_images(
+    writer,
+    config["graph_size"],
+    config["p_correction_type"],
+    num_images=10,
+    vgg_input=False,
+)
+
+# create empty dictionary to store models (used to store models for tensorboard saving, not working)
+models_dict = {}
 
 # creating folder in "results" folder to save the results of the whole experiment
 results_dir = os.path.join(current_dir, "results", exp_name_with_time)
@@ -56,6 +73,9 @@ for model_specs in config["models"]:
     model = load_model(
         model_specs["model_name"], config["graph_size"], model_specs["hyperparameters"]
     )
+
+    # saving model to dictionary (used to store models for tensorboard saving, not working)
+    models_dict[model_specs["model_name"]] = model
 
     # training model and visualizing it on Tensorboard
     trained_model = train_model(
@@ -92,3 +112,17 @@ for model_specs in config["models"]:
         config["graph_size"],
         model_results_dir,
     )
+
+# SAVING MODELS
+# saving single model to tensorboard (working):
+tensorboard_save_models(writer, model, config["graph_size"])
+
+# # saving all models to tensorboard (not working):
+# # - creating wrapper class:
+# models_wrapper = ModelsWrapper(models_dict)
+# tensorboard_save_models(
+#     writer,
+#     models_wrapper,
+#     config["graph_size"],
+#     config["models"],
+# )

@@ -317,7 +317,8 @@ def test_model(
                 test[0].to(device)
             )  # performing forward pass on test data
             soft_output = soft_output.squeeze()  # remove extra dimension
-            # Converting soft predictions to hard predictions:
+            # Converting soft predictions to hard predictions
+            # NOTE: can be done stochastically?
             for index in range(training_hyperparameters["num_test"]):
                 if soft_output[index] > 0.5:
                     hard_output[index] = 1.0

@@ -25,6 +25,7 @@ class Models:
             nn.Linear(hyperparameters["l2"], hyperparameters["l3"]),
             nn.BatchNorm1d(hyperparameters["l3"]),
             nn.ReLU(),
+            # AN ADDITIONAL LAYER MIGHT BE NEEDED?
             # output layer
             nn.Linear(hyperparameters["l3"], 1),
             nn.Sigmoid(),
@@ -72,6 +73,7 @@ class Models:
             nn.ReLU(),
             nn.Dropout(hyperparameters["dropout_prob"]),
             nn.MaxPool2d(hyperparameters["kernel_size"]),
+            # AN ADDITIONAL LAYER MIGHT BE NEEDED?
             # output layer
             nn.Flatten(),
             nn.Linear(hyperparameters["c3"] * 3 * 3, hyperparameters["l3"]),

@@ -19,7 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def early_stopper(
     validation_loss,
     memory=5,
-    validation_exit_error=0.2,
+    validation_exit_error=0.1,  # CAN BE CHANGED
 ):
     """
     Implements early stopping based on stored validation loss. Validation loss is stored every "saved_steps". If the AVERAGE value of the last "memory" losses is below the "exit_error" values defined above, then training is interrupted and the next task version is trained.
@@ -232,6 +232,8 @@ def train_model(
                 # if early stopping, clearing lists storing training and validation errors before breaking out of the cycle loop:
                 train_error = []
                 val_error = []
+
+                print("||| Early stopping triggered.")
 
                 break
 

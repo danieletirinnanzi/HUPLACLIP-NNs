@@ -1,0 +1,29 @@
+elapsed_time: '0:02:07.177475'
+exp_name: CNN_experiment
+graph_size: 100
+models:
+- hyperparameters:
+    c1: 5
+    c2: 10
+    c3: 15
+    c4: 20
+    dropout_prob: 0.2
+    jump: 5
+    jump_test: 1
+    kernel_size: 3
+    l3: 100
+    learning_rate: 0.01
+    loss_function: BCELoss
+    max_clique_size_proportion: 0.6
+    max_clique_size_proportion_test: 0.7
+    min_clique_size_proportion: 0.4
+    num_cycles: 10
+    num_test: 32
+    num_train: 32
+    num_training_steps: 50
+    num_val: 32
+    optimizer: Adam
+    save_step: 5
+    test_iterations: 16
+  model_name: CNN
+p_correction_type: p_reduce

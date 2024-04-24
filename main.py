@@ -32,11 +32,14 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config("docs\MLP_CNN_VGG_experiment_configuration.yml")
+config = load_config("docs\VGG_experiment_configuration.yml")
+
+# saving starting time of the experiment:
+start_time = datetime.datetime.now()
 
 # Tensorboard:
-current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-exp_name_with_time = f"{config['exp_name']}_N{config['graph_size']}_{current_time}"
+start_time_string = start_time.strftime("%Y-%m-%d_%H-%M-%S")
+exp_name_with_time = f"{config['exp_name']}_N{config['graph_size']}_{start_time_string}"
 current_dir = os.path.dirname(os.path.realpath(__file__))
 runs_dir = os.path.join(current_dir, "runs")
 # create a new directory for each experiment
@@ -59,9 +62,6 @@ models_dict = {}
 # creating folder in "results" folder to save the results of the whole experiment
 results_dir = os.path.join(current_dir, "results", exp_name_with_time)
 os.makedirs(results_dir)
-
-# saving copy of the configuration file in the experiment folder just created (to keep track of the experiment settings):
-save_exp_config(config, results_dir, exp_name_with_time)
 
 # loading, training, and testing models:
 for model_specs in config["models"]:
@@ -113,8 +113,12 @@ for model_specs in config["models"]:
         model_results_dir,
     )
 
+# saving copy of the configuration file in the experiment folder just created (to keep track of the experiment settings), adding an indication regarding the elapsed time from the start of the experiment:
+end_time = datetime.datetime.now()
+save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time)
+
 # SAVING MODELS
-# saving single model to tensorboard (working):
+# saving single model to tensorboard (working, last model trained is saved):
 tensorboard_save_models(writer, model, config["graph_size"])
 
 # # saving all models to tensorboard (not working):

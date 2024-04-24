@@ -40,14 +40,16 @@ def load_model(model_name, graph_size, hyperparameters):
 
 
 # save experiment configuration file in results folder:
-def save_exp_config(config, results_dir, exp_name_with_time):
+def save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time):
     """
-    Save a copy of the configuration file in the experiment folder.
+    Save a copy of the configuration file in the experiment folder, adding a line where the time needed for the whole experiment is reported.
 
     Args:
     config (dict): The configuration settings.
     results_dir (str): The directory where the results will be saved.
     exp_name_with_time (str): The name of the experiment with time.
+    start_time (datetime): The time when the experiment started.
+    end_time (datetime): The time when the experiment ended.
 
     Returns:
     None
@@ -55,6 +57,13 @@ def save_exp_config(config, results_dir, exp_name_with_time):
     config_file_path = os.path.join(
         results_dir, f"{exp_name_with_time}_configuration.yml"
     )
+    # Calculate the elapsed time
+    elapsed_time = end_time - start_time
+
+    # Convert the elapsed time to a string format
+    elapsed_time_str = str(elapsed_time)
+    # adding elapsed time to the configuration dictionary and saving it to the file
+    config["elapsed_time"] = elapsed_time_str
     with open(config_file_path, "w") as file:
         yaml.dump(config, file)
 

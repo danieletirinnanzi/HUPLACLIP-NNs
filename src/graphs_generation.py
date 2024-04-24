@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 # import vgg transform
-from src.image_transforms import VGG16transform as transform
+from src.graphs_transforms import VGG16transform
 
 
 def plant_clique(graph, clique_size, graph_size):
@@ -41,7 +41,7 @@ def generate_graphs(
         graph_size (int): Number of nodes in each graph.
         clique_size (int): Size of the planted clique.
         p_correction_type (str): Type of p correction to apply.
-        vgg_input (bool): Whether the graph will be used as input for VGG16.If True, the graph will be 3-dimensional.
+        vgg_input (bool): Whether the graph will be used as input for VGG16. If True, the graph will be modified.
         p_nodes (float): Probability of an edge being present between two nodes.
         p_clique (float): Probability of a graph having a planted clique.
 
@@ -73,13 +73,22 @@ def generate_graphs(
             "Decrease the clique size to avoid having a negative corrected probability of association between nodes"
         )
 
-    # Generating the graphs
+    # Generating the labels (with/without clique)
     on_off = torch.bernoulli(p_clique * torch.ones(number_of_graphs))
-    # if graphs are input to VGG16, they must be 3-dimensional:
+    # Generating the graph_list that will contain the adjacency matrices (will be filled later on)
     if vgg_input:
-        data = torch.zeros(number_of_graphs, 3, graph_size, graph_size)
+        # defining the magnification factor for the adjacency matrix:
+        if graph_size < 224:
+            factor = math.ceil(
+                224 / graph_size
+            )  # rounding up to the nearest integer, so that input is never smaller than 224
+        else:
+            factor = 1  # no magnification needed
+        graphs = torch.zeros(
+            number_of_graphs, 3, graph_size * factor, graph_size * factor
+        )
     else:
-        data = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
+        graphs = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
 
     # differentiating between the two types of correction:
     if p_correction_type == "p_increase":
@@ -109,14 +118,13 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for VGG16, the adjacency matrix must first be resized, and then made 3-dimensional:
+            # if the graph is used as input for VGG16, the adjacency matrix must be resized and then made 3-dimensional:
             if vgg_input:
-                # NOTE: IF INPUT SIZE < 224, OTHERWISE DO NOTHING
-                adjacency_matrix = transform(adjacency_matrix)
-                adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)
-                data[i] = adjacency_matrix
+                # applying VGGtransform, that outputs adjacency matrices of the correct format
+                adjacency_matrix = VGG16transform(adjacency_matrix)
+                graphs[i] = adjacency_matrix
             else:
-                data[i, 0] = adjacency_matrix
+                graphs[i, 0] = adjacency_matrix
 
     elif p_correction_type == "p_reduce":
         # (NEW CORRECTION) reducing the p value of the graph where the clique will be added
@@ -148,21 +156,13 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for VGG16, the adjacency matrix must first be resized, and then made 3-dimensional:
+            # if the graph is used as input for VGG16, the adjacency matrix must be resized and then made 3-dimensional:
             if vgg_input:
-
-                print("Pre-transform")
-                print(adjacency_matrix.shape)
-
-                adjacency_matrix = transform(adjacency_matrix)
-
-                print("Post-transform")
-                print(adjacency_matrix.shape)
-
-                adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)
-                data[i] = adjacency_matrix
+                # applying VGGtransform, that outputs adjacency matrices of the correct format
+                adjacency_matrix = VGG16transform(adjacency_matrix)
+                graphs[i] = adjacency_matrix
             else:
-                data[i, 0] = adjacency_matrix
+                graphs[i, 0] = adjacency_matrix
 
     else:
         raise ValueError(
@@ -170,4 +170,4 @@ def generate_graphs(
         )
 
     # returning the generated graphs and the on_off flag
-    return data, on_off.tolist()
+    return graphs, on_off.tolist()

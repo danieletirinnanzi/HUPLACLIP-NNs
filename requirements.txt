@@ -45,8 +45,9 @@ pytz==2024.1
 pywin32==306
 PyYAML==6.0.1
 pyzmq==25.1.2
+seaborn==0.13.2
 six==1.16.0
--e git+https://github.com/danieletirinnanzi/HUPLACLIP-NNs.git@507b6006d637af0e76e8efe7f4d2182752e1b92b#egg=src
+-e git+https://github.com/danieletirinnanzi/HUPLACLIP-NNs.git@791071441847549f9f1fdc6d6fe0dbbafa3c7614#egg=src
 stack-data==0.6.3
 sympy==1.12
 tensorboard==2.16.2

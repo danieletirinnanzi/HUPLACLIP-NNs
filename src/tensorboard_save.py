@@ -39,8 +39,8 @@ def tensorboard_save_images(
 def tensorboard_save_models(writer, model, graph_size):
 
     # Add last element of configuration file to tensorboard:
-    # - checking if model is VGG16 from name:
-    if "VGG" in str(model):
+    # - checking if model requires 3 channels images as input:
+    if str(model) in ["VGG16", "RESNET50"]:
         # - defining input for VGG16
         dummy_input = torch.randn(1, 3, graph_size, graph_size)
         writer.add_graph(model, dummy_input)

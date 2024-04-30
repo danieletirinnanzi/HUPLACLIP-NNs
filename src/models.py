@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
+from src.input_transforms import find_patch_size
 
 
 class Models:
@@ -92,10 +93,55 @@ class Models:
         for param in model.parameters():
             param.requires_grad = False
 
-        # Modify the classifier for binary classification (excluding FC layers)
+        # TODO: ADD INTERMEDIATE LAYER?
+
         model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
         return model
 
-    # def transformer():
-    #     # importing the transformer model
+    @staticmethod
+    def resnet50():
+        model = models.resnet50(weights="DEFAULT")
+
+        # Freeze the architecture
+        for param in model.parameters():
+            param.requires_grad = False
+
+        # TODO: ADD INTERMEDIATE LAYER?
+
+        # Modify the classifier for binary classification (excluding FC layers)
+        model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
+
+        return model
+
+    @staticmethod
+    def vit_scratch(graph_size):
+
+        patch_size = find_patch_size(graph_size)
+
+        model = models.vit_b_16()  # NOTE: num_classes can be set also from here
+
+        # manually setting patch size and image size:
+        model.patch_size = patch_size
+        model.image_size = graph_size
+
+        # Modify the classifier for binary classification
+        model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+        return model
+
+    @staticmethod
+    def vit_pretrained():
+
+        # TODO: PATCH SIZE DEFINITION
+
+        model = models.vit_b_16(weights="DEFAULT")
+
+        # Freeze the architecture
+        for param in model.parameters():
+            param.requires_grad = False
+
+        # Modify the classifier for binary classification
+        model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+        return model

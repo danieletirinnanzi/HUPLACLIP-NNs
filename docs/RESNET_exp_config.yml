@@ -1,4 +1,4 @@
-exp_name: MLP_experiment
+exp_name: RESNET_exp
 graph_size: 100
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -7,18 +7,8 @@ p_correction_type: p_reduce
 
 models:
 
-  # each instance of "models" will be trained and tested with the specified hyperparameters
-  
-  - model_name: MLP
+  - model_name: RESNET50
     hyperparameters:
-
-      # ARCHITECTURE:
-      l1: 1000
-      l2: 500
-      l3: 100
-      l3: 100   
-      dropout_prob: 0.2
-      learning_rate: 0.01         
       
       # TRAINING HYPERPARAMETERS:
       # training cycles (TO BE INCREASED):
@@ -27,9 +17,6 @@ models:
       # training and validation set sizes (TO BE INCREASED):
       num_train: 32
       num_val: 32
-      # other hyperparameters:
-      learning_rate: 0.01
-      dropout: 0.2
       # training structure:
       max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
       min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
@@ -43,4 +30,4 @@ models:
       max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
       num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
       jump_test: 1  # increase in clique size between test iterations
-      test_iterations: 16 # number of times for which a single clique size is tested
+      test_iterations: 16 # number of times for which a single clique size is tested      

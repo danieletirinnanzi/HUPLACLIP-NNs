@@ -30,6 +30,15 @@ def load_model(model_name, graph_size, hyperparameters):
             model = Models.cnn(graph_size, hyperparameters)
         case "VGG16":
             model = Models.vgg16()
+        case "RESNET50":
+            model = Models.resnet50()
+        case "VITscratch":
+            model = Models.vit_scratch(graph_size)
+        case "VITpretrained":
+            model = Models.vit_pretrained()
+
+        # ADDITIONAL MODELS CAN BE ADDED HERE
+
         case _:
             raise ValueError("Model not found")
 
@@ -54,9 +63,7 @@ def save_exp_config(config, results_dir, exp_name_with_time, start_time, end_tim
     Returns:
     None
     """
-    config_file_path = os.path.join(
-        results_dir, f"{exp_name_with_time}_configuration.yml"
-    )
+    config_file_path = os.path.join(results_dir, f"{exp_name_with_time}_config.yml")
     # Calculate the elapsed time
     elapsed_time = end_time - start_time
 

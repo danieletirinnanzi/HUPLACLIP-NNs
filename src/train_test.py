@@ -51,7 +51,7 @@ def train_model(
     # - "model" is the loaded model
     # - configuration file contains all hyperparameters for training
     # - writer is the Tensorboard writer
-    # - model_name is the name of the model, and is needed in the case of VGG -> 3D graphs are generated
+    # - model_name is the name of the model, and is needed in the case of Networks that were trained on ImageNet -> 3D graphs are generated
 
     ## START OF TESTS
     # TODO: MOVE TO A "tests.py" FILE?
@@ -78,11 +78,11 @@ def train_model(
 
     ## END OF TESTS
 
-    # if model is VGG, graphs will be 3D:
-    if model_name == "VGG16":
-        vgg_input = True
+    # if model was trained on ImageNet, graphs have to be 3D (Visual Transformers need no resizing):
+    if model_name in ["VGG16", "RESNET50"]:
+        imageNet_input = True
     else:
-        vgg_input = False
+        imageNet_input = False
 
     # Notify start of training:
     print("||| Started training...")
@@ -149,7 +149,7 @@ def train_model(
                     graph_size,
                     current_clique_size,
                     p_correction_type,
-                    vgg_input,
+                    imageNet_input,
                 )
                 # Forward pass on training data
                 train_pred = model(train[0].to(device))
@@ -185,7 +185,7 @@ def train_model(
                             graph_size,
                             current_clique_size_val,
                             p_correction_type,
-                            vgg_input,
+                            imageNet_input,
                         )
                         # Compute loss on validation set:
                         val_pred = model(val[0].to(device))
@@ -276,9 +276,9 @@ def test_model(
 
     # if model is VGG, graphs will be 3D:
     if model_name == "VGG16":
-        vgg_input = True
+        imageNet_input = True
     else:
-        vgg_input = False
+        imageNet_input = False
 
     # Notify start of testing:
     print("||| Started testing...")
@@ -310,7 +310,7 @@ def test_model(
                 graph_size,
                 current_clique_size,
                 p_correction_type,
-                vgg_input,
+                imageNet_input,
             )  # generating test data
             hard_output = torch.zeros(
                 [training_hyperparameters["num_test"]]

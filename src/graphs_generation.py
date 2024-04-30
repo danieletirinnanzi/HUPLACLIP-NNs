@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 # import vgg transform
-from src.graphs_transforms import VGG16transform
+from src.input_transforms import imageNet_transform
 
 
 def plant_clique(graph, clique_size, graph_size):
@@ -29,7 +29,7 @@ def generate_graphs(
     graph_size,
     clique_size,
     p_correction_type,
-    vgg_input,
+    imageNet_input,
     p_nodes=0.5,
     p_clique=0.5,
 ):
@@ -41,7 +41,7 @@ def generate_graphs(
         graph_size (int): Number of nodes in each graph.
         clique_size (int): Size of the planted clique.
         p_correction_type (str): Type of p correction to apply.
-        vgg_input (bool): Whether the graph will be used as input for VGG16. If True, the graph will be modified.
+        imageNet_input (bool): Whether the model was originally trained on ImageNet. If True, the graph will be modified.
         p_nodes (float): Probability of an edge being present between two nodes.
         p_clique (float): Probability of a graph having a planted clique.
 
@@ -76,7 +76,7 @@ def generate_graphs(
     # Generating the labels (with/without clique)
     on_off = torch.bernoulli(p_clique * torch.ones(number_of_graphs))
     # Generating the graph_list that will contain the adjacency matrices (will be filled later on)
-    if vgg_input:
+    if imageNet_input:
         # defining the magnification factor for the adjacency matrix:
         if graph_size < 224:
             factor = math.ceil(
@@ -118,10 +118,10 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for VGG16, the adjacency matrix must be resized and then made 3-dimensional:
-            if vgg_input:
-                # applying VGGtransform, that outputs adjacency matrices of the correct format
-                adjacency_matrix = VGG16transform(adjacency_matrix)
+            # if the graph is used as input for ImageNet, the adjacency matrix must be resized and then made 3-dimensional:
+            if imageNet_input:
+                # applying imageNet transform, that outputs adjacency matrices of the correct format
+                adjacency_matrix = imageNet_transform(adjacency_matrix)
                 graphs[i] = adjacency_matrix
             else:
                 graphs[i, 0] = adjacency_matrix
@@ -156,10 +156,10 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for VGG16, the adjacency matrix must be resized and then made 3-dimensional:
-            if vgg_input:
-                # applying VGGtransform, that outputs adjacency matrices of the correct format
-                adjacency_matrix = VGG16transform(adjacency_matrix)
+            # if the graph is used as input for ImageNet, the adjacency matrix must be resized and then made 3-dimensional:
+            if imageNet_input:
+                # applying imageNet transform, that outputs adjacency matrices of the correct format
+                adjacency_matrix = imageNet_transform(adjacency_matrix)
                 graphs[i] = adjacency_matrix
             else:
                 graphs[i, 0] = adjacency_matrix

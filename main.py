@@ -32,7 +32,7 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config("docs\VGG_experiment_configuration.yml")
+config = load_config("docs\GLOBAL_exp_config.yml")
 
 # saving starting time of the experiment:
 start_time = datetime.datetime.now()
@@ -73,6 +73,8 @@ for model_specs in config["models"]:
     model = load_model(
         model_specs["model_name"], config["graph_size"], model_specs["hyperparameters"]
     )
+
+    print(model)
 
     # saving model to dictionary (used to store models for tensorboard saving, not working)
     models_dict[model_specs["model_name"]] = model
@@ -121,12 +123,12 @@ save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time)
 # saving single model to tensorboard (working, last model trained is saved):
 tensorboard_save_models(writer, model, config["graph_size"])
 
-# # saving all models to tensorboard (not working):
-# # - creating wrapper class:
-# models_wrapper = ModelsWrapper(models_dict)
-# tensorboard_save_models(
-#     writer,
-#     models_wrapper,
-#     config["graph_size"],
-#     config["models"],
-# )
+# saving all models to tensorboard (not working):
+# - creating wrapper class:
+models_wrapper = ModelsWrapper(models_dict)
+tensorboard_save_models(
+    writer,
+    models_wrapper,
+    config["graph_size"],
+    config["models"],
+)

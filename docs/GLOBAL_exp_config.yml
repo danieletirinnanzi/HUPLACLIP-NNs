@@ -1,4 +1,4 @@
-exp_name: MLP_CNN_VGG_experiment
+exp_name: GLOBAL_exp
 graph_size: 100
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -105,4 +105,82 @@ models:
       max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
       num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
       jump_test: 1  # increase in clique size between test iterations
-      test_iterations: 16 # number of times for which a single clique size is tested      
+      test_iterations: 16 # number of times for which a single clique size is tested   
+
+
+  - model_name: RESNET50
+    hyperparameters:
+      
+      # TRAINING HYPERPARAMETERS:
+      # training cycles (TO BE INCREASED):
+      num_cycles: 10
+      num_training_steps: 50
+      # training and validation set sizes (TO BE INCREASED):
+      num_train: 32
+      num_val: 32
+      # training structure:
+      max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
+      min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
+      jump: 5
+      save_step: 5
+      # optimizer and loss function:
+      optimizer: Adam
+      loss_function: BCELoss
+
+      # TESTING HYPARAMETERS:
+      max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
+      num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
+      jump_test: 1  # increase in clique size between test iterations
+      test_iterations: 16 # number of times for which a single clique size is tested
+
+  # - model_name: VITscratch
+  #   hyperparameters:
+      
+  #     # TRAINING HYPERPARAMETERS:
+  #     # training cycles (TO BE INCREASED):
+  #     num_cycles: 10
+  #     num_training_steps: 50
+  #     # training and validation set sizes (TO BE INCREASED):
+  #     num_train: 32
+  #     num_val: 32
+  #     # training structure:
+  #     max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
+  #     min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
+  #     jump: 5
+  #     save_step: 5
+  #     # optimizer and loss function:
+  #     optimizer: Adam
+  #     loss_function: BCELoss
+
+  #     # TESTING HYPERPARAMETERS:
+  #     max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
+  #     num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
+  #     jump_test: 1  # increase in clique size between test iterations
+  #     test_iterations: 16 # number of times for which a single clique size is tested
+
+  # - model_name: VITpretrained
+  #   hyperparameters:
+      
+  #     # TRAINING HYPERPARAMETERS:
+  #     # training cycles (TO BE INCREASED):
+  #     num_cycles: 10
+  #     num_training_steps: 50
+  #     # training and validation set sizes (TO BE INCREASED):
+  #     num_train: 32
+  #     num_val: 32
+  #     # training structure:
+  #     max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
+  #     min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
+  #     jump: 5
+  #     save_step: 5
+  #     # optimizer and loss function:
+  #     optimizer: Adam
+  #     loss_function: BCELoss
+
+  #     # TESTING HYPERPARAMETERS:
+  #     max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
+  #     num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
+  #     jump_test: 1  # increase in clique size between test iterations
+  #     test_iterations: 16 # number of times for which a single clique size is tested
+
+  

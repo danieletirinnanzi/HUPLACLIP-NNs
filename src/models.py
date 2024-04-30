@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-from src.input_transforms import find_patch_size
+# from src.input_transforms import find_patch_size
 
 
 class Models:

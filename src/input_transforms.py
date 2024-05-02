@@ -47,6 +47,7 @@ def find_patch_size(graph_size):
 
     Returns:
         int: The patch size.
+        int: The size of the input image.
 
     Raises:
         ValueError: If a patch size different than 1 cannot be found.
@@ -79,4 +80,4 @@ def find_patch_size(graph_size):
             "A patch size different than 1 cannot be found. The chosen graph size might be incompatible with the ViT model."
         )
 
-    return patch_size
+    return patch_size, image_size

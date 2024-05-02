@@ -118,19 +118,18 @@ class Models:
         return model
 
     # VISUAL TRANSFORMERS:
+    # TO FIX: now predictions not working, probably a resizing of the input is required https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py
     # - ViT from scratch
     @staticmethod
     def vit_scratch(graph_size):
 
-        patch_size = find_patch_size(graph_size)
-
-        print(f"Patch size: {patch_size}")
+        patch_size, image_size = find_patch_size(graph_size)
 
         model = models.vit_b_16()  # NOTE: num_classes can be set also from here
 
         # manually setting patch size and image size:
         model.patch_size = patch_size
-        model.image_size = graph_size
+        model.image_size = image_size
 
         # Modify the classifier for binary classification
         model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
@@ -139,15 +138,19 @@ class Models:
 
     # - ViT pretrained
     @staticmethod
-    def vit_pretrained():
+    def vit_pretrained(graph_size):
 
-        # TODO: PATCH SIZE DEFINITION
+        patch_size, image_size = find_patch_size(graph_size)
 
         model = models.vit_b_16(weights="DEFAULT")
 
         # Freeze the architecture
         for param in model.parameters():
             param.requires_grad = False
+
+        # manually setting patch size and image size:
+        model.patch_size = patch_size
+        model.image_size = image_size
 
         # Modify the classifier for binary classification
         model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())

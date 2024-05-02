@@ -1,5 +1,4 @@
 import math
-# import src.graphs_generation as gen_graphs
 
 
 def imageNet_transform(adjacency_matrix, output_size=(224, 224)):
@@ -37,42 +36,47 @@ def imageNet_transform(adjacency_matrix, output_size=(224, 224)):
     return adjacency_matrix
 
 
-# def find_patch_size(graph_size):
-#     """
-#     Find the patch size for the ViT model based on the size of the input image. The patch size is the size of the square
-#     that is used as an input to the model.
+# - Function needed to define the patch size based on the graph size:
+def find_patch_size(graph_size):
+    """
+    Find the patch size for the ViT model based on the size of the input image. The patch size is the size of the square
+    that is used as an input to the model.
 
-#     Args:
-#         graph_size (int): The size of the graph.
+    Args:
+        graph_size (int): The size of the graph.
 
-#     Returns:
-#         int: The patch size.
+    Returns:
+        int: The patch size.
 
-#     Raises:
-#         ValueError: If a patch size different than 1 cannot be found.
-#     """
+    Raises:
+        ValueError: If a patch size different than 1 cannot be found.
+    """
 
-#     # storing rescaling factor for the adjacency matrix:
-#     factor = imageNet_transform(
-#         gen_graphs.generate_graphs(1, graph_size, graph_size, "p_increase", True)[0]
-#     )[1]
+    from src.graphs_generation import generate_graphs as gen_graphs
 
-#     print(factor)
+    # storing size of the input image:
+    single_graph = gen_graphs(1, graph_size, int(graph_size / 2), "p_increase", True)[
+        0
+    ]  # generating a single graph (already includes the magnification factor for ImageNet models)
+    image_size = single_graph.shape[-1]
 
-#     # calculating the size of the image:
-#     image_size = graph_size * factor
+    # defining patch size based on the image size:
+    patch_size = (
+        image_size // 20  # floor division
+    )  # initial value of patch_size is 1/20 of the image size, is then increased until it is a divisor of the graph size
+    # increase patch size until an integer divisor of the image size is found:
+    while patch_size <= image_size:
+        if image_size % patch_size == 0:
+            break
+        patch_size += 1
 
-#     patch_size = (
-#         image_size // 20  # floor division
-#     )  # initial value of patch_size is 1/20 of the graph size, is then increased until it is a divisor of the graph size
-#     while patch_size <= image_size:
-#         if image_size % patch_size == 0:
-#             break
-#         patch_size += 1
+    if patch_size == image_size:  # if no divisor is found, patch size is set to 1
+        patch_size = 1
 
-#     patch_size = patch_size if patch_size <= image_size else 1
+    # notifying user if patch size different than 1 cannot be found:
+    if patch_size == 1:
+        raise ValueError(
+            "A patch size different than 1 cannot be found. The chosen graph size might be incompatible with the ViT model."
+        )
 
-#     if patch_size == 1:
-#         raise ValueError("A patch size different than 1 cannot be found.")
-
-#     return patch_size
+    return patch_size

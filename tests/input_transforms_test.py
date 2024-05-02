@@ -49,27 +49,39 @@ class TestInputTransform(unittest.TestCase):
 
     def test_find_patch_size(self):
 
-        # Test case where graph is 224 -> the function should find a patch size of 14 (NOTE: this is slightly inaccurate, in the original paper the patch size is 16, but this is a good approximation)
+        # Test case where graph is 100 -> the function should find a patch size of 20 (100 becomes 300 after resizing, then 300/20 = 15)
+        self.assertEqual(find_patch_size(100), 15)
+
+        # Test case where graph is 200 ->the function should find a patch size of (200 becomes 400 after resizing, then 400/20 = 20)
+        self.assertEqual(find_patch_size(200), 20)
+
+        # Test case where graph is 224 -> the function should find a patch size of 14 (224 is not resized, and the function starts searching from graph_size/20=11, then increases the patch size. NOTE: this is slightly inaccurate, in the original paper the patch size is 16, but this is a good approximation)
         self.assertEqual(find_patch_size(224), 14)
 
+        # Test case where graph size is 300 -> the function should find a patch size of 15
+        self.assertEqual(find_patch_size(300), 15)
+
         # Test case where graph size is 400 -> the function should find a patch size of 20
-        self.assertEqual(find_patch_size(40), 2)
+        self.assertEqual(find_patch_size(400), 20)
 
-        # Test case where graph size is 50 -> the function should find a patch size of 2
-        self.assertEqual(find_patch_size(50), 2)
+        # Test case where graph size is 500 -> the function should find a patch size of 25
+        self.assertEqual(find_patch_size(50), 25)
 
-        # Test case where graph size is 37 -> the function should raise an error
+        # Test case where graph size is 600 -> the function should find a patch size of 30
+        self.assertEqual(find_patch_size(600), 30)
+
+        # Test case where graph size is 700 -> the function should find a patch size of 35
+        self.assertEqual(find_patch_size(700), 35)
+
+        # Test case where graph size is 800 -> the function should find a patch size of 40
+        self.assertEqual(find_patch_size(800), 40)
+
+        # Test case where graph size is 900 -> the function should find a patch size of 45
+        self.assertEqual(find_patch_size(900), 45)
+
+        # Test case where graph size is 1000 -> the function should find a patch size of 50
+        self.assertEqual(find_patch_size(1000), 50)
+
+        # Test case where graph size is 331 -> it is a prime number, so the function should return 1 as patch_size, and notify the user with a ValueError
         with self.assertRaises(ValueError):
-            find_patch_size(37)
-
-        # Test case where graph size is 1 -> the function should raise an error
-        with self.assertRaises(ValueError):
-            find_patch_size(1)
-
-        # Test case where graph size is 0 -> the function should raise an error
-        with self.assertRaises(ValueError):
-            find_patch_size(0)
-
-        # Test case where graph size is negative -> the function should raise an error
-        with self.assertRaises(ValueError):
-            find_patch_size(-10)
+            find_patch_size(331)

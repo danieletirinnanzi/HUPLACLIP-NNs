@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-# from src.input_transforms import find_patch_size
+from src.input_transforms import find_patch_size
 
 
 class Models:
@@ -8,7 +8,7 @@ class Models:
     @staticmethod
     def mlp(graph_size, hyperparameters):
 
-        # Definition of the MLP architecture
+        # MLP
         model = nn.Sequential(
             # flatten operation
             nn.Flatten(),
@@ -34,6 +34,7 @@ class Models:
 
         return model
 
+    # CNN
     @staticmethod
     def cnn(graph_size, hyperparameters):
 
@@ -85,6 +86,7 @@ class Models:
 
         return model
 
+    # VGG16
     @staticmethod
     def vgg16():
         model = models.vgg16(weights="DEFAULT")
@@ -99,6 +101,7 @@ class Models:
 
         return model
 
+    # RESNET50
     @staticmethod
     def resnet50():
         model = models.resnet50(weights="DEFAULT")
@@ -114,10 +117,14 @@ class Models:
 
         return model
 
+    # VISUAL TRANSFORMERS:
+    # - ViT from scratch
     @staticmethod
     def vit_scratch(graph_size):
 
         patch_size = find_patch_size(graph_size)
+
+        print(f"Patch size: {patch_size}")
 
         model = models.vit_b_16()  # NOTE: num_classes can be set also from here
 
@@ -130,6 +137,7 @@ class Models:
 
         return model
 
+    # - ViT pretrained
     @staticmethod
     def vit_pretrained():
 

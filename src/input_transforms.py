@@ -14,6 +14,7 @@ def imageNet_transform(adjacency_matrix, output_size=(224, 224)):
     Returns:
         torch.Tensor: The transformed adjacency matrix.
     """
+
     if adjacency_matrix.shape[0] >= output_size[0]:
         # adjacency matrix is already bigger than the expected size, only 3 channels are added:
         adjacency_matrix = adjacency_matrix.unsqueeze(0).repeat(3, 1, 1)

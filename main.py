@@ -10,7 +10,7 @@ from src.utils import load_model
 from src.utils import save_exp_config
 from src.utils import save_test_results
 from src.utils import save_trained_model
-from src.utils import save_CNN_features
+from src.utils import save_features
 from src.train_test import train_model
 from src.train_test import test_model
 from src.tensorboard_save import (
@@ -21,12 +21,12 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "CNN_exp_config.yml"))
+config = load_config(os.path.join("docs", "VGG_exp_config.yml"))
 
 # saving starting time of the experiment:
 start_time = datetime.datetime.now()
 
-# Tensorboard:
+# # Tensorboard:
 start_time_string = start_time.strftime("%Y-%m-%d_%H-%M-%S")
 exp_name_with_time = f"{config['exp_name']}_N{config['graph_size']}_{start_time_string}"
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -45,10 +45,11 @@ tensorboard_save_images(
     vgg_input=False,
 )
 
-# create empty dictionary to store models (used to store models for tensorboard saving, not working)
-models_dict = {}
+# # NOT WORKING:
+# # create empty dictionary to store models (used to store models for tensorboard saving, not working)
+# models_dict = {}
 
-# creating folder in "results" folder to save the results of the whole experiment
+# # creating folder in "results" folder to save the results of the whole experiment
 results_dir = os.path.join(current_dir, "results", exp_name_with_time)
 os.makedirs(results_dir)
 
@@ -63,8 +64,9 @@ for model_specs in config["models"]:
         model_specs["model_name"], config["graph_size"], model_specs["hyperparameters"]
     )
 
-    # saving model to dictionary (used to store models for tensorboard saving, not working)
-    models_dict[model_specs["model_name"]] = model
+    # # NOT WORKING:
+    # # saving model to dictionary (used to store models for tensorboard saving, not working)
+    # models_dict[model_specs["model_name"]] = model
 
     # training model and visualizing it on Tensorboard
     trained_model = train_model(
@@ -105,10 +107,11 @@ for model_specs in config["models"]:
         model_results_dir,
     )
 
-    # - if model is CNN, saving the features extracted by the model in the results folder:
-    if model_specs["model_name"] == "CNN":
-        save_CNN_features(
+    # - for CNN, VGG and ResNet, saving the features extracted by the model in the results folder:
+    if model_specs["model_name"] in ["CNN", "VGG16", "RESNET50"]:
+        save_features(
             trained_model,
+            model_specs["model_name"],
             config["graph_size"],
             config["p_correction_type"],
             model_results_dir,
@@ -123,7 +126,7 @@ save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time)
 tensorboard_save_models(writer, model, config["graph_size"])
 
 
-# DO NOT UNCOMMENT THIS, NOT WORKING
+# -----------------------------DO NOT UNCOMMENT THIS, NOT WORKING
 # # saving all models to tensorboard (not working):
 # # - creating wrapper class:
 # models_wrapper = ModelsWrapper(models_dict)

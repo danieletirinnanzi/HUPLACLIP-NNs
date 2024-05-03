@@ -154,28 +154,69 @@ def save_trained_model(trained_model, model_name, graph_size, results_dir):
     print(f"- Trained model saved successfully in {file_path}.")
 
 
-def save_CNN_features(trained_model, graph_size, p_correction, results_dir):
-
-    # TODO: INSERT TESTS HERE
-
-    # creating features extractor with relevant node names:
-    trained_model = create_feature_extractor(
-        trained_model, {"1": "feat1", "6": "feat2", "11": "feat3", "15": "feat4"}
-    )
+def save_features(trained_model, model_name, graph_size, p_correction, results_dir):
 
     from src.graphs_generation import generate_graphs
 
-    # generating graph WITH CLIQUE for prediction (clique size is set to 60% of graph size, can be increased if needed):
-    out = trained_model(
-        generate_graphs(
-            1, graph_size, int(0.6 * graph_size), p_correction, False, p_clique=1
-        )[0]
-    )
+    # TODO: INSERT TESTS HERE
 
-    # Create a figure with 4 subplots
+    # Defining layers to extract features from:
+    # - CNN features:
+    if model_name == "CNN":
+        # creating features extractor with relevant node names:
+        trained_model = create_feature_extractor(
+            trained_model, {"1": "feat1", "6": "feat2", "11": "feat3", "15": "feat4"}
+        )
+        # performing prediction on a single graph with clique (70% of graph size, can be modified):
+        out = trained_model(
+            generate_graphs(
+                1, graph_size, int(0.7 * graph_size), p_correction, False, p_clique=1
+            )[0]
+        )
+
+    # - VGG features:
+    if model_name == "VGG16":
+        # creating features extractor with relevant node names:
+        trained_model = create_feature_extractor(
+            trained_model,
+            {
+                "features.5": "feat5",
+                "features.10": "feat10",
+                "features.17": "feat17",
+                "features.24": "feat24",
+            },
+        )
+        # performing prediction on a single graph with clique (70% of graph size, can be modified):
+        out = trained_model(
+            generate_graphs(
+                1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+            )[0]
+        )
+
+    # - ResNet features:
+    if model_name == "RESNET50":
+        # creating features extractor with relevant node names:
+        trained_model = create_feature_extractor(
+            trained_model,
+            {
+                "layer1.2.relu_2": "feat1",
+                "layer2.3.relu_2": "feat2",
+                "layer3.5.relu_2": "feat3",
+                "layer4.2.relu_2": "feat4",
+            },
+        )
+        # performing prediction on a single graph with clique (70% of graph size, can be modified):
+        out = trained_model(
+            generate_graphs(
+                1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+            )[0]
+        )
+
+    # Visualizing the features:
+    # - Create a figure with 4 subplots
     fig, axs = plt.subplots(1, 4, figsize=(20, 5))
 
-    # Iterate over the feature maps
+    # - Iterate over the feature maps
     for i, (name, feature_map) in enumerate(out.items()):
         # Select the first feature map of the first image in the batch
         feature_map = feature_map[0, 0, :, :].detach().cpu().numpy()
@@ -188,9 +229,8 @@ def save_CNN_features(trained_model, graph_size, p_correction, results_dir):
 
     plt.tight_layout()
 
-    # - defining file path:
-    file_path = os.path.join(results_dir, f"CNN_features_plot.png")
-    # Save the figure as a PNG image with 300 dpi
+    # - Defining file path:
+    file_path = os.path.join(results_dir, f"{model_name}_features_plot.png")
     plt.savefig(file_path, dpi=300)
 
-    print(f"- CNN features image saved successfully in {file_path}.")
+    print(f"- Features image saved successfully in {file_path}.")

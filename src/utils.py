@@ -165,7 +165,7 @@ def save_CNN_features(trained_model, graph_size, p_correction, results_dir):
 
     from src.graphs_generation import generate_graphs
 
-    # generating graph WITH CLIQUE for prediction:
+    # generating graph WITH CLIQUE for prediction (clique size is set to 60% of graph size, can be increased if needed):
     out = trained_model(
         generate_graphs(
             1, graph_size, int(0.6 * graph_size), p_correction, False, p_clique=1

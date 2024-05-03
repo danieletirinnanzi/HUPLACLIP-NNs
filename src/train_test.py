@@ -141,7 +141,7 @@ def train_model(
             # Training steps loop:
             for training_step in range(
                 training_hyperparameters["num_training_steps"] + 1
-            ): 
+            ):
 
                 # Generating training data
                 train = gen_graphs.generate_graphs(
@@ -165,6 +165,8 @@ def train_model(
 
                 # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
                 if training_step % training_hyperparameters["save_step"] == 0:
+
+                    # TODO: PUT MODEL IN EVAL MODE HERE?
 
                     # At each training step that has to be saved:
                     # - increasing saved_steps: this will be the x axis of the tensorboard plots
@@ -215,6 +217,8 @@ def train_model(
 
                     # Flush the writer to make sure all data is written to disk
                     writer.flush()
+
+                    # TODO: PUT MODEL BACK IN TRAIN MODE HERE?
 
                 # Backward pass
                 train_loss.backward()

@@ -2,9 +2,13 @@ import yaml
 import torch
 import csv
 import os
+import matplotlib.pyplot as plt
 
 # custom imports
 from .models import Models
+from torchvision.models.feature_extraction import (
+    create_feature_extractor,
+)
 
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -148,3 +152,45 @@ def save_trained_model(trained_model, model_name, graph_size, results_dir):
     torch.save(trained_model.state_dict(), file_path)
 
     print(f"- Trained model saved successfully in {file_path}.")
+
+
+def save_CNN_features(trained_model, graph_size, p_correction, results_dir):
+
+    # TODO: INSERT TESTS HERE
+
+    # creating features extractor with relevant node names:
+    trained_model = create_feature_extractor(
+        trained_model, {"1": "feat1", "6": "feat2", "11": "feat3", "15": "feat4"}
+    )
+
+    from src.graphs_generation import generate_graphs
+
+    # generating graph WITH CLIQUE for prediction:
+    out = trained_model(
+        generate_graphs(
+            1, graph_size, int(0.6 * graph_size), p_correction, False, p_clique=1
+        )[0]
+    )
+
+    # Create a figure with 4 subplots
+    fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+
+    # Iterate over the feature maps
+    for i, (name, feature_map) in enumerate(out.items()):
+        # Select the first feature map of the first image in the batch
+        feature_map = feature_map[0, 0, :, :].detach().cpu().numpy()
+
+        # TODO: NORMALIZING THE FEATURES before visualization?
+
+        # Plot the feature map
+        axs[i].imshow(feature_map, cmap="gray")
+        axs[i].set_title(name)
+
+    plt.tight_layout()
+
+    # - defining file path:
+    file_path = os.path.join(results_dir, f"CNN_features_plot.png")
+    # Save the figure as a PNG image with 300 dpi
+    plt.savefig(file_path, dpi=300)
+
+    print(f"- CNN features image saved successfully in {file_path}.")

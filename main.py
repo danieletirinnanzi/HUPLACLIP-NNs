@@ -1,5 +1,6 @@
 import datetime
 import os
+import torch
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -9,6 +10,7 @@ from src.utils import load_model
 from src.utils import save_exp_config
 from src.utils import save_test_results
 from src.utils import save_trained_model
+from src.utils import save_CNN_features
 from src.train_test import train_model
 from src.train_test import test_model
 from src.tensorboard_save import (
@@ -19,7 +21,7 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "VITscratch_exp_config.yml"))
+config = load_config(os.path.join("docs", "CNN_exp_config.yml"))
 
 # saving starting time of the experiment:
 start_time = datetime.datetime.now()
@@ -61,8 +63,6 @@ for model_specs in config["models"]:
         model_specs["model_name"], config["graph_size"], model_specs["hyperparameters"]
     )
 
-    print(model)
-
     # saving model to dictionary (used to store models for tensorboard saving, not working)
     models_dict[model_specs["model_name"]] = model
 
@@ -76,9 +76,9 @@ for model_specs in config["models"]:
         model_specs["model_name"],
     )
 
-    # testing model
+    # testing trained model
     test_results = test_model(
-        model,
+        trained_model,
         model_specs["hyperparameters"],
         config["graph_size"],
         config["p_correction_type"],
@@ -91,7 +91,10 @@ for model_specs in config["models"]:
 
     # - saving test results as csv file
     save_test_results(
-        test_results, model_specs["model_name"], config["graph_size"], model_results_dir
+        test_results,
+        model_specs["model_name"],
+        config["graph_size"],
+        model_results_dir,
     )
 
     # - saving the trained model (will not be synched with git due to size)
@@ -102,6 +105,15 @@ for model_specs in config["models"]:
         model_results_dir,
     )
 
+    # - if model is CNN, saving the features extracted by the model in the results folder:
+    if model_specs["model_name"] == "CNN":
+        save_CNN_features(
+            trained_model,
+            config["graph_size"],
+            config["p_correction_type"],
+            model_results_dir,
+        )
+
 # saving copy of the configuration file in the experiment folder just created (to keep track of the experiment settings), adding an indication regarding the elapsed time from the start of the experiment:
 end_time = datetime.datetime.now()
 save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time)
@@ -110,6 +122,8 @@ save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time)
 # saving single model to tensorboard (working, last model trained is saved):
 tensorboard_save_models(writer, model, config["graph_size"])
 
+
+# DO NOT UNCOMMENT THIS, NOT WORKING
 # # saving all models to tensorboard (not working):
 # # - creating wrapper class:
 # models_wrapper = ModelsWrapper(models_dict)

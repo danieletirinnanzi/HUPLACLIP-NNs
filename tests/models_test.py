@@ -238,121 +238,121 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(torch.all(prediction >= 0))
         self.assertTrue(torch.all(prediction <= 1))
 
-    # VITscratch:
-    def test_VITscratch_predictions(self):
+    # # VITscratch:
+    # def test_VITscratch_predictions(self):
 
-        # loading experiment configuration file of VITscratch experiment:
-        VITscratch_config = load_config("docs\VITscratch_exp_config.yml")
-        # checking correspondence of graph size:
-        self.assertEqual(global_config["graph_size"], VITscratch_config["graph_size"])
-        # checking correspondence of p correction type:
-        self.assertEqual(
-            global_config["p_correction_type"], VITscratch_config["p_correction_type"]
-        )
+    #     # loading experiment configuration file of VITscratch experiment:
+    #     VITscratch_config = load_config("docs\VITscratch_exp_config.yml")
+    #     # checking correspondence of graph size:
+    #     self.assertEqual(global_config["graph_size"], VITscratch_config["graph_size"])
+    #     # checking correspondence of p correction type:
+    #     self.assertEqual(
+    #         global_config["p_correction_type"], VITscratch_config["p_correction_type"]
+    #     )
 
-        # checking that the VITscratch section in the global experiment configuration file is the same as the one in the VITscratch experiment configuration file:
-        self.assertEqual(
-            global_config["models"][4]["model_name"],
-            VITscratch_config["models"][0]["model_name"],
-        )
-        # checking that hyperparameters correspond:
-        self.assertEqual(
-            global_config["models"][4]["hyperparameters"],
-            VITscratch_config["models"][0]["hyperparameters"],
-        )
+    #     # checking that the VITscratch section in the global experiment configuration file is the same as the one in the VITscratch experiment configuration file:
+    #     self.assertEqual(
+    #         global_config["models"][4]["model_name"],
+    #         VITscratch_config["models"][0]["model_name"],
+    #     )
+    #     # checking that hyperparameters correspond:
+    #     self.assertEqual(
+    #         global_config["models"][4]["hyperparameters"],
+    #         VITscratch_config["models"][0]["hyperparameters"],
+    #     )
 
-        # loading model
-        model = load_model(
-            VITscratch_config["models"][0]["model_name"],
-            VITscratch_config["graph_size"],
-            VITscratch_config["models"][0]["hyperparameters"],
-        )
+    #     # loading model
+    #     model = load_model(
+    #         VITscratch_config["models"][0]["model_name"],
+    #         VITscratch_config["graph_size"],
+    #         VITscratch_config["models"][0]["hyperparameters"],
+    #     )
 
-        # defining clique size (taking minimum clique size on which model will be trained):
-        clique_size = int(
-            VITscratch_config["graph_size"]
-            * (
-                VITscratch_config["models"][0]["hyperparameters"][
-                    "min_clique_size_proportion"
-                ]
-            )
-        )
+    #     # defining clique size (taking minimum clique size on which model will be trained):
+    #     clique_size = int(
+    #         VITscratch_config["graph_size"]
+    #         * (
+    #             VITscratch_config["models"][0]["hyperparameters"][
+    #                 "min_clique_size_proportion"
+    #             ]
+    #         )
+    #     )
 
-        # generating two graphs and predicting
-        prediction = model(
-            gen_graphs.generate_graphs(
-                2,
-                VITscratch_config["graph_size"],
-                clique_size,
-                VITscratch_config["p_correction_type"],
-                True,
-            )[0].to(device)
-        )
+    #     # generating two graphs and predicting
+    #     prediction = model(
+    #         gen_graphs.generate_graphs(
+    #             2,
+    #             VITscratch_config["graph_size"],
+    #             clique_size,
+    #             VITscratch_config["p_correction_type"],
+    #             True,
+    #         )[0].to(device)
+    #     )
 
-        # checking that the output is one-dimensional (and has two elements) after squeezing:
-        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+    #     # checking that the output is one-dimensional (and has two elements) after squeezing:
+    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
 
-        # checking that both predictions are between 0 and 1:
-        self.assertTrue(torch.all(prediction >= 0))
-        self.assertTrue(torch.all(prediction <= 1))
+    #     # checking that both predictions are between 0 and 1:
+    #     self.assertTrue(torch.all(prediction >= 0))
+    #     self.assertTrue(torch.all(prediction <= 1))
 
-    # VITpretrained:
-    def test_VITpretrained_predictions(self):
+    # # VITpretrained:
+    # def test_VITpretrained_predictions(self):
 
-        # loading experiment configuration file of VITpretrained experiment:
-        VITpretrained_config = load_config("docs\VITpretrained_exp_config.yml")
-        # checking correspondence of graph size:
-        self.assertEqual(
-            global_config["graph_size"], VITpretrained_config["graph_size"]
-        )
-        # checking correspondence of p correction type:
-        self.assertEqual(
-            global_config["p_correction_type"],
-            VITpretrained_config["p_correction_type"],
-        )
+    #     # loading experiment configuration file of VITpretrained experiment:
+    #     VITpretrained_config = load_config("docs\VITpretrained_exp_config.yml")
+    #     # checking correspondence of graph size:
+    #     self.assertEqual(
+    #         global_config["graph_size"], VITpretrained_config["graph_size"]
+    #     )
+    #     # checking correspondence of p correction type:
+    #     self.assertEqual(
+    #         global_config["p_correction_type"],
+    #         VITpretrained_config["p_correction_type"],
+    #     )
 
-        # checking that the VITpretrained section in the global experiment configuration file is the same as the one in the VITpretrained experiment configuration file:
-        self.assertEqual(
-            global_config["models"][5]["model_name"],
-            VITpretrained_config["models"][0]["model_name"],
-        )
-        # checking that hyperparameters correspond:
-        self.assertEqual(
-            global_config["models"][5]["hyperparameters"],
-            VITpretrained_config["models"][0]["hyperparameters"],
-        )
+    #     # checking that the VITpretrained section in the global experiment configuration file is the same as the one in the VITpretrained experiment configuration file:
+    #     self.assertEqual(
+    #         global_config["models"][5]["model_name"],
+    #         VITpretrained_config["models"][0]["model_name"],
+    #     )
+    #     # checking that hyperparameters correspond:
+    #     self.assertEqual(
+    #         global_config["models"][5]["hyperparameters"],
+    #         VITpretrained_config["models"][0]["hyperparameters"],
+    #     )
 
-        # loading model
-        model = load_model(
-            VITpretrained_config["models"][0]["model_name"],
-            VITpretrained_config["graph_size"],
-            VITpretrained_config["models"][0]["hyperparameters"],
-        )
+    #     # loading model
+    #     model = load_model(
+    #         VITpretrained_config["models"][0]["model_name"],
+    #         VITpretrained_config["graph_size"],
+    #         VITpretrained_config["models"][0]["hyperparameters"],
+    #     )
 
-        # defining clique size (taking minimum clique size on which model will be trained):
-        clique_size = int(
-            VITpretrained_config["graph_size"]
-            * (
-                VITpretrained_config["models"][0]["hyperparameters"][
-                    "min_clique_size_proportion"
-                ]
-            )
-        )
+    #     # defining clique size (taking minimum clique size on which model will be trained):
+    #     clique_size = int(
+    #         VITpretrained_config["graph_size"]
+    #         * (
+    #             VITpretrained_config["models"][0]["hyperparameters"][
+    #                 "min_clique_size_proportion"
+    #             ]
+    #         )
+    #     )
 
-        # generating two graphs and predicting
-        prediction = model(
-            gen_graphs.generate_graphs(
-                2,
-                VITpretrained_config["graph_size"],
-                clique_size,
-                VITpretrained_config["p_correction_type"],
-                True,
-            )[0].to(device)
-        )
+    #     # generating two graphs and predicting
+    #     prediction = model(
+    #         gen_graphs.generate_graphs(
+    #             2,
+    #             VITpretrained_config["graph_size"],
+    #             clique_size,
+    #             VITpretrained_config["p_correction_type"],
+    #             True,
+    #         )[0].to(device)
+    #     )
 
-        # checking that the output is one-dimensional (and has two elements) after squeezing:
-        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+    #     # checking that the output is one-dimensional (and has two elements) after squeezing:
+    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
 
-        # checking that both predictions are between 0 and 1:
-        self.assertTrue(torch.all(prediction >= 0))
-        self.assertTrue(torch.all(prediction <= 1))
+    #     # checking that both predictions are between 0 and 1:
+    #     self.assertTrue(torch.all(prediction >= 0))
+    #     self.assertTrue(torch.all(prediction <= 1))

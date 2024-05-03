@@ -155,10 +155,21 @@ def save_trained_model(trained_model, model_name, graph_size, results_dir):
 
 
 def save_features(trained_model, model_name, graph_size, p_correction, results_dir):
+    """
+    Save the features extracted from a trained model and save the corresponding image.
+
+    Args:
+        trained_model (torch.nn.Module): The trained model used for feature extraction.
+        model_name (str): The name of the model.
+        graph_size (int): The size of the graph.
+        p_correction (str): The p-correction type.
+        results_dir (str): The directory where the features image will be saved.
+
+    Returns:
+        None
+    """
 
     from src.graphs_generation import generate_graphs
-
-    # TODO: INSERT TESTS HERE
 
     # Defining layers to extract features from:
     # - CNN features:
@@ -167,12 +178,12 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
         trained_model = create_feature_extractor(
             trained_model, {"1": "feat1", "6": "feat2", "11": "feat3", "15": "feat4"}
         )
-        # performing prediction on a single graph with clique (70% of graph size, can be modified):
-        out = trained_model(
-            generate_graphs(
-                1, graph_size, int(0.7 * graph_size), p_correction, False, p_clique=1
-            )[0]
-        )
+        #  generate graph with clique (70% of graph size, can be modified)
+        graph = generate_graphs(
+            1, graph_size, int(0.7 * graph_size), p_correction, False, p_clique=1
+        )[0]
+        # performing prediction on the single graph:
+        out = trained_model(graph)
 
     # - VGG features:
     if model_name == "VGG16":
@@ -186,12 +197,12 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
                 "features.24": "feat24",
             },
         )
-        # performing prediction on a single graph with clique (70% of graph size, can be modified):
-        out = trained_model(
-            generate_graphs(
-                1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
-            )[0]
-        )
+        #  generate graph with clique (70% of graph size, can be modified)
+        graph = generate_graphs(
+            1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+        )[0]
+        # performing prediction on the single graph:
+        out = trained_model(graph)
 
     # - ResNet features:
     if model_name == "RESNET50":
@@ -205,23 +216,29 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
                 "layer4.2.relu_2": "feat4",
             },
         )
-        # performing prediction on a single graph with clique (70% of graph size, can be modified):
-        out = trained_model(
-            generate_graphs(
-                1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
-            )[0]
-        )
+        #  generate graph with clique (70% of graph size, can be modified)
+        graph = generate_graphs(
+            1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+        )[0]
+        # performing prediction on the single graph:
+        out = trained_model(graph)
 
-    # Visualizing the features:
-    # - Create a figure with 4 subplots
-    fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+    # Putting input as first element in the dictionary, before the features:
+    out = {"input": graph, **out}
 
-    # - Iterate over the feature maps
+    # Visualizing the input image and the 4 features:
+    # - Create a figure with 5 subplots
+    fig, axs = plt.subplots(1, 5, figsize=(20, 5))
+
+    # - Iterate over the feature maps and add them in places
     for i, (name, feature_map) in enumerate(out.items()):
-        # Select the first feature map of the first image in the batch
+        # Select the first feature map
         feature_map = feature_map[0, 0, :, :].detach().cpu().numpy()
 
-        # TODO: NORMALIZING THE FEATURES before visualization?
+        # normalizing the feature map
+        feature_map = (feature_map - feature_map.min()) / (
+            feature_map.max() - feature_map.min()
+        )
 
         # Plot the feature map
         axs[i].imshow(feature_map, cmap="gray")

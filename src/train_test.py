@@ -127,7 +127,7 @@ def train_model(
     clique_sizes = np.linspace(
         max_clique_size,
         min_clique_size,
-        num=training_hyperparameters["clique_size_levels"],
+        num=training_hyperparameters["clique_training_levels"],
     ).astype(int)
 
     # training loop:
@@ -283,7 +283,7 @@ def test_model(
 ):
 
     # if model is VGG, graphs will be 3D:
-    if model_name == "VGG16" or model_name =="RESNET50":
+    if model_name == "VGG16" or model_name == "RESNET50":
         imageNet_input = True
     else:
         imageNet_input = False
@@ -302,8 +302,10 @@ def test_model(
         training_hyperparameters["max_clique_size_proportion_test"] * graph_size
     )
     # calculating array of clique sizes for all test curriculum:
-    clique_sizes = np.arange(
-        max_clique_size, 0, -training_hyperparameters["jump_test"]
+    clique_sizes = np.linspace(
+        max_clique_size,
+        0,
+        num=training_hyperparameters["clique_testing_levels"],
     ).astype(int)
 
     # Loop for decreasing clique sizes

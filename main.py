@@ -49,8 +49,8 @@ tensorboard_save_images(
 # # create empty dictionary to store models (used to store models for tensorboard saving, not working)
 # models_dict = {}
 
-# creating folder in "results" folder to save the results of the whole experiment
-results_dir = os.path.join(current_dir, "results", exp_name_with_time)
+# creating folder in "results/data" folder to save the results of the whole experiment
+results_dir = os.path.join(current_dir, "results", "data", exp_name_with_time)
 os.makedirs(results_dir)
 
 # loading, training, and testing models:

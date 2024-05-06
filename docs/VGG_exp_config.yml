@@ -20,7 +20,7 @@ models:
       # training structure:
       max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
       min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-      clique_size_levels: 5
+      clique_training_levels: 5
       save_step: 5
       # optimizer and loss function:
       optimizer: Adam
@@ -29,5 +29,5 @@ models:
       # TESTING HYPERPARAMETERS:
       max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
       num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-      jump_test: 1  # increase in clique size between test iterations
+      clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
       test_iterations: 16 # number of times for which a single clique size is tested      

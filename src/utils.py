@@ -256,7 +256,7 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
     plt.tight_layout()
 
     # - Defining file path:
-    file_path = os.path.join(results_dir, f"{model_name}_features_plot.png")
+    file_path = os.path.join(results_dir, f"{model_name}_features_N{graph_size}.png")
     plt.savefig(file_path, dpi=300)
 
     print(f"- Features image saved successfully in {file_path}.")

@@ -5,8 +5,7 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Ignore files in the /data folder
-data
+# Ignore log files
 src.egg-info
 
 # Ignore files in the /runs folder

@@ -1,5 +1,5 @@
 exp_name: VITscratch_exp
-graph_size: 100
+graph_size: 300
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
 # - p_reduce (new correction): reducing the p value of the graph where the clique will be added

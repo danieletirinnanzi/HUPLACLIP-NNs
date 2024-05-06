@@ -21,7 +21,7 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "MLP_exp_config.yml"))
+config = load_config(os.path.join("docs", "GLOBAL_exp_config.yml"))
 
 # saving starting time of the experiment:
 start_time = datetime.datetime.now()
@@ -36,22 +36,22 @@ experiment_dir = os.path.join(runs_dir, exp_name_with_time)
 # create writer and point to log directory
 writer = SummaryWriter(log_dir=experiment_dir)
 
-# # saving images to tensorboard:
-# tensorboard_save_images(
-#     writer,
-#     config["graph_size"],
-#     config["p_correction_type"],
-#     num_images=10,
-#     vgg_input=False,
-# )
+# saving images to tensorboard:
+tensorboard_save_images(
+    writer,
+    config["graph_size"],
+    config["p_correction_type"],
+    num_images=10,
+    vgg_input=False,
+)
 
 # # NOT WORKING:
 # # create empty dictionary to store models (used to store models for tensorboard saving, not working)
 # models_dict = {}
 
-# # creating folder in "results" folder to save the results of the whole experiment
-# results_dir = os.path.join(current_dir, "results", exp_name_with_time)
-# os.makedirs(results_dir)
+# creating folder in "results" folder to save the results of the whole experiment
+results_dir = os.path.join(current_dir, "results", exp_name_with_time)
+os.makedirs(results_dir)
 
 # loading, training, and testing models:
 for model_specs in config["models"]:

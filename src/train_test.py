@@ -283,7 +283,7 @@ def test_model(
 ):
 
     # if model is VGG, graphs will be 3D:
-    if model_name == "VGG16":
+    if model_name == "VGG16" or model_name =="RESNET50":
         imageNet_input = True
     else:
         imageNet_input = False

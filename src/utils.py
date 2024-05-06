@@ -183,7 +183,7 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
             1, graph_size, int(0.7 * graph_size), p_correction, False, p_clique=1
         )[0]
         # performing prediction on the single graph:
-        out = trained_model(graph)
+        out = trained_model(graph.cuda())
 
     # - VGG features:
     if model_name == "VGG16":
@@ -202,7 +202,7 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
             1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
         )[0]
         # performing prediction on the single graph:
-        out = trained_model(graph)
+        out = trained_model(graph.cuda())
 
     # - ResNet features:
     if model_name == "RESNET50":
@@ -221,7 +221,7 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
             1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
         )[0]
         # performing prediction on the single graph:
-        out = trained_model(graph)
+        out = trained_model(graph.cuda())
 
     # Putting input as first element in the dictionary, before the features:
     out = {"input": graph, **out}

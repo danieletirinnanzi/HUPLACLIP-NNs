@@ -21,7 +21,7 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "GLOBAL_exp_config.yml"))
+config = load_config(os.path.join("docs", "CNN_exp_config.yml"))
 
 # saving starting time of the experiment:
 start_time = datetime.datetime.now()
@@ -127,12 +127,15 @@ for model_specs in config["models"]:
 end_time = datetime.datetime.now()
 save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time)
 
-# SAVING MODELS
-# saving single model to tensorboard (working, last model trained is saved):
-tensorboard_save_models(writer, model, config["graph_size"])
-
 
 # -----------------------------DO NOT UNCOMMENT THIS, NOT WORKING
+
+# # SAVING MODELS (NOT WORKING)
+# # saving single model to tensorboard (not working for VGG16, model name should be passed instead of model itself):
+# # Got error: "RuntimeError: Given groups=1, weight of size [64, 3, 3, 3], expected input[1, 1, 300, 300] to have 3 channels, but got 1 channels instead"
+# tensorboard_save_models(writer, model, config["graph_size"])
+
+
 # # saving all models to tensorboard (not working):
 # # - creating wrapper class:
 # models_wrapper = ModelsWrapper(models_dict)

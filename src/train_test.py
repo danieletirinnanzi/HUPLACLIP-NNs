@@ -124,8 +124,10 @@ def train_model(
         training_hyperparameters["min_clique_size_proportion"] * graph_size
     )
     # calculating array of clique sizes for all training curriculum:
-    clique_sizes = np.arange(
-        max_clique_size, min_clique_size - 1, -training_hyperparameters["jump"]
+    clique_sizes = np.linspace(
+        max_clique_size,
+        min_clique_size,
+        num=training_hyperparameters["clique_size_levels"],
     ).astype(int)
 
     # training loop:
@@ -162,70 +164,72 @@ def train_model(
                     .type(torch.float)
                     .to(device),  # labels should be float for BCELoss
                 )
-
-                # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
-                if training_step % training_hyperparameters["save_step"] == 0:
-
-                    # TODO: PUT MODEL IN EVAL MODE HERE?
-
-                    # At each training step that has to be saved:
-                    # - increasing saved_steps: this will be the x axis of the tensorboard plots
-                    saved_steps += 1
-
-                    # - storing training error (refers to current task version)
-                    train_error.append(train_loss.item())
-
-                    # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
-                    val_dict = {"train_error": train_loss.item()}
-
-                    # At each save_step, generate validation set and compute validation error for all the task versions:
-                    for current_clique_size_val in clique_sizes:
-
-                        # Generating validation graphs:
-                        val = gen_graphs.generate_graphs(
-                            training_hyperparameters["num_val"],
-                            graph_size,
-                            current_clique_size_val,
-                            p_correction_type,
-                            imageNet_input,
-                        )
-                        # Compute loss on validation set:
-                        val_pred = model(val[0].to(device))
-                        val_pred = val_pred.squeeze()  # remove extra dimension
-                        val_loss = criterion(
-                            val_pred.to(device),
-                            torch.Tensor(val[1])
-                            .type(torch.float)
-                            .to(device),  # labels should be float for BCELoss
-                        )
-
-                        # Storing validation error (only when validating the current task version, needed for early stopping)
-                        if current_clique_size_val == current_clique_size:
-                            val_error.append(val_loss.item())
-
-                        # updating dictionary with validation losses for all task versions:
-                        val_dict[f"val_error_{current_clique_size_val}"] = (
-                            val_loss.item()
-                        )
-
-                    # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
-                    writer.add_scalars(
-                        f"Log_{model_name}",
-                        val_dict,
-                        saved_steps,
-                    )
-
-                    # Flush the writer to make sure all data is written to disk
-                    writer.flush()
-
-                    # TODO: PUT MODEL BACK IN TRAIN MODE HERE?
-
                 # Backward pass
                 train_loss.backward()
                 # Update weights
                 optim.step()
                 # Clear gradients
                 optim.zero_grad(set_to_none=True)
+
+                # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
+                if training_step % training_hyperparameters["save_step"] == 0:
+
+                    # Put model in evaluation mode and disable gradient computation
+                    model.eval()
+                    with torch.no_grad():
+
+                        # At each training step that has to be saved:
+                        # - increasing saved_steps: this will be the x axis of the tensorboard plots
+                        saved_steps += 1
+
+                        # - storing training error (refers to current task version)
+                        train_error.append(train_loss.item())
+
+                        # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
+                        val_dict = {"train_error": train_loss.item()}
+
+                        # At each save_step, generate validation set and compute validation error for all the task versions:
+                        for current_clique_size_val in clique_sizes:
+
+                            # Generating validation graphs:
+                            val = gen_graphs.generate_graphs(
+                                training_hyperparameters["num_val"],
+                                graph_size,
+                                current_clique_size_val,
+                                p_correction_type,
+                                imageNet_input,
+                            )
+                            # Compute loss on validation set:
+                            val_pred = model(val[0].to(device))
+                            val_pred = val_pred.squeeze()  # remove extra dimension
+                            val_loss = criterion(
+                                val_pred.to(device),
+                                torch.Tensor(val[1])
+                                .type(torch.float)
+                                .to(device),  # labels should be float for BCELoss
+                            )
+
+                            # Storing validation error (only when validating the current task version, needed for early stopping)
+                            if current_clique_size_val == current_clique_size:
+                                val_error.append(val_loss.item())
+
+                            # updating dictionary with validation losses for all task versions:
+                            val_dict[f"val_error_{current_clique_size_val}"] = (
+                                val_loss.item()
+                            )
+
+                        # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
+                        writer.add_scalars(
+                            f"Log_{model_name}",
+                            val_dict,
+                            saved_steps,
+                        )
+
+                        # Flush the writer to make sure all data is written to disk
+                        writer.flush()
+
+                    # Put model back in training mode after validation is done
+                    model.train()
 
             # At the end of the cycle:
 

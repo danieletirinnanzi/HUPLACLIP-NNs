@@ -80,19 +80,18 @@ class Models:
             nn.MaxPool2d(hyperparameters["kernel_size"]),
         )
 
-        # performing forward pass on random data to get the size of the output tensor
-        with torch.no_grad():
-            model_output = model(torch.randn(1, 1, graph_size, graph_size))
-            model_output_size = model_output.view(-1).size(0)
+        # performing forward pass on random data to get the size of the output tensor (gradients are unused)
+        model_output = model(torch.randn(1, 1, graph_size, graph_size))
+        model_output_size = model_output.view(-1).size(
+            0
+        )  # flattening the output tensor
 
-            # adding the output layer
-            model.add_module("Flatten", nn.Flatten())
-            model.add_module(
-                "Linear1", nn.Linear(model_output_size, hyperparameters["l1"])
-            )
-            model.add_module("ReLU", nn.ReLU())
-            model.add_module("Linear2", nn.Linear(hyperparameters["l1"], 1))
-            model.add_module("Sigmoid", nn.Sigmoid())
+        # adding the output layer
+        model.add_module("Flatten", nn.Flatten())
+        model.add_module("Linear1", nn.Linear(model_output_size, hyperparameters["l1"]))
+        model.add_module("ReLU", nn.ReLU())
+        model.add_module("Linear2", nn.Linear(hyperparameters["l1"], 1))
+        model.add_module("Sigmoid", nn.Sigmoid())
 
         return model
 

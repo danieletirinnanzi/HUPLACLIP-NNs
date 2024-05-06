@@ -20,7 +20,7 @@ models:
       # training structure:
       max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
       min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-      jump: 5
+      clique_size_levels: 5
       save_step: 5
       # optimizer and loss function:
       optimizer: Adam

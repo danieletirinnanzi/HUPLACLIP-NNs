@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from .models import Models
 from torchvision.models.feature_extraction import (
     create_feature_extractor,
+    get_graph_node_names,
 )
 
 # defining device
@@ -169,6 +170,12 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
         None
     """
 
+    # NOTE: add visualization of features also when graph has no clique?
+
+    # # To visualize the names of the nodes in the graph:
+    # names = get_graph_node_names(trained_model)
+    # print(names)
+
     from src.graphs_generation import generate_graphs
 
     # Defining layers to extract features from:
@@ -176,7 +183,14 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
     if model_name == "CNN":
         # creating features extractor with relevant node names:
         trained_model = create_feature_extractor(
-            trained_model, {"1": "feat1", "6": "feat2", "11": "feat3", "15": "feat4"}
+            trained_model,
+            {
+                "0.0": "feat1",
+                "1.0": "feat2",
+                "2.0": "feat3",
+                "3.0": "feat4",
+                "4.0": "feat5",
+            },
         )
         #  generate graph with clique (70% of graph size, can be modified)
         graph = generate_graphs(
@@ -194,10 +208,11 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
         trained_model = create_feature_extractor(
             trained_model,
             {
-                "features.5": "feat5",
+                "features.2": "feat2",
                 "features.10": "feat10",
                 "features.17": "feat17",
                 "features.24": "feat24",
+                "features.28": "feat28",
             },
         )
         #  generate graph with clique (70% of graph size, can be modified)
@@ -216,10 +231,11 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
         trained_model = create_feature_extractor(
             trained_model,
             {
-                "layer1.2.relu_2": "feat1",
-                "layer2.3.relu_2": "feat2",
-                "layer3.5.relu_2": "feat3",
-                "layer4.2.relu_2": "feat4",
+                "layer1.0.conv1": "feature1",
+                "layer2.0.conv1": "feature2",
+                "layer3.0.conv1": "feature3.0",
+                "layer3.5.conv3": "feature3.5",
+                "layer4.2.conv3": "feature4",
             },
         )
         #  generate graph with clique (70% of graph size, can be modified)
@@ -236,8 +252,8 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
     out = {"input": graph, **out}
 
     # Visualizing the input image and the 4 features:
-    # - Create a figure with 5 subplots
-    fig, axs = plt.subplots(1, 5, figsize=(20, 5))
+    # - Create a figure with 6 subplots
+    fig, axs = plt.subplots(1, 6, figsize=(20, 5))
 
     # - Iterate over the feature maps and add them in places
     for i, (name, feature_map) in enumerate(out.items()):

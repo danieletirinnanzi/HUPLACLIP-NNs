@@ -23,7 +23,7 @@ models:
       clique_training_levels: 5
       save_step: 5
       # optimizer and loss function:
-      optimizer: Adam
+      optimizer: AdamW
       loss_function: BCELoss
 
       # TESTING HYPERPARAMETERS:

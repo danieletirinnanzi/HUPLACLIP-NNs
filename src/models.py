@@ -27,7 +27,6 @@ class Models:
             nn.Linear(hyperparameters["l2"], hyperparameters["l3"]),
             nn.BatchNorm1d(hyperparameters["l3"]),
             nn.ReLU(),
-            # AN ADDITIONAL LAYER MIGHT BE NEEDED?
             # output layer
             nn.Linear(hyperparameters["l3"], 1),
             nn.Sigmoid(),
@@ -38,49 +37,92 @@ class Models:
     @staticmethod
     def cnn(graph_size, hyperparameters):
 
+        def create_conv_block(
+            in_channels, out_channels, kernel_size, stride, padding, dropout_prob=0.5
+        ):
+            return nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size),
+                nn.Dropout(dropout_prob),
+            )
+
         # Definition of the CNN architecture
         model = nn.Sequential(
-            # dropout
-            nn.Dropout(hyperparameters["dropout_prob"]),
             # 1st block
-            nn.Conv2d(
+            create_conv_block(
                 1,
                 hyperparameters["c1"],
                 hyperparameters["kernel_size"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
             ),
-            nn.BatchNorm2d(hyperparameters["c1"]),
-            nn.ReLU(),
-            nn.Dropout(hyperparameters["dropout_prob"]),
-            nn.MaxPool2d(hyperparameters["kernel_size"]),
             # 2nd block
-            nn.Conv2d(
+            create_conv_block(
                 hyperparameters["c1"],
                 hyperparameters["c2"],
                 hyperparameters["kernel_size"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
             ),
-            nn.BatchNorm2d(hyperparameters["c2"]),
-            nn.ReLU(),
-            nn.Dropout(hyperparameters["dropout_prob"]),
-            nn.MaxPool2d(hyperparameters["kernel_size"]),
             # 3rd block
-            nn.Conv2d(
+            create_conv_block(
                 hyperparameters["c2"],
                 hyperparameters["c3"],
                 hyperparameters["kernel_size"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
             ),
-            nn.BatchNorm2d(hyperparameters["c3"]),
-            nn.ReLU(),
-            nn.Dropout(hyperparameters["dropout_prob"]),
-            nn.MaxPool2d(hyperparameters["kernel_size"]),
+            # 4th block
+            create_conv_block(
+                hyperparameters["c3"],
+                hyperparameters["c4"],
+                hyperparameters["kernel_size"],
+                hyperparameters["stride"],
+                hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
+            ),
+            # 5th block
+            create_conv_block(
+                hyperparameters["c4"],
+                hyperparameters["c5"],
+                hyperparameters["kernel_size"],
+                hyperparameters["stride"],
+                hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
+            ),
+            # ADDITIONAL BLOCKS (stabilize learning, but now cause features to vanish for N=300). Alternative solutions:
+            # - Adaptive pooling;
+            # - Global average pooling;
+            # - Dilated convolutions;
+            # - Skip connections;
+            # - Use exact same Rudy's architecture.
+            # # 6th block
+            # create_conv_block(
+            #     hyperparameters["c5"],
+            #     hyperparameters["c6"],
+            #     hyperparameters["kernel_size"],
+            #     hyperparameters["stride"],
+            #     hyperparameters["padding"],
+            #     hyperparameters["dropout_prob"],
+            # ),
+            # # 7th block
+            # create_conv_block(
+            #     hyperparameters["c6"],
+            #     hyperparameters["c7"],
+            #     hyperparameters["kernel_size"],
+            #     hyperparameters["stride"],
+            #     hyperparameters["padding"],
+            #     hyperparameters["dropout_prob"],
+            # ),
         )
 
-        # performing forward pass on random data to get the size of the output tensor (gradients are unused)
+        # performing forward pass on random input to get the size of the output tensor (gradients are unused here)
+        # NOTE: the proper way of doing this is to use a function that calculates the output size of the CNN, given its structure
         model_output = model(torch.randn(1, 1, graph_size, graph_size))
         model_output_size = model_output.view(-1).size(
             0

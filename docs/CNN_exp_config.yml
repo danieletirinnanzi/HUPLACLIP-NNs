@@ -11,10 +11,14 @@ models:
     hyperparameters:
       
       # ARCHITECTURE:
-      # number of hidden layers and number of neurons in each hidden layer:
+      # number of convolutional layers and number of channels in each layer:
       c1: 5
       c2: 10
-      c3: 15    
+      c3: 15
+      c4: 20    
+      c5: 25
+      c6: 30
+      c7: 35
       l1: 100
       stride: 1
       padding: 1
@@ -35,7 +39,7 @@ models:
       clique_training_levels: 5
       save_step: 5
       # optimizer and loss function:
-      optimizer: Adam
+      optimizer: AdamW
       loss_function: BCELoss
 
       # TESTING HYPERPARAMETERS:

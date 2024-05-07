@@ -16,7 +16,6 @@ models:
       l1: 1000
       l2: 500
       l3: 100
-      l3: 100   
       dropout_prob: 0.2
       learning_rate: 0.01         
       
@@ -36,7 +35,7 @@ models:
       clique_training_levels: 5
       save_step: 5
       # optimizer and loss function:
-      optimizer: Adam
+      optimizer: AdamW
       loss_function: BCELoss
 
       # TESTING HYPERPARAMETERS:

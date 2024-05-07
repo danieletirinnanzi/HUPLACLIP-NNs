@@ -90,6 +90,8 @@ def train_model(
     # Defining optimizer:
     if training_hyperparameters["optimizer"] == "Adam":
         optim = torch.optim.Adam(model.parameters())
+    elif training_hyperparameters["optimizer"] == "AdamW":
+        optim = torch.optim.AdamW(model.parameters())
     elif training_hyperparameters["optimizer"] == "SGD":
         optim = torch.optim.SGD(
             model.parameters(),
@@ -304,7 +306,7 @@ def test_model(
     # calculating array of clique sizes for all test curriculum:
     clique_sizes = np.linspace(
         max_clique_size,
-        0,
+        1,
         num=training_hyperparameters["clique_testing_levels"],
     ).astype(int)
 

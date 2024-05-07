@@ -21,7 +21,7 @@ from src.tensorboard_save import (
 
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "CNN_exp_config.yml"))
+config = load_config(os.path.join("docs", "GLOBAL_exp_config.yml"))
 
 # saving starting time of the experiment:
 start_time = datetime.datetime.now()

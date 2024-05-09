@@ -8,9 +8,16 @@ import src.graphs_generation as gen_graphs
 ### SAVING IMAGES
 
 
-def tensorboard_save_images(
-    writer, graph_size, p_correction_type, num_images=10, vgg_input=False
-):
+def tensorboard_save_images(writer, graph_size, p_correction_type, num_images=10):
+    """
+    Save images of graphs to TensorBoard. By default, this saves the images of the adjacency matrices of 10 random graphs, without any input transformation.
+
+    Args:
+        writer (SummaryWriter): The TensorBoard SummaryWriter object.
+        graph_size (int): The size of the graph.
+        p_correction_type (str): The type of p-correction.
+        num_images (int, optional): The number of images to save. Default is 10.
+    """
 
     # Set clique size to 60% of the graph size:
     clique_size = int(0.6 * graph_size)
@@ -20,13 +27,12 @@ def tensorboard_save_images(
         graph_size,
         clique_size,
         p_correction_type,
-        vgg_input,
     )
 
     img = torchvision.utils.make_grid(graph_pool[0], nrow=5)
 
     # adding to tensorboard
-    writer.add_image("Example graphs", img, dataformats="CHW")
+    writer.add_image("10 example graphs", img, dataformats="CHW")
 
     # flushing writer
     writer.flush()

@@ -42,7 +42,6 @@ tensorboard_save_images(
     config["graph_size"],
     config["p_correction_type"],
     num_images=10,
-    vgg_input=False,
 )
 
 # # NOT WORKING:

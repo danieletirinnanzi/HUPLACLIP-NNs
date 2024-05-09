@@ -46,15 +46,26 @@ def early_stopper(
 def train_model(
     model, training_hyperparameters, graph_size, p_correction_type, writer, model_name
 ):
+    """
+    Trains a model using the specified hyperparameters.
 
-    #  NOTES FOR WRITING DOCUMENTATION:
-    # - "model" is the loaded model
-    # - configuration file contains all hyperparameters for training
-    # - writer is the Tensorboard writer
-    # - model_name is the name of the model, and is needed in the case of Networks that were trained on ImageNet -> 3D graphs are generated
+    Args:
+        model (torch.nn.Module): The loaded model.
+        training_hyperparameters (dict): A dictionary containing all hyperparameters for training (read from configuration file).
+        graph_size (int): The size of the graph.
+        p_correction_type (str): The type of p-correction.
+        writer: The Tensorboard writer.
+        model_name (str): The name of the model.
 
-    ## START OF TESTS
-    # TODO: MOVE TO A "tests.py" FILE?
+    Raises:
+        ValueError: If the model is not provided, training_hyperparameters is not a dictionary,
+            graph_size is not a positive integer, p_correction_type is not a string, or writer is not provided.
+
+    Returns:
+        None
+    """
+
+    # START OF TESTS
 
     # Check if model is provided
     if model is None:
@@ -78,11 +89,14 @@ def train_model(
 
     ## END OF TESTS
 
-    # if model was trained on ImageNet, graphs have to be 3D (Visual Transformers need no resizing):
+    # Defining if transformations are needed based on model name:
     if model_name in ["VGG16", "RESNET50"]:
         imageNet_input = True
+    elif model_name in ["CNN"]:
+        cnn_input = True
     else:
         imageNet_input = False
+        cnn_input = False
 
     # Notify start of training:
     print("||| Started training...")
@@ -154,6 +168,7 @@ def train_model(
                     current_clique_size,
                     p_correction_type,
                     imageNet_input,
+                    cnn_input,
                 )
                 # Forward pass on training data
                 train_pred = model(train[0].to(device))
@@ -200,6 +215,7 @@ def train_model(
                                 current_clique_size_val,
                                 p_correction_type,
                                 imageNet_input,
+                                cnn_input,
                             )
                             # Compute loss on validation set:
                             val_pred = model(val[0].to(device))
@@ -283,12 +299,29 @@ def train_model(
 def test_model(
     model, training_hyperparameters, graph_size, p_correction_type, model_name
 ):
+    """
+    Test the given, trained model.
 
-    # if model is VGG, graphs will be 3D:
-    if model_name == "VGG16" or model_name == "RESNET50":
+    Args:
+        model (torch.nn.Module): The trained model to be tested.
+        training_hyperparameters (dict): A dictionary containing hyperparameters for training.
+        graph_size (int): The size of the graph.
+        p_correction_type (str): The type of p-correction.
+        model_name (str): The name of the model.
+
+    Returns:
+        dict: A dictionary containing the results of testing for different clique sizes.
+              The keys are the clique sizes and the values are the corresponding accuracies.
+    """
+
+    # Defining if transformations are needed based on model name:
+    if model_name in ["VGG16", "RESNET50"]:
         imageNet_input = True
+    elif model_name in ["CNN"]:
+        cnn_input = True
     else:
         imageNet_input = False
+        cnn_input = False
 
     # Notify start of testing:
     print("||| Started testing...")
@@ -323,6 +356,7 @@ def test_model(
                 current_clique_size,
                 p_correction_type,
                 imageNet_input,
+                cnn_input,
             )  # generating test data
             hard_output = torch.zeros(
                 [training_hyperparameters["num_test"]]

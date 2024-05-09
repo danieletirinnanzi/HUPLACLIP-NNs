@@ -93,7 +93,9 @@ def find_patch_size(graph_size):
     from src.graphs_generation import generate_graphs as gen_graphs
 
     # storing size of the input image:
-    single_graph = gen_graphs(1, graph_size, int(graph_size / 2), "p_increase", True)[
+    single_graph = gen_graphs(
+        1, graph_size, int(graph_size / 2), "p_increase", imageNet_input=True
+    )[
         0
     ]  # generating a single graph (already includes the magnification factor for ImageNet models)
     image_size = single_graph.shape[-1]

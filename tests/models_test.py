@@ -5,8 +5,9 @@ from src.utils import load_config
 from src.models import Models
 import src.graphs_generation as gen_graphs
 
-# loading experiment configuration file of global experiment:
-global_config = load_config("docs\GLOBAL_exp_config.yml")
+# loading experiment configuration file of single experiment and grid experiment:
+single_config = load_config("docs\single_exp_config.yml")
+grid_config = load_config("docs\grid_exp_config.yml")
 
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,8 +15,24 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ModelTest(unittest.TestCase):
 
+    # checking correspondence between grid experiment file and single experiment file:
+
+    def test_single_grid_exp_correspondence(self):
+
+        # checking that graph size of single config is included in grid config:
+        self.assertIn(single_config["graph_size"][0], grid_config["graph_size_values"])
+        # checking that p correction type of single config is the same as grid config:
+        self.assertEqual(
+            grid_config["p_correction_type"], single_config["p_correction_type"]
+        )
+        # checking that the models section in the grid experiment configuration file is the same as the one in the single experiment configuration file:
+        self.assertEqual(
+            grid_config["models"],
+            single_config["models"],
+        )
+
     # for each model:
-    # - first testing correspondence between single model experiment file and global experiment;
+    # - first testing correspondence between single model experiment file and corresponding section of "single" experiment;
     # - then testing that model predictions are either 0 or 1
 
     # MLP:
@@ -24,20 +41,20 @@ class ModelTest(unittest.TestCase):
         # loading experiment configuration file of MLP experiment:
         MLP_config = load_config("docs\MLP_exp_config.yml")
         # checking correspondence of graph size:
-        self.assertEqual(global_config["graph_size"], MLP_config["graph_size"])
+        self.assertEqual(single_config["graph_size"][0], MLP_config["graph_size"])
         # checking correspondence of p correction type:
         self.assertEqual(
-            global_config["p_correction_type"], MLP_config["p_correction_type"]
+            single_config["p_correction_type"], MLP_config["p_correction_type"]
         )
 
         # checking that the MLP section in the global experiment configuration file is the same as the one in the MLP experiment configuration file:
         self.assertEqual(
-            global_config["models"][0]["model_name"],
+            single_config["models"][0]["model_name"],
             MLP_config["models"][0]["model_name"],
         )
         # checking that hyperparameters correspond:
         self.assertEqual(
-            global_config["models"][0]["hyperparameters"],
+            single_config["models"][0]["hyperparameters"],
             MLP_config["models"][0]["hyperparameters"],
         )
 
@@ -62,6 +79,7 @@ class ModelTest(unittest.TestCase):
                 clique_size,
                 MLP_config["p_correction_type"],
                 False,
+                False,
             )[0].to(device)
         )
 
@@ -78,20 +96,20 @@ class ModelTest(unittest.TestCase):
         # loading experiment configuration file of CNN experiment:
         CNN_config = load_config("docs\CNN_exp_config.yml")
         # checking correspondence of graph size:
-        self.assertEqual(global_config["graph_size"], CNN_config["graph_size"])
+        self.assertEqual(single_config["graph_size"][0], CNN_config["graph_size"])
         # checking correspondence of p correction type:
         self.assertEqual(
-            global_config["p_correction_type"], CNN_config["p_correction_type"]
+            single_config["p_correction_type"], CNN_config["p_correction_type"]
         )
 
         # checking that the CNN section in the global experiment configuration file is the same as the one in the CNN experiment configuration file:
         self.assertEqual(
-            global_config["models"][1]["model_name"],
+            single_config["models"][1]["model_name"],
             CNN_config["models"][0]["model_name"],
         )
         # checking that hyperparameters correspond:
         self.assertEqual(
-            global_config["models"][1]["hyperparameters"],
+            single_config["models"][1]["hyperparameters"],
             CNN_config["models"][0]["hyperparameters"],
         )
 
@@ -116,6 +134,7 @@ class ModelTest(unittest.TestCase):
                 clique_size,
                 CNN_config["p_correction_type"],
                 False,
+                True,
             )[0].to(device)
         )
 
@@ -132,20 +151,20 @@ class ModelTest(unittest.TestCase):
         # loading experiment configuration file of VGG experiment:
         VGG_config = load_config("docs\VGG_exp_config.yml")
         # checking correspondence of graph size:
-        self.assertEqual(global_config["graph_size"], VGG_config["graph_size"])
+        self.assertEqual(single_config["graph_size"][0], VGG_config["graph_size"])
         # checking correspondence of p correction type:
         self.assertEqual(
-            global_config["p_correction_type"], VGG_config["p_correction_type"]
+            single_config["p_correction_type"], VGG_config["p_correction_type"]
         )
 
         # checking that the VGG section in the global experiment configuration file is the same as the one in the VGG experiment configuration file:
         self.assertEqual(
-            global_config["models"][2]["model_name"],
+            single_config["models"][2]["model_name"],
             VGG_config["models"][0]["model_name"],
         )
         # checking that hyperparameters correspond:
         self.assertEqual(
-            global_config["models"][2]["hyperparameters"],
+            single_config["models"][2]["hyperparameters"],
             VGG_config["models"][0]["hyperparameters"],
         )
 
@@ -170,6 +189,7 @@ class ModelTest(unittest.TestCase):
                 clique_size,
                 VGG_config["p_correction_type"],
                 True,
+                False,
             )[0].to(device)
         )
 
@@ -186,20 +206,20 @@ class ModelTest(unittest.TestCase):
         # loading experiment configuration file of RESNET experiment:
         RESNET_config = load_config("docs\RESNET_exp_config.yml")
         # checking correspondence of graph size:
-        self.assertEqual(global_config["graph_size"], RESNET_config["graph_size"])
+        self.assertEqual(single_config["graph_size"][0], RESNET_config["graph_size"])
         # checking correspondence of p correction type:
         self.assertEqual(
-            global_config["p_correction_type"], RESNET_config["p_correction_type"]
+            single_config["p_correction_type"], RESNET_config["p_correction_type"]
         )
 
         # checking that the RESNET section in the global experiment configuration file is the same as the one in the RESNET experiment configuration file:
         self.assertEqual(
-            global_config["models"][3]["model_name"],
+            single_config["models"][3]["model_name"],
             RESNET_config["models"][0]["model_name"],
         )
         # checking that hyperparameters correspond:
         self.assertEqual(
-            global_config["models"][3]["hyperparameters"],
+            single_config["models"][3]["hyperparameters"],
             RESNET_config["models"][0]["hyperparameters"],
         )
 
@@ -228,6 +248,7 @@ class ModelTest(unittest.TestCase):
                 clique_size,
                 RESNET_config["p_correction_type"],
                 True,
+                False,
             )[0].to(device)
         )
 
@@ -244,20 +265,20 @@ class ModelTest(unittest.TestCase):
     #     # loading experiment configuration file of VITscratch experiment:
     #     VITscratch_config = load_config("docs\VITscratch_exp_config.yml")
     #     # checking correspondence of graph size:
-    #     self.assertEqual(global_config["graph_size"], VITscratch_config["graph_size"])
+    #     self.assertEqual(single_config["graph_size"][0], VITscratch_config["graph_size"])
     #     # checking correspondence of p correction type:
     #     self.assertEqual(
-    #         global_config["p_correction_type"], VITscratch_config["p_correction_type"]
+    #         single_config["p_correction_type"], VITscratch_config["p_correction_type"]
     #     )
 
     #     # checking that the VITscratch section in the global experiment configuration file is the same as the one in the VITscratch experiment configuration file:
     #     self.assertEqual(
-    #         global_config["models"][4]["model_name"],
+    #         single_config["models"][4]["model_name"],
     #         VITscratch_config["models"][0]["model_name"],
     #     )
     #     # checking that hyperparameters correspond:
     #     self.assertEqual(
-    #         global_config["models"][4]["hyperparameters"],
+    #         single_config["models"][4]["hyperparameters"],
     #         VITscratch_config["models"][0]["hyperparameters"],
     #     )
 
@@ -303,22 +324,22 @@ class ModelTest(unittest.TestCase):
     #     VITpretrained_config = load_config("docs\VITpretrained_exp_config.yml")
     #     # checking correspondence of graph size:
     #     self.assertEqual(
-    #         global_config["graph_size"], VITpretrained_config["graph_size"]
+    #         single_config["graph_size"][0], VITpretrained_config["graph_size"]
     #     )
     #     # checking correspondence of p correction type:
     #     self.assertEqual(
-    #         global_config["p_correction_type"],
+    #         single_config["p_correction_type"],
     #         VITpretrained_config["p_correction_type"],
     #     )
 
     #     # checking that the VITpretrained section in the global experiment configuration file is the same as the one in the VITpretrained experiment configuration file:
     #     self.assertEqual(
-    #         global_config["models"][5]["model_name"],
+    #         single_config["models"][5]["model_name"],
     #         VITpretrained_config["models"][0]["model_name"],
     #     )
     #     # checking that hyperparameters correspond:
     #     self.assertEqual(
-    #         global_config["models"][5]["hyperparameters"],
+    #         single_config["models"][5]["hyperparameters"],
     #         VITpretrained_config["models"][0]["hyperparameters"],
     #     )
 

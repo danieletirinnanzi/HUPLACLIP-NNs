@@ -95,38 +95,39 @@ class Models:
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
             ),
-            # ADDITIONAL BLOCKS (stabilize learning, but now cause features to vanish for N=300). Alternative solutions:
-            # - Adaptive pooling;
-            # - Global average pooling;
-            # - Dilated convolutions;
-            # - Skip connections;
-            # - Use exact same Rudy's architecture.
-            # # 6th block
-            # create_conv_block(
-            #     hyperparameters["c5"],
-            #     hyperparameters["c6"],
-            #     hyperparameters["kernel_size"],
-            #     hyperparameters["stride"],
-            #     hyperparameters["padding"],
-            #     hyperparameters["dropout_prob"],
-            # ),
-            # # 7th block
-            # create_conv_block(
-            #     hyperparameters["c6"],
-            #     hyperparameters["c7"],
-            #     hyperparameters["kernel_size"],
-            #     hyperparameters["stride"],
-            #     hyperparameters["padding"],
-            #     hyperparameters["dropout_prob"],
-            # ),
+            # 6th block
+            create_conv_block(
+                hyperparameters["c5"],
+                hyperparameters["c6"],
+                hyperparameters["kernel_size"],
+                hyperparameters["stride"],
+                hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
+            ),
+            # 7th block
+            create_conv_block(
+                hyperparameters["c6"],
+                hyperparameters["c7"],
+                hyperparameters["kernel_size"],
+                hyperparameters["stride"],
+                hyperparameters["padding"],
+                hyperparameters["dropout_prob"],
+            ),
+            # 8th block NEEDED?
         )
 
         # performing forward pass on random input to get the size of the output tensor (gradients are unused here)
         # NOTE: the proper way of doing this is to use a function that calculates the output size of the CNN, given its structure
-        model_output = model(torch.randn(1, 1, graph_size, graph_size))
+        model_output = model(
+            torch.bernoulli(torch.rand(1, 1, 2400, 2400))
+        )  # input size for CNN is always 2400
         model_output_size = model_output.view(-1).size(
             0
         )  # flattening the output tensor
+
+        # # UNCOMMENT THIS TO SEE THE SIZE OF THE FINAL AMOUNT OF FEATURES:
+        # print(model_output_size)
+        # print(model_output.shape)
 
         # adding the output layer
         model.add_module("Flatten", nn.Flatten())

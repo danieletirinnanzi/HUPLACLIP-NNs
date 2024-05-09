@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 # import vgg transform
-from src.input_transforms import imageNet_transform
+from src.input_transforms import imageNet_transform, cnn_transform
 
 
 def plant_clique(graph, clique_size, graph_size):
@@ -30,6 +30,7 @@ def generate_graphs(
     clique_size,
     p_correction_type,
     imageNet_input,
+    cnn_input,
     p_nodes=0.5,
     p_clique=0.5,
 ):
@@ -42,14 +43,14 @@ def generate_graphs(
         clique_size (int): Size of the planted clique.
         p_correction_type (str): Type of p correction to apply.
         imageNet_input (bool): Whether the model was originally trained on ImageNet. If True, the graph will be modified.
-        p_nodes (float): Probability of an edge being present between two nodes.
-        p_clique (float): Probability of a graph having a planted clique.
-
+        cnn_input (bool): Whether the model is a ConvNet. If True, the graph will be modified.
+        p_nodes (float): Probability of an edge being present between two nodes. Default is 0.5.
+        p_clique (float): Probability of a graph having a planted clique. Default is 0.5.
 
     Returns:
         tuple: A tuple containing the generated graphs and the on_off flag for each graph.
     """
-    
+
     # Testing validity of input parameters (these bounds are needed for the "p_reduce" correction)
     if (
         not isinstance(graph_size, (int, np.int32, np.int64))
@@ -71,20 +72,32 @@ def generate_graphs(
         raise ValueError(
             "Decrease the clique size to avoid having a negative corrected probability of association between nodes"
         )
+    elif cnn_input and imageNet_input:
+        # making sure that only a transformation at a time is requested:
+        raise ValueError(
+            "Both flags cnn_input and imageNet_input are true. Input transformations cannot be requested at the same time."
+        )
 
     # Generating the labels (with/without clique)
     on_off = torch.bernoulli(p_clique * torch.ones(number_of_graphs))
-    # Generating the graph_list that will contain the adjacency matrices (will be filled later on)
+    # Generating the graph_list that will contain the adjacency matrices (now filled with zeros, will be filled with the actual adjacency matrices later on)
+    # - imageNet input (for VGG and ResNet models):
     if imageNet_input:
         # defining the magnification factor for the adjacency matrix:
         if graph_size < 224:
             factor = math.ceil(
                 224 / graph_size
-            )  # rounding up to the nearest integer, so that input is never smaller than 224
+            )  # rounding up to the nearest integer, so that input is always >224
         else:
             factor = 1  # no magnification needed
         graphs = torch.zeros(
             number_of_graphs, 3, graph_size * factor, graph_size * factor
+        )
+    # - convnet input:
+    elif cnn_input:
+        factor = int(2400 / graph_size)
+        graphs = torch.zeros(
+            number_of_graphs, 1, graph_size * factor, graph_size * factor
         )
     else:
         graphs = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
@@ -117,10 +130,13 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for ImageNet, the adjacency matrix must be resized and then made 3-dimensional:
+            # - graph is input for ImageNet -> the adjacency matrix must be resized and then made 3-dimensional:
             if imageNet_input:
-                # applying imageNet transform, that outputs adjacency matrices of the correct format
                 adjacency_matrix = imageNet_transform(adjacency_matrix)
+                graphs[i] = adjacency_matrix
+            # - graph is input for cnn -> the adjacency matrix must be resized and made 2400x2400:
+            elif cnn_input:
+                adjacency_matrix = cnn_transform(adjacency_matrix)
                 graphs[i] = adjacency_matrix
             else:
                 graphs[i, 0] = adjacency_matrix
@@ -155,10 +171,13 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # if the graph is used as input for ImageNet, the adjacency matrix must be resized and then made 3-dimensional:
+            # - graph is input for ImageNet -> the adjacency matrix must be resized and then made 3-dimensional:
             if imageNet_input:
-                # applying imageNet transform, that outputs adjacency matrices of the correct format
                 adjacency_matrix = imageNet_transform(adjacency_matrix)
+                graphs[i] = adjacency_matrix
+            # - graph is input for cnn -> the adjacency matrix must be resized and made 2400x2400:
+            elif cnn_input:
+                adjacency_matrix = cnn_transform(adjacency_matrix)
                 graphs[i] = adjacency_matrix
             else:
                 graphs[i, 0] = adjacency_matrix

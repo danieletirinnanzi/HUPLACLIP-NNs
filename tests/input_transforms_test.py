@@ -1,6 +1,6 @@
 import torch
 import unittest
-from src.input_transforms import imageNet_transform, find_patch_size
+from src.input_transforms import imageNet_transform, cnn_transform, find_patch_size
 
 
 class TestInputTransform(unittest.TestCase):
@@ -46,6 +46,55 @@ class TestInputTransform(unittest.TestCase):
             adjacency_matrix, output_size=(224, 224)
         )
         self.assertTrue(torch.all(torch.eq(transformed_matrix, adjacency_matrix)))
+
+    def test_cnn_transform(self):
+        # Test case 1: 100x100 adjacency matrix is resized to 2400x2400
+        adjacency_matrix = torch.bernoulli(torch.rand(100, 100))
+        # Call the cnn_transform function
+        transformed_matrix = cnn_transform(adjacency_matrix)
+        # Check if the transformed matrix has the correct shape
+        self.assertEqual(transformed_matrix.shape, (2400, 2400))
+        # Check if the transformed matrix is a torch.Tensor
+        self.assertIsInstance(transformed_matrix, torch.Tensor)
+
+        # Test case 2: if the adjacency matrix size is not evenly divisible by the output size, a ValueError is raised
+        with self.assertRaises(ValueError):
+            cnn_transform(torch.randn(130, 130))
+
+        # Test case 3: adjacency matrix is 4x4 and is expanded to 8x8
+        adjacency_matrix = torch.tensor(
+            [[1, 0, 1, 1], [0, 1, 0, 1], [1, 0, 1, 0], [1, 1, 0, 1]]
+        )
+        expected_output = torch.tensor(
+            [
+                [1, 1, 0, 0, 1, 1, 1, 1],
+                [1, 1, 0, 0, 1, 1, 1, 1],
+                [0, 0, 1, 1, 0, 0, 1, 1],
+                [0, 0, 1, 1, 0, 0, 1, 1],
+                [1, 1, 0, 0, 1, 1, 0, 0],
+                [1, 1, 0, 0, 1, 1, 0, 0],
+                [1, 1, 1, 1, 0, 0, 1, 1],
+                [1, 1, 1, 1, 0, 0, 1, 1],
+            ]
+        )
+        # Call the cnn_transform function
+        transformed_matrix = cnn_transform(adjacency_matrix, output_size=(8, 8))
+        # Check if the transformed matrix has the correct shape
+        self.assertEqual(transformed_matrix.shape, (8, 8))
+        # Check if the transformed matrix is equal to the expected output
+        self.assertTrue(torch.all(torch.eq(transformed_matrix, expected_output)))
+
+        # Test case 4: adjacency matrix is 20x20 and is transformed to 2400x2400
+        adjacency_matrix = torch.bernoulli(torch.rand((20, 20)))
+        transformed_matrix = cnn_transform(adjacency_matrix)
+        # checking that number of edges in transformed matrix is a multiple of the number of edges in the original matrix:
+        self.assertTrue(
+            transformed_matrix.sum().item() % adjacency_matrix.sum().item() == 0
+        )
+        # checking that size size of the transformed matrix is exactly 2400x2400:
+        self.assertTrue(
+            transformed_matrix.shape[0] == 2400 and transformed_matrix.shape[1] == 2400
+        )
 
     def test_find_patch_size(self):
 

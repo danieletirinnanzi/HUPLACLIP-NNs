@@ -11,6 +11,9 @@ src.egg-info
 # Ignore files in the /runs folder
 runs
 
+# Ignore files in the /out folder
+out
+
 # Ignore temporary files produced by ML pipelines with PyTorch
 *.pth
 *.pt

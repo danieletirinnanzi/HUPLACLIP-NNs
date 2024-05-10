@@ -1,11 +1,9 @@
 exp_name: grid_exp
-graph_size_values:
+graph_size_values: 
+# NOTE: to perform single experiments, simply comment the graph size values that are not needed
   - 100
-  - 120
   - 150
-  - 160
   - 200
-  - 240
   - 300
   - 400
   - 480

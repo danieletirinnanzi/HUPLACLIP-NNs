@@ -172,7 +172,7 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
 
     # NOTE: add visualization of features also when graph has no clique?
 
-    # # To visualize the names of the nodes in the graph:
+    # # Uncomment this to visualize the names of the nodes in the graph:
     # names = get_graph_node_names(trained_model)
     # print(names)
 
@@ -190,11 +190,13 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
                 "2.0": "feat3",
                 "3.0": "feat4",
                 "4.0": "feat5",
+                "5.0": "feat6",
+                "6.0": "feat7",
             },
         )
         #  generate graph with clique (70% of graph size, can be modified)
         graph = generate_graphs(
-            1, graph_size, int(0.7 * graph_size), p_correction, False, p_clique=1
+            1, graph_size, int(0.7 * graph_size), p_correction, False, True, p_clique=1
         )[0]
         # performing prediction on the single graph:
         if device == "cuda":
@@ -209,15 +211,17 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
             trained_model,
             {
                 "features.2": "feat2",
-                "features.10": "feat10",
+                "features.7": "feat7",
+                "features.12": "feat12",
                 "features.17": "feat17",
-                "features.24": "feat24",
+                "features.21": "feat21",
+                "features.26": "feat26",
                 "features.28": "feat28",
             },
         )
         #  generate graph with clique (70% of graph size, can be modified)
         graph = generate_graphs(
-            1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+            1, graph_size, int(0.7 * graph_size), p_correction, True, False, p_clique=1
         )[0]
         # performing prediction on the single graph:
         if device == "cuda":
@@ -231,16 +235,18 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
         trained_model = create_feature_extractor(
             trained_model,
             {
-                "layer1.0.conv1": "feature1",
-                "layer2.0.conv1": "feature2",
+                "layer1.0.conv1": "feature1.0",
+                "layer1.2.conv3": "feature1.2",
+                "layer2.0.conv1": "feature2.0",
+                "layer2.3.conv3": "feature2.3",
                 "layer3.0.conv1": "feature3.0",
                 "layer3.5.conv3": "feature3.5",
-                "layer4.2.conv3": "feature4",
+                "layer4.2.conv3": "feature4.2",
             },
         )
         #  generate graph with clique (70% of graph size, can be modified)
         graph = generate_graphs(
-            1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+            1, graph_size, int(0.7 * graph_size), p_correction, True, False, p_clique=1
         )[0]
         # performing prediction on the single graph:
         if device == "cuda":
@@ -252,8 +258,8 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
     out = {"input": graph, **out}
 
     # Visualizing the input image and the 4 features:
-    # - Create a figure with 6 subplots
-    fig, axs = plt.subplots(1, 6, figsize=(20, 5))
+    # - Create a figure with 8 subplots
+    fig, axs = plt.subplots(1, 8, figsize=(20, 5))
 
     # - Iterate over the feature maps and add them in places
     for i, (name, feature_map) in enumerate(out.items()):
@@ -261,8 +267,9 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
         feature_map = feature_map[0, 0, :, :].detach().cpu().numpy()
 
         # normalizing the feature map
+        epsilon = 1e-10  # to avoid division by zero
         feature_map = (feature_map - feature_map.min()) / (
-            feature_map.max() - feature_map.min()
+            feature_map.max() - feature_map.min() + epsilon
         )
 
         # Plot the feature map

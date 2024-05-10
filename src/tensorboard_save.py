@@ -21,12 +21,9 @@ def tensorboard_save_images(writer, graph_size, p_correction_type, num_images=10
 
     # Set clique size to 60% of the graph size:
     clique_size = int(0.6 * graph_size)
-    # Generate random graphs
+    # Generate random graphs(no transformations applied, just for visualization)
     graph_pool = gen_graphs.generate_graphs(
-        num_images,
-        graph_size,
-        clique_size,
-        p_correction_type,
+        num_images, graph_size, clique_size, p_correction_type, False, False
     )
 
     img = torchvision.utils.make_grid(graph_pool[0], nrow=5)

@@ -89,14 +89,16 @@ def train_model(
 
     ## END OF TESTS
 
-    # Defining if transformations are needed based on model name:
-    if model_name in ["VGG16", "RESNET50"]:
-        imageNet_input = True
-    elif model_name in ["CNN"]:
-        cnn_input = True
-    else:
+    # Setting transformation flags to True if needed:
+    if model_name == "MLP":
         imageNet_input = False
         cnn_input = False
+    elif model_name in ["VGG16", "RESNET50"]:
+        imageNet_input = True
+        cnn_input = False
+    elif model_name == "CNN":
+        imageNet_input = False
+        cnn_input = True
 
     # Notify start of training:
     print("||| Started training...")
@@ -314,14 +316,16 @@ def test_model(
               The keys are the clique sizes and the values are the corresponding accuracies.
     """
 
-    # Defining if transformations are needed based on model name:
-    if model_name in ["VGG16", "RESNET50"]:
-        imageNet_input = True
-    elif model_name in ["CNN"]:
-        cnn_input = True
-    else:
+    # Setting transformation flags to True if needed:
+    if model_name == "MLP":
         imageNet_input = False
         cnn_input = False
+    elif model_name in ["VGG16", "RESNET50"]:
+        imageNet_input = True
+        cnn_input = False
+    elif model_name == "CNN":
+        imageNet_input = False
+        cnn_input = True
 
     # Notify start of testing:
     print("||| Started testing...")

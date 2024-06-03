@@ -1,0 +1,28 @@
+elapsed_time: '0:19:34.732170'
+exp_name: grid_exp
+graph_size_values:
+- 200
+models:
+- hyperparameters:
+    clique_testing_levels: 100
+    clique_training_levels: 5
+    dropout: 0.2
+    dropout_prob: 0.2
+    l1: 1000
+    l2: 500
+    l3: 100
+    learning_rate: 0.01
+    loss_function: BCELoss
+    max_clique_size_proportion: 0.6
+    max_clique_size_proportion_test: 0.7
+    min_clique_size_proportion: 0.4
+    num_cycles: 10
+    num_test: 32
+    num_train: 32
+    num_training_steps: 50
+    num_val: 32
+    optimizer: AdamW
+    save_step: 5
+    test_iterations: 16
+  model_name: MLP
+p_correction_type: p_reduce

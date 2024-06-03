@@ -38,13 +38,19 @@ class Models:
     def cnn(graph_size, hyperparameters):
 
         def create_conv_block(
-            in_channels, out_channels, kernel_size, stride, padding, dropout_prob=0.5
+            in_channels,
+            out_channels,
+            kernel_size_conv,
+            kernel_size_pool,
+            stride,
+            padding,
+            dropout_prob=0.5,
         ):
             return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
+                nn.Conv2d(in_channels, out_channels, kernel_size_conv, stride, padding),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
-                nn.MaxPool2d(kernel_size),
+                nn.MaxPool2d(kernel_size_pool),
                 nn.Dropout(dropout_prob),
             )
 
@@ -54,7 +60,8 @@ class Models:
             create_conv_block(
                 1,
                 hyperparameters["c1"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
@@ -63,7 +70,8 @@ class Models:
             create_conv_block(
                 hyperparameters["c1"],
                 hyperparameters["c2"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
@@ -72,7 +80,8 @@ class Models:
             create_conv_block(
                 hyperparameters["c2"],
                 hyperparameters["c3"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
@@ -81,7 +90,8 @@ class Models:
             create_conv_block(
                 hyperparameters["c3"],
                 hyperparameters["c4"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
@@ -90,7 +100,8 @@ class Models:
             create_conv_block(
                 hyperparameters["c4"],
                 hyperparameters["c5"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
@@ -99,7 +110,8 @@ class Models:
             create_conv_block(
                 hyperparameters["c5"],
                 hyperparameters["c6"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
@@ -108,13 +120,17 @@ class Models:
             create_conv_block(
                 hyperparameters["c6"],
                 hyperparameters["c7"],
-                hyperparameters["kernel_size"],
+                hyperparameters["kernel_size_conv"],
+                hyperparameters["kernel_size_pool"],
                 hyperparameters["stride"],
                 hyperparameters["padding"],
                 hyperparameters["dropout_prob"],
             ),
-            # 8th block NEEDED?
         )
+
+        model_output = model(
+            torch.bernoulli(torch.rand(1, 1, 2400, 2400))
+        )  # input size for CNN is always 2400
 
         # performing forward pass on random input to get the size of the output tensor (gradients are unused here)
         # NOTE: the proper way of doing this is to use a function that calculates the output size of the CNN, given its structure

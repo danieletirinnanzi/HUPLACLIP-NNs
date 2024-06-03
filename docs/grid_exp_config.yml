@@ -1,15 +1,15 @@
 exp_name: grid_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  - 100
-  - 150
+  # - 100
+  # - 150
   - 200
-  - 300
-  - 400
-  - 480
-  - 600
-  - 800
-  - 1200  
+  # - 300
+  # - 400
+  # - 480
+  # - 600
+  # - 800
+  # - 1200  
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -17,8 +17,8 @@ graph_size_values:
 p_correction_type: p_reduce
 
 models:
-
-  # each instance of "models" will be trained and tested with the specified hyperparameters
+# NOTE: to perform single experiments, simply comment the models that are not needed.
+# Each instance of "models" will be trained and tested with the specified hyperparameters
   
   - model_name: MLP
     hyperparameters:
@@ -26,7 +26,6 @@ models:
       # ARCHITECTURE:
       l1: 1000
       l2: 500
-      l3: 100
       l3: 100
       dropout_prob: 0.2
       learning_rate: 0.01      
@@ -73,7 +72,8 @@ models:
       stride: 1
       padding: 1
       dropout_prob: 0.2
-      kernel_size: 3
+      kernel_size_conv: 3
+      kernel_size_pool: 2
       learning_rate: 0.01
       
       # TRAINING HYPERPARAMETERS:

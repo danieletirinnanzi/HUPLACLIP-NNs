@@ -11,19 +11,29 @@ class MLP(nn.Module):
         self.architecture_specs = architecture_specs
 
         self.model = nn.Sequential(
+            # Flatten layer
             nn.Flatten(),
+            # First linear layer
             nn.Linear(graph_size * graph_size, architecture_specs["l1"]),
             nn.BatchNorm1d(architecture_specs["l1"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
+            # Second linear layer
             nn.Linear(architecture_specs["l1"], architecture_specs["l2"]),
             nn.BatchNorm1d(architecture_specs["l2"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
+            # Third linear layer
             nn.Linear(architecture_specs["l2"], architecture_specs["l3"]),
             nn.BatchNorm1d(architecture_specs["l3"]),
             nn.ReLU(),
-            nn.Linear(architecture_specs["l3"], 1),
+            # Fourth linear layer
+            nn.Linear(architecture_specs["l3"], architecture_specs["l4"]),
+            nn.BatchNorm1d(architecture_specs["l4"]),
+            nn.ReLU(),
+            nn.Dropout(architecture_specs["dropout_prob"]),
+            # Output layer
+            nn.Linear(architecture_specs["l4"], 1),
             nn.Sigmoid(),
         )
 
@@ -92,15 +102,14 @@ class CNN(nn.Module):
         )
 
     def calculate_output_size(self):
+
         # performing forward pass on random input to get the size of the feature maps (gradients are unused here)
-        model_output = self.model(
-            torch.bernoulli(torch.rand(1, 1, self.graph_size, self.graph_size))
-        )
+        model_output = self.model(torch.bernoulli(torch.rand(1, 1, 2400, 2400)))
         # getting the flattened size of the output tensor
         model_output_size = model_output.view(-1).size(0)
 
-        # TO REMOVE:
-        print("model_output: ", model_output.shape)
+        # # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
+        # print("model_output: ", model_output.shape)
 
         return model_output_size
 

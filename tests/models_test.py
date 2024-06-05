@@ -8,8 +8,11 @@ from src.models import (
     VGG16_scratch,
     VGG16_pretrained,
     ResNet50_scratch,
-    ViTscratch,
-    ViTpretrained,
+    ResNet50_pretrained,
+    GoogLeNet_scratch,
+    GoogLeNet_pretrained,
+    ViT_scratch,
+    ViT_pretrained,
 )
 import src.graphs_generation as gen_graphs
 
@@ -97,8 +100,10 @@ class ModelTest(unittest.TestCase):
             grid_config["testing_parameters"], CNN_config["testing_parameters"]
         )
 
-        # loading model
-        model = load_model(CNN_config["models"][0], CNN_config["graph_size"])
+        # loading models
+        small_model = load_model(CNN_config["models"][0], CNN_config["graph_size"])
+        large_model = load_model(CNN_config["models"][1], CNN_config["graph_size"])
+        medium_model = load_model(CNN_config["models"][2], CNN_config["graph_size"])
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
@@ -106,8 +111,31 @@ class ModelTest(unittest.TestCase):
             * (CNN_config["training_parameters"]["min_clique_size_proportion"])
         )
 
-        # generating two graphs and predicting
-        prediction = model(
+        # generating two graphs and predicting with each model:
+        # - small model
+        prediction_small = small_model(
+            gen_graphs.generate_graphs(
+                2,
+                CNN_config["graph_size"],
+                clique_size,
+                CNN_config["p_correction_type"],
+                False,
+                True,
+            )[0].to(device)
+        )
+        # - large model
+        prediction_large = large_model(
+            gen_graphs.generate_graphs(
+                2,
+                CNN_config["graph_size"],
+                clique_size,
+                CNN_config["p_correction_type"],
+                False,
+                True,
+            )[0].to(device)
+        )
+        # - medium model
+        prediction_medium = medium_model(
             gen_graphs.generate_graphs(
                 2,
                 CNN_config["graph_size"],
@@ -118,12 +146,21 @@ class ModelTest(unittest.TestCase):
             )[0].to(device)
         )
 
-        # checking that the output is one-dimensional (and has two elements) after squeezing:
-        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        # checking that the all outputs are one-dimensional (and have two elements) after squeezing:
+        self.assertEqual(prediction_small.squeeze().size(), torch.Size([2]))
+        self.assertEqual(prediction_large.squeeze().size(), torch.Size([2]))
+        self.assertEqual(prediction_medium.squeeze().size(), torch.Size([2]))
 
-        # checking that both predictions are between 0 and 1:
-        self.assertTrue(torch.all(prediction >= 0))
-        self.assertTrue(torch.all(prediction <= 1))
+        # checking that all predictions are between 0 and 1:
+        # - small model
+        self.assertTrue(torch.all(prediction_small >= 0))
+        self.assertTrue(torch.all(prediction_small <= 1))
+        # - large model
+        self.assertTrue(torch.all(prediction_large >= 0))
+        self.assertTrue(torch.all(prediction_large <= 1))
+        # - medium model
+        self.assertTrue(torch.all(prediction_medium >= 0))
+        self.assertTrue(torch.all(prediction_medium <= 1))
 
     # VGG:
     def test_VGG_predictions(self):

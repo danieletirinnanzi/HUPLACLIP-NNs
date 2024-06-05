@@ -58,6 +58,7 @@ models:
   - model_name: CNN_small   #SMALL FILTERS, MANY LAYERS
     architecture:
       num_conv_layers: 8
+      c0: 1
       c1: 4
       c2: 8
       c3: 16
@@ -74,9 +75,26 @@ models:
       kernel_size_pool: 2
       # OUT: (512, 9, 9)
 
+  - model_name: CNN_large  #LARGE FILTERS, FEW LAYERS
+    architecture:
+      num_conv_layers: 4
+      c0: 1
+      c1: 4
+      c2: 8
+      c3: 16
+      c4: 32
+      l1: 100
+      stride: 2
+      padding: 3
+      dropout_prob: 0.2
+      kernel_size_conv: 10
+      kernel_size_pool: 2
+      # OUT: (32, 8, 8)
+
   - model_name: CNN_medium #MEDIUM FILTERS, MEDIUM LAYERS
     architecture:
       num_conv_layers: 7
+      c0: 1
       c1: 4
       c2: 8
       c3: 16
@@ -90,22 +108,7 @@ models:
       dropout_prob: 0.2
       kernel_size_conv: 5
       kernel_size_pool: 2
-      # OUT: (256, 16, 16)      
-
-  - model_name: CNN_large  #LARGE FILTERS, FEW LAYERS
-    architecture:
-      num_conv_layers: 4
-      c1: 4
-      c2: 8
-      c3: 16
-      C4: 32
-      l1: 100
-      stride: 2
-      padding: 3
-      dropout_prob: 0.2
-      kernel_size_conv: 10
-      kernel_size_pool: 2
-      # OUT: (32, 8, 8)
+      # OUT: (256, 16, 16)
 
   - model_name: VGG16scratch  
 

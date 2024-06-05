@@ -52,12 +52,13 @@ models:
       l3: 100
       l4: 50
       dropout_prob: 0.2
-      learning_rate: 0.01         
+      learning_rate: 0.01      
 
   # CNN models (http://layer-calc.com/)
   - model_name: CNN_small   #SMALL FILTERS, MANY LAYERS
     architecture:
-      # number of convolutional layers and number of channels in each layer:
+      num_conv_layers: 8
+      c0: 1
       c1: 4
       c2: 8
       c3: 16
@@ -76,11 +77,12 @@ models:
 
   - model_name: CNN_large  #LARGE FILTERS, FEW LAYERS
     architecture:
-      # number of convolutional layers and number of channels in each layer:
+      num_conv_layers: 4
+      c0: 1
       c1: 4
       c2: 8
       c3: 16
-      C4: 32
+      c4: 32
       l1: 100
       stride: 2
       padding: 3
@@ -91,7 +93,8 @@ models:
 
   - model_name: CNN_medium #MEDIUM FILTERS, MEDIUM LAYERS
     architecture:
-      # number of convolutional layers and number of channels in each layer:
+      num_conv_layers: 7
+      c0: 1
       c1: 4
       c2: 8
       c3: 16
@@ -111,9 +114,13 @@ models:
 
   - model_name: VGG16pretrained
 
-  - model_name: ResNet50
+  - model_name: ResNet50scratch
 
-  - model_name: GoogLeNet
+  - model_name: ResNet50pretrained
+
+  - model_name: GoogLeNetscratch
+
+  - model_name: GoogLeNetpretrained
   
   - model_name: ViTscratch
 

@@ -44,7 +44,7 @@ def load_model(model_specs, graph_size):
     match model_name:
         case "MLP":
             model = MLP(graph_size, model_specs["architecture"])
-        case "CNNsmall" | "CNNmedium" | "CNNlarge":
+        case "CNN_small" | "CNN_medium" | "CNN_large":
             model = CNN(graph_size, model_specs["architecture"])
         case "VGG16scratch":
             model = VGG16_scratch()

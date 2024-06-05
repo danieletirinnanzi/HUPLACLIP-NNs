@@ -1,202 +1,120 @@
 exp_name: grid_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  # - 100
-  # - 150
+  - 100
+  - 150
   - 200
-  # - 300
-  # - 400
-  # - 480
-  # - 600
-  # - 800
-  # - 1200  
+  - 300
+  - 400
+  - 480
+  - 600
+  - 800
+  - 1200  
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
 # - p_reduce (new correction): reducing the p value of the graph where the clique will be added
 p_correction_type: p_reduce
 
+training_parameters:
+  # training steps:
+  num_training_steps: 500
+  # training and validation set sizes:
+  num_train: 32
+  num_val: 32
+  # other hyperparameters:
+  learning_rate: 0.01
+  # ADDITIONAL PARAMETERS GO HERE AND WILL BE READ IN train_test.py (line 106)
+  # training structure:
+  max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
+  min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
+  clique_training_levels: 5
+  save_step: 5
+  # optimizer and loss function:
+  optimizer: AdamW
+  loss_function: BCELoss
+
+testing_parameters:
+  max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
+  num_test: 32  # number of graphs in each test iteration
+  clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
+  test_iterations: 16 # number of times for which a single clique size is tested
+
+
 models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
-# Each instance of "models" will be trained and tested with the specified hyperparameters
+# Each instance of "models" will be trained and tested
   
   - model_name: MLP
-    hyperparameters:
-      
-      # ARCHITECTURE:
+    architecture:
       l1: 1000
       l2: 500
       l3: 100
+      l4: 50
       dropout_prob: 0.2
-      learning_rate: 0.01      
+      learning_rate: 0.01         
 
-      # TRAINING HYPERPARAMETERS:
-      # training cycles (TO BE INCREASED):
-      num_cycles: 10
-      num_training_steps: 50
-      # training and validation set sizes (TO BE INCREASED):
-      num_train: 32
-      num_val: 32
-      # other hyperparameters:
-      learning_rate: 0.01
-      dropout: 0.2
-      # training structure:
-      max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-      min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-      clique_training_levels: 5
-      save_step: 5
-      # optimizer and loss function:
-      optimizer: AdamW
-      loss_function: BCELoss
-
-      # TESTING HYPERPARAMETERS:
-      max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-      num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-      clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-      test_iterations: 16 # number of times for which a single clique size is tested
-
-
-  - model_name: CNN
-    hyperparameters:
-      
-      # ARCHITECTURE:
+  # CNN models (http://layer-calc.com/)
+  - model_name: CNN_small   #SMALL FILTERS, MANY LAYERS
+    architecture:
       # number of convolutional layers and number of channels in each layer:
-      c1: 5
-      c2: 10
-      c3: 15
-      c4: 20    
-      c5: 25
-      c6: 30
-      c7: 35
+      c1: 4
+      c2: 8
+      c3: 16
+      c4: 32    
+      c5: 64
+      c6: 128
+      c7: 256
+      c8: 512
       l1: 100
       stride: 1
       padding: 1
       dropout_prob: 0.2
       kernel_size_conv: 3
       kernel_size_pool: 2
-      learning_rate: 0.01
-      
-      # TRAINING HYPERPARAMETERS:
-      # training cycles (TO BE INCREASED):
-      num_cycles: 10
-      num_training_steps: 50
-      # training and validation set sizes (TO BE INCREASED):
-      num_train: 32
-      num_val: 32
-      # training structure:
-      max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-      min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-      clique_training_levels: 5
-      save_step: 5
-      # optimizer and loss function:
-      optimizer: AdamW
-      loss_function: BCELoss
+      # OUT: (512, 9, 9)
 
-      # TESTING HYPERPARAMETERS:
-      max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-      num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-      clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-      test_iterations: 16 # number of times for which a single clique size is tested      
+  - model_name: CNN_large  #LARGE FILTERS, FEW LAYERS
+    architecture:
+      # number of convolutional layers and number of channels in each layer:
+      c1: 4
+      c2: 8
+      c3: 16
+      C4: 32
+      l1: 100
+      stride: 2
+      padding: 3
+      dropout_prob: 0.2
+      kernel_size_conv: 10
+      kernel_size_pool: 2
+      # OUT: (32, 8, 8)
 
-  - model_name: VGG16
-    hyperparameters:
-      
-      # TRAINING HYPERPARAMETERS:
-      # training cycles (TO BE INCREASED):
-      num_cycles: 10
-      num_training_steps: 50
-      # training and validation set sizes (TO BE INCREASED):
-      num_train: 32
-      num_val: 32
-      # training structure:
-      max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-      min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-      clique_training_levels: 5
-      save_step: 5
-      # optimizer and loss function:
-      optimizer: AdamW
-      loss_function: BCELoss
+  - model_name: CNN_medium #MEDIUM FILTERS, MEDIUM LAYERS
+    architecture:
+      # number of convolutional layers and number of channels in each layer:
+      c1: 4
+      c2: 8
+      c3: 16
+      c4: 32
+      c5: 64
+      c6: 128
+      c7: 256
+      l1: 100
+      stride: 1
+      padding: 1
+      dropout_prob: 0.2
+      kernel_size_conv: 5
+      kernel_size_pool: 2
+      # OUT: (256, 16, 16)
 
-      # TESTING HYPERPARAMETERS:
-      max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-      num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-      clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-      test_iterations: 16 # number of times for which a single clique size is tested   
+  - model_name: VGG16scratch  
 
+  - model_name: VGG16pretrained
 
-  - model_name: RESNET50
-    hyperparameters:
-      
-      # TRAINING HYPERPARAMETERS:
-      # training cycles (TO BE INCREASED):
-      num_cycles: 10
-      num_training_steps: 50
-      # training and validation set sizes (TO BE INCREASED):
-      num_train: 32
-      num_val: 32
-      # training structure:
-      max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-      min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-      clique_training_levels: 5
-      save_step: 5
-      # optimizer and loss function:
-      optimizer: AdamW
-      loss_function: BCELoss
+  - model_name: ResNet50
 
-      # TESTING HYPARAMETERS:
-      max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-      num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-      clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-      test_iterations: 16 # number of times for which a single clique size is tested
-
-  # - model_name: VITscratch
-  #   hyperparameters:
-      
-  #     # TRAINING HYPERPARAMETERS:
-  #     # training cycles (TO BE INCREASED):
-  #     num_cycles: 10
-  #     num_training_steps: 50
-  #     # training and validation set sizes (TO BE INCREASED):
-  #     num_train: 32
-  #     num_val: 32
-  #     # training structure:
-  #     max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-  #     min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-  #     clique_training_levels: 5
-  #     save_step: 5
-  #     # optimizer and loss function:
-  #     optimizer: AdamW
-  #     loss_function: BCELoss
-
-  #     # TESTING HYPERPARAMETERS:
-  #     max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-  #     num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-  #     clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-  #     test_iterations: 16 # number of times for which a single clique size is tested
-
-  # - model_name: VITpretrained
-  #   hyperparameters:
-      
-  #     # TRAINING HYPERPARAMETERS:
-  #     # training cycles (TO BE INCREASED):
-  #     num_cycles: 10
-  #     num_training_steps: 50
-  #     # training and validation set sizes (TO BE INCREASED):
-  #     num_train: 32
-  #     num_val: 32
-  #     # training structure:
-  #     max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-  #     min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-  #     clique_training_levels: 5
-  #     save_step: 5
-  #     # optimizer and loss function:
-  #     optimizer: AdamW
-  #     loss_function: BCELoss
-
-  #     # TESTING HYPERPARAMETERS:
-  #     max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-  #     num_test: 32  # (TO BE INCREASED) number of graphs in each test iteration
-  #     clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-  #     test_iterations: 16 # number of times for which a single clique size is tested
-
+  - model_name: GoogLeNet
   
+  - model_name: ViTscratch
+
+  - model_name: ViTpretrained

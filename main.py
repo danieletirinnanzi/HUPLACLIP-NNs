@@ -21,7 +21,7 @@ from src.tensorboard_save import (
 )
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "grid_exp_config.yml"))
+config = load_config(os.path.join("docs", "nndl_exp_config.yml"))
 
 # storing starting time of the experiment in string format:
 start_time = datetime.datetime.now()
@@ -73,9 +73,7 @@ for graph_size in config["graph_size_values"]:
         print(model_specs["model_name"])
 
         # loading model
-        model = load_model(
-            model_specs["model_name"], graph_size, model_specs["hyperparameters"]
-        )
+        model = load_model(model_specs, graph_size)
 
         # put model in training mode
         model.train()
@@ -83,7 +81,7 @@ for graph_size in config["graph_size_values"]:
         # training model and visualizing it on Tensorboard
         trained_model = train_model(
             model,
-            model_specs["hyperparameters"],
+            config["training_parameters"],
             graph_size,
             config["p_correction_type"],
             writer,
@@ -96,7 +94,7 @@ for graph_size in config["graph_size_values"]:
         # testing trained model
         test_results = test_model(
             trained_model,
-            model_specs["hyperparameters"],
+            config["testing_parameters"],
             graph_size,
             config["p_correction_type"],
             model_specs["model_name"],

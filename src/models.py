@@ -4,223 +4,215 @@ import torchvision.models as models
 from src.input_transforms import find_patch_size
 
 
-class Models:
+class MLP(nn.Module):
+    def __init__(self, graph_size, architecture_specs):
+        super().__init__()
+        self.graph_size = graph_size
+        self.architecture_specs = architecture_specs
 
-    @staticmethod
-    def mlp(graph_size, hyperparameters):
-
-        # MLP
-        model = nn.Sequential(
-            # flatten operation
+        self.model = nn.Sequential(
             nn.Flatten(),
-            # 1st block
-            nn.Linear(graph_size * graph_size, hyperparameters["l1"]),
-            nn.BatchNorm1d(hyperparameters["l1"]),
+            nn.Linear(graph_size * graph_size, architecture_specs["l1"]),
+            nn.BatchNorm1d(architecture_specs["l1"]),
             nn.ReLU(),
-            nn.Dropout(hyperparameters["dropout_prob"]),
-            # 2nd block
-            nn.Linear(hyperparameters["l1"], hyperparameters["l2"]),
-            nn.BatchNorm1d(hyperparameters["l2"]),
+            nn.Dropout(architecture_specs["dropout_prob"]),
+            nn.Linear(architecture_specs["l1"], architecture_specs["l2"]),
+            nn.BatchNorm1d(architecture_specs["l2"]),
             nn.ReLU(),
-            nn.Dropout(hyperparameters["dropout_prob"]),
-            # 3rd block
-            nn.Linear(hyperparameters["l2"], hyperparameters["l3"]),
-            nn.BatchNorm1d(hyperparameters["l3"]),
+            nn.Dropout(architecture_specs["dropout_prob"]),
+            nn.Linear(architecture_specs["l2"], architecture_specs["l3"]),
+            nn.BatchNorm1d(architecture_specs["l3"]),
             nn.ReLU(),
-            # output layer
-            nn.Linear(hyperparameters["l3"], 1),
+            nn.Linear(architecture_specs["l3"], 1),
             nn.Sigmoid(),
         )
 
-        return model
+    def forward(self, x):
+        return self.model(x)
 
-    @staticmethod
-    def cnn(graph_size, hyperparameters):
 
-        def create_conv_block(
-            in_channels,
-            out_channels,
-            kernel_size_conv,
-            kernel_size_pool,
-            stride,
-            padding,
-            dropout_prob=0.5,
-        ):
-            return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size_conv, stride, padding),
-                nn.BatchNorm2d(out_channels),
-                nn.ReLU(),
-                nn.MaxPool2d(kernel_size_pool),
-                nn.Dropout(dropout_prob),
+class CNN(nn.Module):
+    def __init__(self, graph_size, architecture_specs):
+        super().__init__()
+        self.graph_size = graph_size
+        self.architecture_specs = architecture_specs
+
+        # dynamically create convolutional layers based on architecture_specs
+        conv_layers = []
+        for i in range(architecture_specs["num_conv_layers"]):
+            in_channels = architecture_specs[f"c{i}"]
+            out_channels = architecture_specs[f"c{i+1}"]
+            kernel_size_conv = architecture_specs["kernel_size_conv"]
+            kernel_size_pool = architecture_specs["kernel_size_pool"]
+            stride = architecture_specs["stride"]
+            padding = architecture_specs["padding"]
+            conv_layers.append(
+                self.create_block(
+                    in_channels,
+                    out_channels,
+                    kernel_size_conv,
+                    kernel_size_pool,
+                    stride,
+                    padding,
+                )
             )
 
-        # Definition of the CNN architecture
-        model = nn.Sequential(
-            # 1st block
-            create_conv_block(
-                1,
-                hyperparameters["c1"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
-            # 2nd block
-            create_conv_block(
-                hyperparameters["c1"],
-                hyperparameters["c2"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
-            # 3rd block
-            create_conv_block(
-                hyperparameters["c2"],
-                hyperparameters["c3"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
-            # 4th block
-            create_conv_block(
-                hyperparameters["c3"],
-                hyperparameters["c4"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
-            # 5th block
-            create_conv_block(
-                hyperparameters["c4"],
-                hyperparameters["c5"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
-            # 6th block
-            create_conv_block(
-                hyperparameters["c5"],
-                hyperparameters["c6"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
-            # 7th block
-            create_conv_block(
-                hyperparameters["c6"],
-                hyperparameters["c7"],
-                hyperparameters["kernel_size_conv"],
-                hyperparameters["kernel_size_pool"],
-                hyperparameters["stride"],
-                hyperparameters["padding"],
-                hyperparameters["dropout_prob"],
-            ),
+        self.model = nn.Sequential(*conv_layers)
+
+        self.flatten = nn.Flatten()
+        self.linear1 = nn.Linear(self.calculate_output_size(), architecture_specs["l1"])
+        self.relu = nn.ReLU()
+        self.linear2 = nn.Linear(architecture_specs["l1"], 1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.model(x)
+        x = self.flatten(x)
+        x = self.linear1(x)
+        x = self.relu(x)
+        x = self.linear2(x)
+        x = self.sigmoid(x)
+        return x
+
+    def create_block(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size_conv,
+        kernel_size_pool,
+        stride,
+        padding,
+    ):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size_conv, stride, padding),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size_pool),
+            nn.Dropout(self.architecture_specs["dropout_prob"]),
         )
 
-        model_output = model(
-            torch.bernoulli(torch.rand(1, 1, 2400, 2400))
-        )  # input size for CNN is always 2400
+    def calculate_output_size(self):
+        # performing forward pass on random input to get the size of the feature maps (gradients are unused here)
+        model_output = self.model(
+            torch.bernoulli(torch.rand(1, 1, self.graph_size, self.graph_size))
+        )
+        # getting the flattened size of the output tensor
+        model_output_size = model_output.view(-1).size(0)
 
-        # performing forward pass on random input to get the size of the output tensor (gradients are unused here)
-        # NOTE: the proper way of doing this is to use a function that calculates the output size of the CNN, given its structure
-        model_output = model(
-            torch.bernoulli(torch.rand(1, 1, 2400, 2400))
-        )  # input size for CNN is always 2400
-        model_output_size = model_output.view(-1).size(
-            0
-        )  # flattening the output tensor
+        # TO REMOVE:
+        print("model_output: ", model_output.shape)
 
-        # # UNCOMMENT THIS TO SEE THE SIZE OF THE FINAL AMOUNT OF FEATURES:
-        # print(model_output_size)
-        # print(model_output.shape)
+        return model_output_size
 
-        # adding the output layer
-        model.add_module("Flatten", nn.Flatten())
-        model.add_module("Linear1", nn.Linear(model_output_size, hyperparameters["l1"]))
-        model.add_module("ReLU", nn.ReLU())
-        model.add_module("Linear2", nn.Linear(hyperparameters["l1"], 1))
-        model.add_module("Sigmoid", nn.Sigmoid())
 
-        return model
+# 3 CHANNEL INPUT FROM WITHIN THE MODEL https://discuss.pytorch.org/t/transfer-learning-usage-with-different-input-size/20744/4
 
-    # VGG16
-    @staticmethod
-    def vgg16():
-        model = models.vgg16(weights="DEFAULT")
 
+class VGG16_scratch(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = models.vgg16()
+        # Change the classifier
+        self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
+
+    def forward(self, x):
+        return self.model(x)
+
+
+class VGG16_pretrained(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = models.vgg16(weights="DEFAULT")
         # Freeze the architecture
-        for param in model.parameters():
+        for param in self.model.parameters():
             param.requires_grad = False
+        # Change the classifier
+        self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
-        # TODO: ADD INTERMEDIATE LAYER?
+    def forward(self, x):
+        return self.model(x)
 
-        model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
-        return model
+class ResNet50_scratch(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = models.resnet50()
+        # Change the classifier
+        self.model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
 
-    # RESNET50
-    @staticmethod
-    def resnet50():
-        model = models.resnet50(weights="DEFAULT")
+    def forward(self, x):
+        return self.model(x)
 
+
+class ResNet50_pretrained(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = models.resnet50(weights="DEFAULT")
         # Freeze the architecture
-        for param in model.parameters():
+        for param in self.model.parameters():
             param.requires_grad = False
+        # Change the classifier
+        self.model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
 
-        # TODO: ADD INTERMEDIATE LAYER?
+    def forward(self, x):
+        return self.model(x)
 
-        # Modify the classifier for binary classification (excluding FC layers)
-        model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
 
-        return model
+class GoogLeNet_scratch(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = models.googlenet()
+        # Change the classifier
+        self.model.fc = nn.Sequential(nn.Linear(1024, 1), nn.Sigmoid())
 
-    # VISUAL TRANSFORMERS:
-    # TO FIX: now predictions not working, probably a resizing of the input is required https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py
-    # - ViT from scratch
-    @staticmethod
-    def vit_scratch(graph_size):
+    def forward(self, x):
+        return self.model(x)
 
+
+class GoogLeNet_pretrained(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = models.googlenet(weights="DEFAULT")
+        # Freeze the architecture
+        for param in self.model.parameters():
+            param.requires_grad = False
+        # Change the classifier
+        self.model.fc = nn.Sequential(nn.Linear(1024, 1), nn.Sigmoid())
+
+    def forward(self, x):
+        return self.model(x)
+
+
+class ViT_scratch(nn.Module):
+    def __init__(self, graph_size):
+        super().__init__()
+        self.graph_size = graph_size
         patch_size, image_size = find_patch_size(graph_size)
-
-        model = models.vit_b_16()  # NOTE: num_classes can be set also from here
-
+        self.model = models.vit_b_16()
         # manually setting patch size and image size:
-        model.patch_size = patch_size
-        model.image_size = image_size
+        self.model.patch_size = patch_size
+        self.model.image_size = image_size
+        # Change the head
+        self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
-        # Modify the classifier for binary classification
-        model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+    def forward(self, x):
+        return self.model(x)
 
-        return model
 
-    # - ViT pretrained
-    @staticmethod
-    def vit_pretrained(graph_size):
-
+class ViT_pretrained(nn.Module):
+    def __init__(self, graph_size):
+        super().__init__()
+        self.graph_size = graph_size
         patch_size, image_size = find_patch_size(graph_size)
-
-        model = models.vit_b_16(weights="DEFAULT")
-
-        # Freeze the architecture
-        for param in model.parameters():
-            param.requires_grad = False
-
+        self.model = models.vit_b_16(weights="DEFAULT")
         # manually setting patch size and image size:
-        model.patch_size = patch_size
-        model.image_size = image_size
+        self.model.patch_size = patch_size
+        self.model.image_size = image_size
+        # Freeze the architecture
+        for param in self.model.parameters():
+            param.requires_grad = False
+        # Change the head
+        self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
-        # Modify the classifier for binary classification
-        model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
-
-        return model
+    def forward(self, x):
+        return self.model(x)

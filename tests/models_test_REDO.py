@@ -2,7 +2,15 @@ import unittest
 import torch
 from src.utils import load_model
 from src.utils import load_config
-from src.models import Models
+from src.models import (
+    MLP,
+    CNN,
+    VGG16_scratch,
+    VGG16_pretrained,
+    ResNet50_scratch,
+    ViTscratch,
+    ViTpretrained,
+)
 import src.graphs_generation as gen_graphs
 
 # loading experiment configuration file of single experiment and grid experiment:
@@ -27,29 +35,28 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(
             grid_config["p_correction_type"], MLP_config["p_correction_type"]
         )
-
-        # checking that the MLP section in the global experiment configuration file is the same as the one in the MLP experiment configuration file:
+        # checking correspondence of training parameters:
         self.assertEqual(
-            grid_config["models"][0]["model_name"],
-            MLP_config["models"][0]["model_name"],
+            grid_config["training_parameters"], MLP_config["training_parameters"]
         )
-        # checking that hyperparameters correspond:
+        # checking correspondence of testing parameters:
         self.assertEqual(
-            grid_config["models"][0]["hyperparameters"],
-            MLP_config["models"][0]["hyperparameters"],
+            grid_config["testing_parameters"], MLP_config["testing_parameters"]
+        )
+
+        # checking that the MLP architecture in the grid experiment configuration file is the same as the one in the MLP experiment configuration file:
+        self.assertEqual(
+            grid_config["models"][0]["architecture"],
+            MLP_config["models"][0]["architecture"],
         )
 
         # loading model
-        model = load_model(
-            MLP_config["models"][0]["model_name"],
-            MLP_config["graph_size"],
-            MLP_config["models"][0]["hyperparameters"],
-        )
+        model = load_model(MLP_config["models"][0], MLP_config["graph_size"])
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
             MLP_config["graph_size"]
-            * (MLP_config["models"][0]["hyperparameters"]["min_clique_size_proportion"])
+            * (MLP_config["training_parameters"]["min_clique_size_proportion"])
         )
 
         # generating two graphs and predicting
@@ -81,28 +88,22 @@ class ModelTest(unittest.TestCase):
             grid_config["p_correction_type"], CNN_config["p_correction_type"]
         )
 
-        # checking that the CNN section in the global experiment configuration file is the same as the one in the CNN experiment configuration file:
+        # checking correspondence of training parameters:
         self.assertEqual(
-            grid_config["models"][1]["model_name"],
-            CNN_config["models"][0]["model_name"],
+            grid_config["training_parameters"], CNN_config["training_parameters"]
         )
-        # checking that hyperparameters correspond:
+        # checking correspondence of testing parameters:
         self.assertEqual(
-            grid_config["models"][1]["hyperparameters"],
-            CNN_config["models"][0]["hyperparameters"],
+            grid_config["testing_parameters"], CNN_config["testing_parameters"]
         )
 
         # loading model
-        model = load_model(
-            CNN_config["models"][0]["model_name"],
-            CNN_config["graph_size"],
-            CNN_config["models"][0]["hyperparameters"],
-        )
+        model = load_model(CNN_config["models"][0], CNN_config["graph_size"])
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
             CNN_config["graph_size"]
-            * (CNN_config["models"][0]["hyperparameters"]["min_clique_size_proportion"])
+            * (CNN_config["training_parameters"]["min_clique_size_proportion"])
         )
 
         # generating two graphs and predicting

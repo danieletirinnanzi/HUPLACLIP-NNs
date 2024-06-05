@@ -8,8 +8,9 @@ __pycache__/
 # Ignore log files
 src.egg-info
 
-# Ignore files in the /runs folder
+# Ignore files in the /runs and /mock_runs folder
 runs
+mock_runs
 
 # Ignore files in the /out folder
 out

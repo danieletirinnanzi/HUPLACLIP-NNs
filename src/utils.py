@@ -5,7 +5,18 @@ import os
 import matplotlib.pyplot as plt
 
 # custom imports
-from .models import Models
+from .models import (
+    MLP,
+    CNN,
+    VGG16_scratch,
+    VGG16_pretrained,
+    ResNet50_scratch,
+    ResNet50_pretrained,
+    GoogLeNet_scratch,
+    GoogLeNet_pretrained,
+    ViT_scratch,
+    ViT_pretrained,
+)
 from torchvision.models.feature_extraction import (
     create_feature_extractor,
     get_graph_node_names,
@@ -25,22 +36,32 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_name, graph_size, hyperparameters):
+def load_model(model_specs, graph_size):
+
+    model_name = model_specs["model_name"]
 
     # - building requested model
     match model_name:
         case "MLP":
-            model = Models.mlp(graph_size, hyperparameters)
-        case "CNN":
-            model = Models.cnn(graph_size, hyperparameters)
-        case "VGG16":
-            model = Models.vgg16()
-        case "RESNET50":
-            model = Models.resnet50()
+            model = MLP(graph_size, model_specs["architecture"])
+        case "CNNsmall" | "CNNmedium" | "CNNlarge":
+            model = CNN(graph_size, model_specs["architecture"])
+        case "VGG16scratch":
+            model = VGG16_scratch()
+        case "VGG16pretrained":
+            model = VGG16_pretrained()
+        case "RESNET50scratch":
+            model = ResNet50_scratch()
+        case "RESNET50pretrained":
+            model = ResNet50_pretrained()
+        case "GoogLeNetscratch":
+            model = GoogLeNet_scratch()
+        case "GoogLeNetpretrained":
+            model = GoogLeNet_pretrained()
         case "VITscratch":
-            model = Models.vit_scratch(graph_size)
+            model = ViT_scratch(graph_size)
         case "VITpretrained":
-            model = Models.vit_pretrained()
+            model = ViT_pretrained(graph_size)
 
         # ADDITIONAL MODELS CAN BE ADDED HERE
 

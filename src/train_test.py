@@ -7,8 +7,6 @@ import torch.nn as nn
 # custom import
 import src.graphs_generation as gen_graphs
 
-# TEST THAT GRAPHS ARE GENERATED CORRECTLY
-
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -144,16 +142,11 @@ def train_model(
 
     ## END OF TESTS
 
-    # Setting transformation flags to True if needed:
+    # Setting input magnification flag to True if needed:
     if model_name == "MLP":
-        imageNet_input = False
-        cnn_input = False
-    elif model_name in ["VGG16", "RESNET50"]:
-        imageNet_input = True
-        cnn_input = False
-    elif model_name == "CNN":
-        imageNet_input = False
-        cnn_input = True
+        input_magnification = False
+    else:
+        input_magnification = True
 
     # Notify start of training:
     print("||| Started training...")
@@ -224,8 +217,7 @@ def train_model(
                 graph_size,
                 current_clique_size,
                 p_correction_type,
-                imageNet_input,
-                cnn_input,
+                input_magnification,
             )
             # Forward pass on training data
             train_pred = model(train[0].to(device))
@@ -268,8 +260,7 @@ def train_model(
                             graph_size,
                             current_clique_size_val,
                             p_correction_type,
-                            imageNet_input,
-                            cnn_input,
+                            input_magnification,
                         )
                         # Compute loss on validation set:
                         val_pred = model(val[0].to(device))
@@ -368,16 +359,11 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
               The keys are the clique sizes and the values are the corresponding accuracies.
     """
 
-    # Setting transformation flags to True if needed:
+    # Setting input magnification flag to True if needed:
     if model_name == "MLP":
-        imageNet_input = False
-        cnn_input = False
-    elif model_name in ["VGG16", "RESNET50"]:
-        imageNet_input = True
-        cnn_input = False
-    elif model_name == "CNN":
-        imageNet_input = False
-        cnn_input = True
+        input_magnification = False
+    else:
+        input_magnification = True
 
     # Notify start of testing:
     print("||| Started testing...")
@@ -411,8 +397,7 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
                 graph_size,
                 current_clique_size,
                 p_correction_type,
-                imageNet_input,
-                cnn_input,
+                input_magnification,
             )  # generating test data
             hard_output = torch.zeros(
                 [testing_parameters["num_test"]]

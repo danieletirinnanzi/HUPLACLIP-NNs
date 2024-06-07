@@ -30,4 +30,6 @@ testing_parameters:
 
 models:
 
-  - model_name: VGG16
+  - model_name: VGG16scratch
+
+  - model_name: VGG16pretrained

@@ -172,30 +172,25 @@ class ModelTest(unittest.TestCase):
             grid_config["p_correction_type"], VGG_config["p_correction_type"]
         )
 
-        # checking that the VGG section in the global experiment configuration file is the same as the one in the VGG experiment configuration file:
+        # checking correspondence of training parameters:
         self.assertEqual(
-            grid_config["models"][2]["model_name"],
-            VGG_config["models"][0]["model_name"],
+            grid_config["training_parameters"], VGG_config["training_parameters"]
         )
-        # checking that hyperparameters correspond:
+        # checking correspondence of testing parameters:
         self.assertEqual(
-            grid_config["models"][2]["hyperparameters"],
-            VGG_config["models"][0]["hyperparameters"],
-        )
-
-        # loading model
-        model = load_model(
-            VGG_config["models"][0]["model_name"],
-            VGG_config["graph_size"],
-            VGG_config["models"][0]["hyperparameters"],
+            grid_config["testing_parameters"], VGG_config["testing_parameters"]
         )
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
             VGG_config["graph_size"]
-            * (VGG_config["models"][0]["hyperparameters"]["min_clique_size_proportion"])
+            * (VGG_config["training_parameters"]["min_clique_size_proportion"])
         )
 
+        # SCRATCH MODEL:
+        print("testing VGG16_scratch")
+        model = load_model(VGG_config["models"][0], VGG_config["graph_size"])
+        model.eval()
         # generating two graphs and predicting
         prediction = model(
             gen_graphs.generate_graphs(
@@ -203,17 +198,48 @@ class ModelTest(unittest.TestCase):
                 VGG_config["graph_size"],
                 clique_size,
                 VGG_config["p_correction_type"],
-                True,
-                False,
+                True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
             )[0].to(device)
         )
 
-        # checking that the output is one-dimensional (and has two elements) after squeezing:
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
         self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
 
         # checking that both predictions are between 0 and 1:
         self.assertTrue(torch.all(prediction >= 0))
         self.assertTrue(torch.all(prediction <= 1))
+
+        print("ok")
+        print("-------------------")
+        # PRETRAINED MODEL:
+        print("testing VGG16_pretrained")
+        model = load_model(VGG_config["models"][1], VGG_config["graph_size"])
+        model.eval()
+        # making sure that requires_grad is True in pretrained model only in first and last layer
+        for name, param in model.named_parameters():
+            if "model.features.0" in name or "model.classifier" in name:
+                self.assertTrue(param.requires_grad)
+            else:
+                self.assertFalse(param.requires_grad)
+
+        prediction = model(
+            gen_graphs.generate_graphs(
+                2,
+                VGG_config["graph_size"],
+                clique_size,
+                VGG_config["p_correction_type"],
+                True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+            )[0].to(device)
+        )
+
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+
+        # checking that both predictions are between 0 and 1:
+        self.assertTrue(torch.all(prediction >= 0))
+        self.assertTrue(torch.all(prediction <= 1))
+
+        print("ok")
 
     # RESNET:
     def test_RESNET_predictions(self):
@@ -225,34 +251,25 @@ class ModelTest(unittest.TestCase):
             grid_config["p_correction_type"], RESNET_config["p_correction_type"]
         )
 
-        # checking that the RESNET section in the global experiment configuration file is the same as the one in the RESNET experiment configuration file:
+        # checking correspondence of training parameters:
         self.assertEqual(
-            grid_config["models"][3]["model_name"],
-            RESNET_config["models"][0]["model_name"],
+            grid_config["training_parameters"], RESNET_config["training_parameters"]
         )
-        # checking that hyperparameters correspond:
+        # checking correspondence of testing parameters:
         self.assertEqual(
-            grid_config["models"][3]["hyperparameters"],
-            RESNET_config["models"][0]["hyperparameters"],
-        )
-
-        # loading model
-        model = load_model(
-            RESNET_config["models"][0]["model_name"],
-            RESNET_config["graph_size"],
-            RESNET_config["models"][0]["hyperparameters"],
+            grid_config["testing_parameters"], RESNET_config["testing_parameters"]
         )
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
             RESNET_config["graph_size"]
-            * (
-                RESNET_config["models"][0]["hyperparameters"][
-                    "min_clique_size_proportion"
-                ]
-            )
+            * (RESNET_config["training_parameters"]["min_clique_size_proportion"])
         )
 
+        # SCRATCH MODEL:
+        print("testing RESNET50_scratch")
+        model = load_model(RESNET_config["models"][0], RESNET_config["graph_size"])
+        model.eval()
         # generating two graphs and predicting
         prediction = model(
             gen_graphs.generate_graphs(
@@ -260,17 +277,47 @@ class ModelTest(unittest.TestCase):
                 RESNET_config["graph_size"],
                 clique_size,
                 RESNET_config["p_correction_type"],
-                True,
-                False,
+                False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+            )[0].to(device)
+        )
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        # checking that both predictions are between 0 and 1:
+        self.assertTrue(torch.all(prediction >= 0))
+        self.assertTrue(torch.all(prediction <= 1))
+
+        print("ok")
+        print("-------------------")
+
+        # PRETRAINED MODEL:
+        print("testing RESNET50_pretrained")
+        model = load_model(RESNET_config["models"][1], RESNET_config["graph_size"])
+        model.eval()
+        # checking that requires_grad is True in pretrained model only in first and last layer
+        for name, param in model.named_parameters():
+            if "model.conv1" in name or "model.fc" in name:
+                self.assertTrue(param.requires_grad)
+            else:
+                self.assertFalse(param.requires_grad)
+        # generating two graphs and predicting
+        prediction = model(
+            gen_graphs.generate_graphs(
+                2,
+                RESNET_config["graph_size"],
+                clique_size,
+                RESNET_config["p_correction_type"],
+                False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
             )[0].to(device)
         )
 
-        # checking that the output is one-dimensional (and has two elements) after squeezing:
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
         self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
 
         # checking that both predictions are between 0 and 1:
         self.assertTrue(torch.all(prediction >= 0))
         self.assertTrue(torch.all(prediction <= 1))
+
+        print("ok")
 
     # # VITscratch:
     # def test_VITscratch_predictions(self):

@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 # import vgg transform
-from src.input_transforms import imageNet_transform, cnn_transform
+from src.input_transforms import magnify_input
 
 
 def plant_clique(graph, clique_size, graph_size):
@@ -18,8 +18,11 @@ def plant_clique(graph, clique_size, graph_size):
     Returns:
         torch.Tensor: Modified adjacency matrix with the planted clique.
     """
+    # adding the planted clique to the adjacency matrix in the top left corner
     graph[:clique_size, :clique_size] = torch.ones(clique_size, clique_size)
+    # creating a random permutation of the nodes
     random_permutation = torch.randperm(graph_size)
+    # placing the rows and columns of the adjacency matrix according to the random permutation
     graph = graph[random_permutation[:, None], random_permutation]
     return graph
 
@@ -29,8 +32,7 @@ def generate_graphs(
     graph_size,
     clique_size,
     p_correction_type,
-    imageNet_input,
-    cnn_input,
+    input_magnification,
     p_nodes=0.5,
     p_clique=0.5,
 ):
@@ -42,8 +44,7 @@ def generate_graphs(
         graph_size (int): Number of nodes in each graph.
         clique_size (int): Size of the planted clique.
         p_correction_type (str): Type of p correction to apply.
-        imageNet_input (bool): Whether the model was originally trained on ImageNet. If True, the graph will be modified.
-        cnn_input (bool): Whether the model is a ConvNet. If True, the graph will be modified.
+        input_magnification (bool): Whether the input needs to be magnified. If True, the graph will be made a 2400x2400 tensor.
         p_nodes (float): Probability of an edge being present between two nodes. Default is 0.5.
         p_clique (float): Probability of a graph having a planted clique. Default is 0.5.
 
@@ -72,33 +73,14 @@ def generate_graphs(
         raise ValueError(
             "Decrease the clique size to avoid having a negative corrected probability of association between nodes"
         )
-    elif cnn_input and imageNet_input:
-        # making sure that only a transformation at a time is requested:
-        raise ValueError(
-            "Both flags cnn_input and imageNet_input are true. Input transformations cannot be requested at the same time."
-        )
 
     # Generating the labels (with/without clique)
     on_off = torch.bernoulli(p_clique * torch.ones(number_of_graphs))
     # Generating the graph_list that will contain the adjacency matrices (now filled with zeros, will be filled with the actual adjacency matrices later on)
-    # - imageNet input (for VGG and ResNet models):
-    if imageNet_input:
-        # defining the magnification factor for the adjacency matrix:
-        if graph_size < 224:
-            factor = math.ceil(
-                224 / graph_size
-            )  # rounding up to the nearest integer, so that input is always >224
-        else:
-            factor = 1  # no magnification needed
-        graphs = torch.zeros(
-            number_of_graphs, 3, graph_size * factor, graph_size * factor
-        )
-    # - convnet input:
-    elif cnn_input:
-        factor = int(2400 / graph_size)
-        graphs = torch.zeros(
-            number_of_graphs, 1, graph_size * factor, graph_size * factor
-        )
+    # - magnified input (for all models except MLP):
+    if input_magnification:
+        graphs = torch.zeros(number_of_graphs, 1, 2400, 2400)
+    # - standard input (for MLP):
     else:
         graphs = torch.zeros(number_of_graphs, 1, graph_size, graph_size)
 
@@ -130,14 +112,11 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # - graph is input for ImageNet -> the adjacency matrix must be resized and then made 3-dimensional:
-            if imageNet_input:
-                adjacency_matrix = imageNet_transform(adjacency_matrix)
+            # - graph is input for all models except MLP
+            if input_magnification:
+                adjacency_matrix = magnify_input(adjacency_matrix)
                 graphs[i] = adjacency_matrix
-            # - graph is input for cnn -> the adjacency matrix must be resized and made 2400x2400:
-            elif cnn_input:
-                adjacency_matrix = cnn_transform(adjacency_matrix)
-                graphs[i] = adjacency_matrix
+            # - graph is input for MLP
             else:
                 graphs[i, 0] = adjacency_matrix
 
@@ -171,14 +150,11 @@ def generate_graphs(
                 upper_triangular, 0, 1
             )
             adjacency_matrix.fill_diagonal_(1)
-            # - graph is input for ImageNet -> the adjacency matrix must be resized and then made 3-dimensional:
-            if imageNet_input:
-                adjacency_matrix = imageNet_transform(adjacency_matrix)
+            # - graph is input for all models except MLP
+            if input_magnification:
+                adjacency_matrix = magnify_input(adjacency_matrix)
                 graphs[i] = adjacency_matrix
-            # - graph is input for cnn -> the adjacency matrix must be resized and made 2400x2400:
-            elif cnn_input:
-                adjacency_matrix = cnn_transform(adjacency_matrix)
-                graphs[i] = adjacency_matrix
+            # - graph is input for MLP
             else:
                 graphs[i, 0] = adjacency_matrix
 

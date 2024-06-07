@@ -121,6 +121,21 @@ class VGG16_scratch(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = models.vgg16()
+        # Make input have 3 channels
+        first_conv_layer = [
+            nn.Conv2d(
+                1,
+                3,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                dilation=1,
+                groups=1,
+                bias=True,
+            )
+        ]
+        first_conv_layer.extend(list(self.model.features))
+        self.model.features = nn.Sequential(*first_conv_layer)
         # Change the classifier
         self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
@@ -135,6 +150,21 @@ class VGG16_pretrained(nn.Module):
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
+        # Make input have 3 channels
+        first_conv_layer = [
+            nn.Conv2d(
+                1,
+                3,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                dilation=1,
+                groups=1,
+                bias=True,
+            )
+        ]
+        first_conv_layer.extend(list(self.model.features))
+        self.model.features = nn.Sequential(*first_conv_layer)
         # Change the classifier
         self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
@@ -146,8 +176,18 @@ class ResNet50_scratch(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = models.resnet50()
+        # Accept one-channel input
+        self.model.conv1 = nn.Conv2d(
+            1,
+            64,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
         # Change the classifier
-        self.model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Sequential(nn.Linear(num_ftrs, 1), nn.Sigmoid())
 
     def forward(self, x):
         return self.model(x)
@@ -160,7 +200,19 @@ class ResNet50_pretrained(nn.Module):
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
+        # Accept one-channel input
+        self.model.conv1 = nn.Conv2d(
+            1,
+            64,
+            kernel_size=7,
+            stride=2,
+            padding=3,
+            bias=False,
+        )
         # Change the classifier
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Sequential(nn.Linear(num_ftrs, 1), nn.Sigmoid())
+
         self.model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
 
     def forward(self, x):

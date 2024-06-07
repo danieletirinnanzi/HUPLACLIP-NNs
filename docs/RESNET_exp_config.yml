@@ -30,4 +30,6 @@ testing_parameters:
 
 models:
 
-  - model_name: ResNet50
+  - model_name: RESNET50scratch
+
+  - model_name: RESNET50pretrained

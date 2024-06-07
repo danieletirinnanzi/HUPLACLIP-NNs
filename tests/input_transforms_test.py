@@ -1,57 +1,57 @@
 import torch
 import unittest
-from src.input_transforms import imageNet_transform, cnn_transform, find_patch_size
+from src.input_transforms import magnify_input, find_patch_size
 
 
 class TestInputTransform(unittest.TestCase):
 
-    def test_imageNet_transform(self):
-        # Test case 1: adjacency matrix is 4x4 and is transformed to 8x8
-        adjacency_matrix = torch.tensor(
-            [[1, 0, 1, 1], [0, 1, 0, 1], [1, 0, 1, 0], [1, 1, 0, 1]]
-        )
-        expected_output = torch.tensor(
-            [
-                [1, 1, 0, 0, 1, 1, 1, 1],
-                [1, 1, 0, 0, 1, 1, 1, 1],
-                [0, 0, 1, 1, 0, 0, 1, 1],
-                [0, 0, 1, 1, 0, 0, 1, 1],
-                [1, 1, 0, 0, 1, 1, 0, 0],
-                [1, 1, 0, 0, 1, 1, 0, 0],
-                [1, 1, 1, 1, 0, 0, 1, 1],
-                [1, 1, 1, 1, 0, 0, 1, 1],
-            ]
-        )
-        transformed_matrix = imageNet_transform(adjacency_matrix, output_size=(8, 8))
-        self.assertEqual(transformed_matrix.shape, (3, 8, 8))
-        self.assertTrue(torch.all(torch.eq(transformed_matrix, expected_output)))
+    # def test_imageNet_transform(self):
+    #     # Test case 1: adjacency matrix is 4x4 and is transformed to 8x8
+    #     adjacency_matrix = torch.tensor(
+    #         [[1, 0, 1, 1], [0, 1, 0, 1], [1, 0, 1, 0], [1, 1, 0, 1]]
+    #     )
+    #     expected_output = torch.tensor(
+    #         [
+    #             [1, 1, 0, 0, 1, 1, 1, 1],
+    #             [1, 1, 0, 0, 1, 1, 1, 1],
+    #             [0, 0, 1, 1, 0, 0, 1, 1],
+    #             [0, 0, 1, 1, 0, 0, 1, 1],
+    #             [1, 1, 0, 0, 1, 1, 0, 0],
+    #             [1, 1, 0, 0, 1, 1, 0, 0],
+    #             [1, 1, 1, 1, 0, 0, 1, 1],
+    #             [1, 1, 1, 1, 0, 0, 1, 1],
+    #         ]
+    #     )
+    #     transformed_matrix = imageNet_transform(adjacency_matrix, output_size=(8, 8))
+    #     self.assertEqual(transformed_matrix.shape, (3, 8, 8))
+    #     self.assertTrue(torch.all(torch.eq(transformed_matrix, expected_output)))
 
-        # Test case 2: adjacency matrix is 20x20 and is transformed to 224x224
-        adjacency_matrix = torch.bernoulli(torch.rand((20, 20)))
-        transformed_matrix = imageNet_transform(
-            adjacency_matrix, output_size=(224, 224)
-        )
-        # checking that number of edges in transformed matrix is a multiple of the number of edges in the original matrix:
-        self.assertTrue(
-            transformed_matrix.sum().item() % adjacency_matrix.sum().item() == 0
-        )
-        # checking that size size of the transformed matrix is at least 224x224:
-        self.assertTrue(
-            transformed_matrix.shape[1] >= 224 and transformed_matrix.shape[2] >= 224
-        )
+    #     # Test case 2: adjacency matrix is 20x20 and is transformed to 224x224
+    #     adjacency_matrix = torch.bernoulli(torch.rand((20, 20)))
+    #     transformed_matrix = imageNet_transform(
+    #         adjacency_matrix, output_size=(224, 224)
+    #     )
+    #     # checking that number of edges in transformed matrix is a multiple of the number of edges in the original matrix:
+    #     self.assertTrue(
+    #         transformed_matrix.sum().item() % adjacency_matrix.sum().item() == 0
+    #     )
+    #     # checking that size size of the transformed matrix is at least 224x224:
+    #     self.assertTrue(
+    #         transformed_matrix.shape[1] >= 224 and transformed_matrix.shape[2] >= 224
+    #     )
 
-        # Test case 3: adjacency matrix is bigger than 224x224, nothing should be done
-        adjacency_matrix = torch.bernoulli(torch.rand((300, 300)))
-        transformed_matrix = imageNet_transform(
-            adjacency_matrix, output_size=(224, 224)
-        )
-        self.assertTrue(torch.all(torch.eq(transformed_matrix, adjacency_matrix)))
+    #     # Test case 3: adjacency matrix is bigger than 224x224, nothing should be done
+    #     adjacency_matrix = torch.bernoulli(torch.rand((300, 300)))
+    #     transformed_matrix = imageNet_transform(
+    #         adjacency_matrix, output_size=(224, 224)
+    #     )
+    #     self.assertTrue(torch.all(torch.eq(transformed_matrix, adjacency_matrix)))
 
-    def test_cnn_transform(self):
+    def test_magnify_input(self):
         # Test case 1: 100x100 adjacency matrix is resized to 2400x2400
         adjacency_matrix = torch.bernoulli(torch.rand(100, 100))
-        # Call the cnn_transform function
-        transformed_matrix = cnn_transform(adjacency_matrix)
+        # Call the magnify_input function
+        transformed_matrix = magnify_input(adjacency_matrix)
         # Check if the transformed matrix has the correct shape
         self.assertEqual(transformed_matrix.shape, (2400, 2400))
         # Check if the transformed matrix is a torch.Tensor
@@ -59,7 +59,7 @@ class TestInputTransform(unittest.TestCase):
 
         # Test case 2: if the adjacency matrix size is not evenly divisible by the output size, a ValueError is raised
         with self.assertRaises(ValueError):
-            cnn_transform(torch.randn(130, 130))
+            magnify_input(torch.randn(130, 130))
 
         # Test case 3: adjacency matrix is 4x4 and is expanded to 8x8
         adjacency_matrix = torch.tensor(
@@ -77,8 +77,8 @@ class TestInputTransform(unittest.TestCase):
                 [1, 1, 1, 1, 0, 0, 1, 1],
             ]
         )
-        # Call the cnn_transform function
-        transformed_matrix = cnn_transform(adjacency_matrix, output_size=(8, 8))
+        # Call the magnify_input function
+        transformed_matrix = magnify_input(adjacency_matrix, output_size=(8, 8))
         # Check if the transformed matrix has the correct shape
         self.assertEqual(transformed_matrix.shape, (8, 8))
         # Check if the transformed matrix is equal to the expected output
@@ -86,7 +86,7 @@ class TestInputTransform(unittest.TestCase):
 
         # Test case 4: adjacency matrix is 20x20 and is transformed to 2400x2400
         adjacency_matrix = torch.bernoulli(torch.rand((20, 20)))
-        transformed_matrix = cnn_transform(adjacency_matrix)
+        transformed_matrix = magnify_input(adjacency_matrix)
         # checking that number of edges in transformed matrix is a multiple of the number of edges in the original matrix:
         self.assertTrue(
             transformed_matrix.sum().item() % adjacency_matrix.sum().item() == 0

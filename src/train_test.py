@@ -438,9 +438,10 @@ def test_model(
 
     # After all task versions have been tested, calculating relevant metrics:
     # - calculating precision, recall, F1 score, Area Under ROC curve (AUC-ROC), Confusion Matrix:
-    precision = TP / (TP + FP)
-    recall = TP / (TP + FN)
-    F1 = 2 * (precision * recall) / (precision + recall)
+    epsilon = 1e-10 # to avoid divisions by zero
+    precision = TP / (TP + FP + epsilon)
+    recall = TP / (TP + FN + epsilon)
+    F1 = 2 * (precision * recall) / (precision + recall + epsilon)
     AUC_ROC = roc_auc_score(y_true, y_scores)
     # storing metrics in results dictionary:
     metrics_results["TP"] = TP

@@ -118,9 +118,6 @@ class CNN(nn.Module):
         return model_output_size
 
 
-# 3 CHANNEL INPUT FROM WITHIN THE MODEL https://discuss.pytorch.org/t/transfer-learning-usage-with-different-input-size/20744/4
-
-
 class VGG16_scratch(nn.Module):
     def __init__(self):
         super().__init__()
@@ -208,7 +205,7 @@ class ViT_scratch(nn.Module):
     def __init__(self, graph_size, architecture_specs):
         super().__init__()
         self.model = models.VisionTransformer(
-            image_size=graph_size,
+            image_size=2400,
             patch_size=architecture_specs["patch_size"],
             num_classes=architecture_specs["num_classes"],
             num_layers=architecture_specs["num_layers"],
@@ -245,7 +242,7 @@ class ViT_pretrained(nn.Module):
         )
 
         # Interpolate the position embedding size
-        image_size = graph_size
+        image_size = 2400
         grid_size = image_size // new_patch_size[0]
         state_dict["pos_embed"] = resample_abs_pos_embed(
             posemb=state_dict["pos_embed"], new_size=[grid_size, grid_size]

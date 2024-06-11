@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.optim
 import torch.nn as nn
+from sklearn.metrics import roc_auc_score
 
 # custom import
 import src.graphs_generation as gen_graphs
@@ -13,38 +14,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # TRAINING FUNCTIONS:
 
 
-# # OLD EARLY STOPPER
-# def early_stopper(
-#     validation_loss,
-#     memory=5,
-#     validation_exit_error=0.1,  # CAN BE CHANGED
-# ):
-#     """
-#     Implements early stopping based on stored validation loss. Validation loss is stored every "saved_steps". If the AVERAGE value of the last "memory" losses is below the "exit_error" values defined above, then training is interrupted and the next task version is trained.
-
-#     Args:
-#         validation_loss (numpy.array): Array containing validation loss values (stored every 10 training steps).
-#         memory (int): Number of previous cycles to consider for calculating average validation and training losses.
-#         validation_exit_error (float): Validation error below which we can stop early
-
-#     Returns:
-#         tuple: A boolean indicating whether to stop early.
-#     """
-
-#     if (
-#         np.mean(validation_loss[validation_loss.shape[0] - memory :])
-#         < validation_exit_error
-#     ):
-#         return True
-#     else:
-#         return False
-
-
-# NEW EARLY STOPPER ( adapted from: https://stackoverflow.com/a/73704579 )
+# EARLY STOPPER ( adapted from: https://stackoverflow.com/a/73704579 )
 class EarlyStopper:
     """
     EarlyStopper is a simple class to stop the training when the validation loss
-    is not improving for a certain number of epochs.
+    is not improving or is below a certain value for a certain number of training steps.
 
     Attributes:
         patience (int): Number of epochs with no improvement after which training will be stopped.
@@ -55,7 +29,7 @@ class EarlyStopper:
         val_exit_loss (float): The validation loss under which the training should stop (exit early).
     """
 
-    def __init__(self, patience=3, min_delta=0.01, val_exit_loss=0.1):
+    def __init__(self, patience=4, min_delta=0.01, val_exit_loss=0.08):
         self.patience = patience
         self.min_delta = min_delta
         # increase in validation loss:
@@ -104,7 +78,7 @@ def train_model(
 
     Args:
         model (torch.nn.Module): The loaded model.
-        training_parameters (dict): A dictionary containing all hyperparameters for training (read from configuration file).
+        training_parameters (dict): A dictionary containing all hyperparameters for training (they are read from configuration file).
         graph_size (int): The size of the graph.
         p_correction_type (str): The type of p-correction.
         writer: The Tensorboard writer.
@@ -205,8 +179,12 @@ def train_model(
         # printing value of clique size when it changes:
         print("||| Clique size is now: ", current_clique_size)
 
-        # Initialize early stopper at the beginning of each task version training:
-        early_stopper = EarlyStopper()
+        # Initialize early stopper at the beginning of each task version training, with custom parameters:
+        early_stopper = EarlyStopper(
+            patience=training_parameters["patience"],
+            min_delta=training_parameters["min_delta"],
+            val_exit_loss=training_parameters["val_exit_loss"],
+        )
 
         # Training steps loop:
         for training_step in range(training_parameters["num_training_steps"] + 1):
@@ -343,97 +321,140 @@ def train_model(
 
 
 # TESTING FUNCTION:
-def test_model(model, testing_parameters, graph_size, p_correction_type, model_name):
+def test_model(
+    model, testing_hyperparameters, graph_size, p_correction_type, model_name
+):
     """
     Test the given, trained model.
 
     Args:
         model (torch.nn.Module): The trained model to be tested.
-        testing_parameters (dict): A dictionary containing hyperparameters for training.
+        testing_hyperparameters (dict): A dictionary containing hyperparameters for testing.
         graph_size (int): The size of the graph.
         p_correction_type (str): The type of p-correction.
         model_name (str): The name of the model.
 
     Returns:
-        dict: A dictionary containing the results of testing for different clique sizes.
-              The keys are the clique sizes and the values are the corresponding accuracies.
+        tuple: A tuple containing two dictionaries:
+            - fraction_correct_results: A dictionary containing the results of testing for different clique sizes
+              (The keys are the clique sizes and the values are the corresponding accuracies).
+            - metrics_results: A dictionary containing various metrics calculated during testing.
     """
 
-    # Setting input magnification flag to True if needed:
-    if model_name == "MLP":
-        input_magnification = False
-    else:
+    # Setting transformation flags to True if needed:
+    if model_name != "MLP":
         input_magnification = True
+    else:
+        input_magnification = False
 
     # Notify start of testing:
     print("||| Started testing...")
 
-    # returns the results of testing for N=300 as a dictionary:
-    # { K: fraction correct, ...}
-
-    # creating empty dictionary:
-    results = {}
+    # creating empty dictionaries for storing testing results:
+    # - fraction correct for each clique size:
+    fraction_correct_results = {}
+    # - other metrics:
+    metrics_results = {}
 
     # calculating max clique size (proportion of graph size):
     max_clique_size = int(
-        testing_parameters["max_clique_size_proportion_test"] * graph_size
+        testing_hyperparameters["max_clique_size_proportion_test"] * graph_size
     )
     # calculating array of clique sizes for all test curriculum:
     clique_sizes = np.linspace(
         max_clique_size,
         1,
-        num=testing_parameters["clique_testing_levels"],
+        num=testing_hyperparameters["clique_testing_levels"],
     ).astype(int)
+
+    # initializing true positive, false positive, true negative, false negative
+    TP = 0
+    FP = 0
+    TN = 0
+    FN = 0
+    # initializing predicted output array and true output array (needed for AUC-ROC calculation)
+    y_scores = []
+    y_true = []
 
     # Loop for decreasing clique sizes
     for current_clique_size in clique_sizes:
 
         # Loop for testing iterations:
-        for test_iter in range(testing_parameters["test_iterations"]):
+        for test_iter in range(testing_hyperparameters["test_iterations"]):
 
             # Testing the network with test data
+            # - generating test data
             test = gen_graphs.generate_graphs(
-                testing_parameters["num_test"],
+                testing_hyperparameters["num_test"],
                 graph_size,
                 current_clique_size,
                 p_correction_type,
                 input_magnification,
-            )  # generating test data
-            hard_output = torch.zeros(
-                [testing_parameters["num_test"]]
-            )  # initializing tensor to store hard predictions
-            soft_output = model(
-                test[0].to(device)
-            )  # performing forward pass on test data
+            )
+            # - initializing tensor to store hard predictions
+            hard_output = torch.zeros([testing_hyperparameters["num_test"]])
+            # - performing prediction on test data
+            soft_output = model(test[0].to(device))
             soft_output = soft_output.squeeze()  # remove extra dimension
+            # - storing soft predictions for AUC-ROC calculation:
+            y_scores.extend(soft_output.cpu().detach().numpy())
+            # - storing true labels for AUC-ROC calculation:
+            y_true.extend(test[1])
             # Converting soft predictions to hard predictions
-            # NOTE: can be done stochastically?
-            for index in range(testing_parameters["num_test"]):
+            for index in range(testing_hyperparameters["num_test"]):
                 if soft_output[index] > 0.5:
+                    # if the output is greater than 0.5, model predicts presence of clique
                     hard_output[index] = 1.0
+                    # Updating true positive and false positive rates
+                    if test[1][index] == 1.0:
+                        TP += 1
+                    elif test[1][index] == 0.0:
+                        FP += 1
                 else:
+                    # if the output is less than 0.5, model predicts absence of clique
                     hard_output[index] = 0.0
+                    # Updating true negative and false negative rates
+                    if test[1][index] == 0.0:
+                        TN += 1
+                    elif test[1][index] == 1.0:
+                        FN += 1
+            # storing hard predictions
             predicted_output = hard_output
 
-        # Calculating fraction of correct predictions on test set:
+        # Calculating fraction of correct predictions on test set, to be printed:
         accuracy = (predicted_output == torch.Tensor(test[1])).sum().item() / (
-            1.0 * testing_parameters["num_test"]
+            1.0 * testing_hyperparameters["num_test"]
         )
-        results[current_clique_size] = accuracy
+        fraction_correct_results[current_clique_size] = accuracy
 
         # Printing the size of the clique just tested and the corresponding test accuracy:
         print(
             "|||Completed testing for clique = ",
             current_clique_size,
-            ". Accuracy on test set =",
+            ". Fraction correct on test set =",
             accuracy,
         )
         print("|||==========================================")
 
-    # After all task versions have been tested:
+    # After all task versions have been tested, calculating relevant metrics:
+    # - calculating precision, recall, F1 score, Area Under ROC curve (AUC-ROC), Confusion Matrix:
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    F1 = 2 * (precision * recall) / (precision + recall)
+    AUC_ROC = roc_auc_score(y_true, y_scores)
+    # storing metrics in results dictionary:
+    metrics_results["TP"] = TP
+    metrics_results["FP"] = FP
+    metrics_results["TN"] = TN
+    metrics_results["FN"] = FN
+    metrics_results["precision"] = precision
+    metrics_results["recall"] = recall
+    metrics_results["F1"] = F1
+    metrics_results["AUC_ROC"] = AUC_ROC
+
     # - notify completion of testing:
     print("||| Finished testing.")
     # - notify completion of testing function execution:
     print("- Model tested successfully.")
 
-    return results
+    return fraction_correct_results, metrics_results

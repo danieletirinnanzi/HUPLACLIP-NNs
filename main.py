@@ -92,7 +92,7 @@ for graph_size in config["graph_size_values"]:
         trained_model.eval()
 
         # testing trained model
-        test_results = test_model(
+        fraction_correct_results, metrics_results = test_model(
             trained_model,
             config["testing_parameters"],
             graph_size,
@@ -108,7 +108,8 @@ for graph_size in config["graph_size_values"]:
 
         # - saving test results as csv file
         save_test_results(
-            test_results,
+            fraction_correct_results,
+            metrics_results,
             model_specs["model_name"],
             graph_size,
             model_results_dir,

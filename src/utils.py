@@ -3,6 +3,7 @@ import torch
 import csv
 import os
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # custom imports
 from .models import (
@@ -101,14 +102,36 @@ def save_exp_config(config, results_dir, exp_name_with_time, start_time, end_tim
         yaml.dump(config, file)
 
 
-# Save results in csv file:
-def save_test_results(test_results_dict, model_name, graph_size, results_dir):
+# Save test results to .csv files:
+def save_test_results(
+    fraction_correct_results, metrics_results, model_name, graph_size, results_dir
+):
+    """
+    Save the test results to .csv files.
+
+    Args:
+        fraction_correct_results (dict): A dictionary containing the fraction correct results.
+        metrics_results (dict): A dictionary containing the metrics results.
+        model_name (str): The name of the model.
+        graph_size (int): The size of the graph.
+        results_dir (str): The directory where the results will be saved.
+
+    Raises:
+        ValueError: If the input arguments are not passed correctly.
+
+    Returns:
+        None
+    """
 
     # START OF TESTS:
 
-    # Check if test_results_dict is passed correctly
-    if not isinstance(test_results_dict, dict):
-        raise ValueError("test_results_dict should be a dictionary")
+    # Check if fraction_correct_results is passed correctly
+    if not isinstance(fraction_correct_results, dict):
+        raise ValueError("fraction_correct_results should be a dictionary")
+
+    # Check if metrics_results is passed correctly
+    if not isinstance(metrics_results, dict):
+        raise ValueError("metrics_results should be a dictionary")
 
     # Check if model_name is passed correctly
     if not model_name:
@@ -124,20 +147,25 @@ def save_test_results(test_results_dict, model_name, graph_size, results_dir):
 
     # END OF TESTS
 
-    # Saving .csv file in "results" folder (already exists, created in main.py)
-    # - defining file name:
-    file_name = f"{model_name}_N{graph_size}_results"
-    # - defining file path:
-    file_path = f"{results_dir}/{file_name}.csv"
-
+    # Saving accuracy results in .csv file:
+    # - defining file name and path:
+    file_path = os.path.join(
+        results_dir, f"{model_name}_N{graph_size}_fraction_correct.csv"
+    )
     # - saving the dictionary as a .csv file:
     with open(file_path, "w") as file:
         writer = csv.writer(file)
         writer.writerow(["clique size", "fraction correct"])  # Add column labels
-        for key, value in test_results_dict.items():
+        for key, value in fraction_correct_results.items():
             writer.writerow([key, value])
 
-    print(f"- Results saved successfully in {file_path}.")
+    # Saving metrics results in .csv file:
+    # - defining file name and path:
+    file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_metrics.csv")
+    # - saving the dictionary as a .csv file:
+    pd.DataFrame([metrics_results]).to_csv(file_path, index=False)
+
+    print(f"- Results saved successfully in {results_dir}.")
 
 
 # Save trained model as .pth file:

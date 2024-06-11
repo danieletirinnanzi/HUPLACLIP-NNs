@@ -33,6 +33,10 @@ training_parameters:
   # optimizer and loss function:
   optimizer: AdamW
   loss_function: BCELoss
+  # early stopping:
+  patience: 4
+  min_delta: 0.01
+  val_exit_loss: 0.08
 
 testing_parameters:
   max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size

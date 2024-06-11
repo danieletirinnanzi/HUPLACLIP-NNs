@@ -64,7 +64,7 @@ for graph_size in config["graph_size_values"]:
 
     # inside experiment results folder, create a new directory for each graph size value:
     graph_size_results_dir = os.path.join(experiment_results_dir, f"N{graph_size}")
-    os.makedirs(graph_size_results_dir)
+    # os.makedirs(graph_size_results_dir)
 
     # loading, training, and testing models:
     for model_specs in config["models"]:
@@ -78,7 +78,7 @@ for graph_size in config["graph_size_values"]:
         # put model in training mode
         model.train()
 
-        # training model and visualizing it on Tensorboard
+        # training model and visualizing training progression on Tensorboard
         trained_model = train_model(
             model,
             config["training_parameters"],
@@ -123,7 +123,17 @@ for graph_size in config["graph_size_values"]:
         )
 
         # - for CNN, VGG and ResNet, saving the features extracted by the model in the results folder:
-        if model_specs["model_name"] in ["CNN", "VGG16", "RESNET50"]:
+        if model_specs["model_name"] in [
+            "CNN_small",
+            "CNN_medium",
+            "CNN_large",
+            "VGG16scratch",
+            "VGG16pretrained",
+            "ResNet50scratch",
+            "ResNet50pretrained",
+            "GoogLeNetscratch",
+            "GoogLeNetpretrained",
+        ]:
             save_features(
                 trained_model,
                 model_specs["model_name"],

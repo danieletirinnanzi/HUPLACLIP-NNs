@@ -2,18 +2,6 @@ import unittest
 import torch
 from src.utils import load_model
 from src.utils import load_config
-from src.models import (
-    MLP,
-    CNN,
-    VGG16_scratch,
-    VGG16_pretrained,
-    ResNet50_scratch,
-    ResNet50_pretrained,
-    GoogLeNet_scratch,
-    GoogLeNet_pretrained,
-    ViT_scratch,
-    ViT_pretrained,
-)
 import src.graphs_generation as gen_graphs
 
 # loading experiment configuration file of single experiment and grid experiment:
@@ -106,8 +94,7 @@ class ModelTest(unittest.TestCase):
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
-            CNN_config["graph_size"]
-            * (CNN_config["training_parameters"]["min_clique_size_proportion"])
+            2400 * (CNN_config["training_parameters"]["min_clique_size_proportion"])
         )
 
         # generating 2 graphs:
@@ -164,8 +151,7 @@ class ModelTest(unittest.TestCase):
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
-            VGG_config["graph_size"]
-            * (VGG_config["training_parameters"]["min_clique_size_proportion"])
+            2400 * (VGG_config["training_parameters"]["min_clique_size_proportion"])
         )
 
         # generating 2 graphs:
@@ -174,12 +160,12 @@ class ModelTest(unittest.TestCase):
             VGG_config["graph_size"],
             clique_size,
             VGG_config["p_correction_type"],
-            False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+            True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
         )[0]
 
         # SCRATCH MODEL:
         print("testing VGG16_scratch")
-        model = load_model(VGG_config["models"][0], VGG_config["graph_size"])
+        model = load_model(VGG_config["models"][0], 2400)
         model.eval()
         # generating two graphs and predicting
         prediction = model(graphs.to(device))
@@ -237,8 +223,7 @@ class ModelTest(unittest.TestCase):
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
-            RESNET_config["graph_size"]
-            * (RESNET_config["training_parameters"]["min_clique_size_proportion"])
+            2400 * (RESNET_config["training_parameters"]["min_clique_size_proportion"])
         )
 
         # generating 2 graphs:
@@ -247,7 +232,7 @@ class ModelTest(unittest.TestCase):
             RESNET_config["graph_size"],
             clique_size,
             RESNET_config["p_correction_type"],
-            False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+            True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
         )[0]
 
         # SCRATCH MODEL:
@@ -308,7 +293,7 @@ class ModelTest(unittest.TestCase):
 
         # defining clique size (taking minimum clique size on which model will be trained):
         clique_size = int(
-            GOOGLENET_config["graph_size"]
+            2400
             * (GOOGLENET_config["training_parameters"]["min_clique_size_proportion"])
         )
 

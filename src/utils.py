@@ -50,17 +50,17 @@ def load_model(model_specs, graph_size):
             model = VGG16_scratch()
         case "VGG16pretrained":
             model = VGG16_pretrained()
-        case "RESNET50scratch":
+        case "ResNet50scratch":
             model = ResNet50_scratch()
-        case "RESNET50pretrained":
+        case "ResNet50pretrained":
             model = ResNet50_pretrained()
-        case "GOOGLENETscratch":
+        case "GoogLeNetscratch":
             model = GoogLeNet_scratch()
-        case "GOOGLENETpretrained":
+        case "GoogLeNetpretrained":
             model = GoogLeNet_pretrained()
-        case "VITscratch":
+        case "ViTscratch":
             model = ViT_scratch(graph_size, model_specs["architecture"])
-        case "VITpretrained":
+        case "ViTpretrained":
             model = ViT_pretrained(graph_size, model_specs["architecture"])
 
         # ADDITIONAL MODELS CAN BE ADDED HERE
@@ -178,7 +178,7 @@ def save_trained_model(trained_model, model_name, graph_size, results_dir):
 
 def save_features(trained_model, model_name, graph_size, p_correction, results_dir):
     """
-    Save the features extracted from a trained model and save the corresponding image.
+    Save the features extracted from a trained model and save the corresponding image in results folder.
 
     Args:
         trained_model (torch.nn.Module): The trained model used for feature extraction.
@@ -193,32 +193,64 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
 
     # NOTE: add visualization of features also when graph has no clique?
 
-    # # Uncomment this to visualize the names of the nodes in the graph:
+    # # Uncomment this to visualize the names of the nodes in the graph (also print model to see the names of the nodes):
     # names = get_graph_node_names(trained_model)
     # print(names)
 
     from src.graphs_generation import generate_graphs
 
+    #  generate graph with clique (70% of graph size, can be modified)
+    graph = generate_graphs(
+        1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+    )[0]
+
     # Defining layers to extract features from:
     # - CNN features:
-    if model_name == "CNN":
-        # creating features extractor with relevant node names:
-        trained_model = create_feature_extractor(
-            trained_model,
-            {
-                "0.0": "feat1",
-                "1.0": "feat2",
-                "2.0": "feat3",
-                "3.0": "feat4",
-                "4.0": "feat5",
-                "5.0": "feat6",
-                "6.0": "feat7",
-            },
-        )
-        #  generate graph with clique (70% of graph size, can be modified)
-        graph = generate_graphs(
-            1, graph_size, int(0.7 * graph_size), p_correction, False, True, p_clique=1
-        )[0]
+    if "CNN" in model_name:
+        # differentiating 3 CNN versions:
+        if model_name == "CNN_small":
+            # creating features extractor with relevant node names:
+            trained_model = create_feature_extractor(
+                trained_model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                    "model.4.0": "feat5",
+                    "model.5.0": "feat6",
+                    "model.6.0": "feat7",
+                    "model.7.0": "feat8",
+                },
+            )
+        elif model_name == "CNN_medium":
+            # creating features extractor with relevant node names:
+            trained_model = create_feature_extractor(
+                trained_model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                    "model.4.0": "feat5",
+                    "model.5.0": "feat6",
+                    "model.6.0": "feat7",
+                },
+            )
+        elif model_name == "CNN_large":
+            # creating features extractor with relevant node names:
+            trained_model = create_feature_extractor(
+                trained_model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                },
+            )
+        else:
+            raise ValueError("CNN Model not found. Model name might be incorrect.")
+
         # performing prediction on the single graph:
         if device == "cuda":
             out = trained_model(graph.cuda())
@@ -226,24 +258,20 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
             out = trained_model(graph)
 
     # - VGG features:
-    if model_name == "VGG16":
+    elif "VGG16" in model_name:
         # creating features extractor with relevant node names:
         trained_model = create_feature_extractor(
             trained_model,
             {
-                "features.2": "feat2",
-                "features.7": "feat7",
-                "features.12": "feat12",
-                "features.17": "feat17",
-                "features.21": "feat21",
-                "features.26": "feat26",
-                "features.28": "feat28",
+                "model.features.2": "conv2",
+                "model.features.7": "conv4",
+                "model.features.12": "conv6",
+                "model.features.17": "conv8",
+                "model.features.21": "conv10",
+                "model.features.26": "conv12",
+                "model.features.28": "conv15",
             },
         )
-        #  generate graph with clique (70% of graph size, can be modified)
-        graph = generate_graphs(
-            1, graph_size, int(0.7 * graph_size), p_correction, True, False, p_clique=1
-        )[0]
         # performing prediction on the single graph:
         if device == "cuda":
             out = trained_model(graph.cuda())
@@ -251,36 +279,57 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
             out = trained_model(graph)
 
     # - ResNet features:
-    if model_name == "RESNET50":
+    elif "ResNet50" in model_name:
         # creating features extractor with relevant node names:
         trained_model = create_feature_extractor(
             trained_model,
             {
-                "layer1.0.conv1": "feature1.0",
-                "layer1.2.conv3": "feature1.2",
-                "layer2.0.conv1": "feature2.0",
-                "layer2.3.conv3": "feature2.3",
-                "layer3.0.conv1": "feature3.0",
-                "layer3.5.conv3": "feature3.5",
-                "layer4.2.conv3": "feature4.2",
+                "model.layer1.0.conv1": "layer1.0_conv1",
+                "model.layer1.2.conv3": "layer1.2_conv3",
+                "model.layer2.0.conv1": "layer2.0_conv1",
+                "model.layer2.3.conv3": "layer2.3_conv3",
+                "model.layer3.0.conv1": "layer3.0_conv1",
+                "model.layer3.5.conv3": "layer3.5_conv3",
+                "model.layer4.2.conv3": "layer4.2_conv3",
             },
         )
-        #  generate graph with clique (70% of graph size, can be modified)
-        graph = generate_graphs(
-            1, graph_size, int(0.7 * graph_size), p_correction, True, False, p_clique=1
-        )[0]
         # performing prediction on the single graph:
         if device == "cuda":
             out = trained_model(graph.cuda())
         else:
             out = trained_model(graph)
 
+    elif "GoogLeNet" in model_name:
+        # creating features extractor with relevant node names:
+        trained_model = create_feature_extractor(
+            trained_model,
+            {
+                "model.conv1.conv": "conv1",
+                "model.conv2.conv": "conv2",
+                "model.conv3.conv": "conv3",
+                "model.inception3a.branch2.0.conv": "inception3a_branch2",
+                "model.inception4a.branch2.0.conv": "inception4a_branch2",
+                "model.inception4c.branch2.0.conv": "inception4c_branch2",
+                "model.inception4d.branch2.0.conv": "inception4d_branch2",
+                "model.inception5a.branch2.0.conv": "inception5a_branch2",
+            },
+        )
+        # performing prediction on the single graph:
+        if device == "cuda":
+            out = trained_model(graph.cuda())
+        else:
+            out = trained_model(graph)
+
+    else:
+        raise ValueError("Model not found. Model name might be incorrect.")
+
     # Putting input as first element in the dictionary, before the features:
     out = {"input": graph, **out}
 
-    # Visualizing the input image and the 4 features:
-    # - Create a figure with 8 subplots
-    fig, axs = plt.subplots(1, 8, figsize=(20, 5))
+    # Visualizing the input image and the saved features contained in "out" dictionary:
+    n_plots = len(out)
+    # - Create a figure with appropriate number of subplots
+    fig, axs = plt.subplots(1, n_plots, figsize=(20, 5))
 
     # - Iterate over the feature maps and add them in places
     for i, (name, feature_map) in enumerate(out.items()):

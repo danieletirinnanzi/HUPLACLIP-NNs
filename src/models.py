@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from src.input_transforms import find_patch_size
 
-# VIT PRETRAINED:
+# for VIT PRETRAINED (https://github.com/bwconrad/flexivit):
 from timm import create_model
 from timm.layers.pos_embed import resample_abs_pos_embed
 from flexivit_pytorch import pi_resize_patch_embed
@@ -130,8 +129,7 @@ class VGG16_scratch(nn.Module):
         self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -146,8 +144,7 @@ class VGG16_pretrained(nn.Module):
         self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -160,10 +157,7 @@ class ResNet50_scratch(nn.Module):
         self.model.fc = nn.Sequential(nn.Linear(num_ftrs, 1), nn.Sigmoid())
 
     def forward(self, x):
-        print("Before reshape: ", x.shape)
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
-        print("After reshape: ", x.shape)
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -179,12 +173,10 @@ class ResNet50_pretrained(nn.Module):
         self.model.fc = nn.Sequential(nn.Linear(num_ftrs, 1), nn.Sigmoid())
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
-# GOOGLENET NOT WORKING, RESIZING TO 224x224 AUTOMATICALLY DURING INFERENCE
 class GoogLeNet_scratch(nn.Module):
     def __init__(self):
         super().__init__()
@@ -193,8 +185,7 @@ class GoogLeNet_scratch(nn.Module):
         self.model.fc = nn.Sequential(nn.Linear(1024, 1), nn.Sigmoid())
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -209,15 +200,8 @@ class GoogLeNet_pretrained(nn.Module):
         self.model.fc = nn.Sequential(nn.Linear(1024, 1), nn.Sigmoid())
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
-
-
-# FROM HERE:
-# https://medium.com/thedeephub/building-vision-transformer-from-scratch-using-pytorch-an-image-worth-16x16-words-24db5f159e27
-# https://github.com/bwconrad/flexivit
-# DEFAULT PATCH SIZE IS 16X16
 
 
 class ViT_scratch(nn.Module):
@@ -238,8 +222,7 @@ class ViT_scratch(nn.Module):
         )
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -284,6 +267,5 @@ class ViT_pretrained(nn.Module):
         )
 
     def forward(self, x):
-        if x.shape[1] == 1:
-            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)

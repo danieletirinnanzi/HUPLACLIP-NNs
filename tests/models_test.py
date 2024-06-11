@@ -70,7 +70,6 @@ class ModelTest(unittest.TestCase):
                 clique_size,
                 MLP_config["p_correction_type"],
                 False,
-                False,
             )[0].to(device)
         )
 
@@ -111,40 +110,22 @@ class ModelTest(unittest.TestCase):
             * (CNN_config["training_parameters"]["min_clique_size_proportion"])
         )
 
+        # generating 2 graphs:
+        graphs = gen_graphs.generate_graphs(
+            2,
+            CNN_config["graph_size"],
+            clique_size,
+            CNN_config["p_correction_type"],
+            True,
+        )[0]
+
         # generating two graphs and predicting with each model:
         # - small model
-        prediction_small = small_model(
-            gen_graphs.generate_graphs(
-                2,
-                CNN_config["graph_size"],
-                clique_size,
-                CNN_config["p_correction_type"],
-                False,
-                True,
-            )[0].to(device)
-        )
+        prediction_small = small_model(graphs.to(device))
         # - large model
-        prediction_large = large_model(
-            gen_graphs.generate_graphs(
-                2,
-                CNN_config["graph_size"],
-                clique_size,
-                CNN_config["p_correction_type"],
-                False,
-                True,
-            )[0].to(device)
-        )
+        prediction_large = large_model(graphs.to(device))
         # - medium model
-        prediction_medium = medium_model(
-            gen_graphs.generate_graphs(
-                2,
-                CNN_config["graph_size"],
-                clique_size,
-                CNN_config["p_correction_type"],
-                False,
-                True,
-            )[0].to(device)
-        )
+        prediction_medium = medium_model(graphs.to(device))
 
         # checking that the all outputs are one-dimensional (and have two elements) after squeezing:
         self.assertEqual(prediction_small.squeeze().size(), torch.Size([2]))
@@ -187,20 +168,21 @@ class ModelTest(unittest.TestCase):
             * (VGG_config["training_parameters"]["min_clique_size_proportion"])
         )
 
+        # generating 2 graphs:
+        graphs = gen_graphs.generate_graphs(
+            2,
+            VGG_config["graph_size"],
+            clique_size,
+            VGG_config["p_correction_type"],
+            False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+        )[0]
+
         # SCRATCH MODEL:
         print("testing VGG16_scratch")
         model = load_model(VGG_config["models"][0], VGG_config["graph_size"])
         model.eval()
         # generating two graphs and predicting
-        prediction = model(
-            gen_graphs.generate_graphs(
-                2,
-                VGG_config["graph_size"],
-                clique_size,
-                VGG_config["p_correction_type"],
-                True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
-            )[0].to(device)
-        )
+        prediction = model(graphs.to(device))
 
         # checking that the outputs are one-dimensional (and has two elements) after squeezing:
         self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
@@ -211,26 +193,19 @@ class ModelTest(unittest.TestCase):
 
         print("ok")
         print("-------------------")
+
         # PRETRAINED MODEL:
         print("testing VGG16_pretrained")
         model = load_model(VGG_config["models"][1], VGG_config["graph_size"])
         model.eval()
         # making sure that requires_grad is True in pretrained model only in first and last layer
         for name, param in model.named_parameters():
-            if "model.features.0" in name or "model.classifier" in name:
+            if "model.classifier" in name:
                 self.assertTrue(param.requires_grad)
             else:
                 self.assertFalse(param.requires_grad)
 
-        prediction = model(
-            gen_graphs.generate_graphs(
-                2,
-                VGG_config["graph_size"],
-                clique_size,
-                VGG_config["p_correction_type"],
-                True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
-            )[0].to(device)
-        )
+        prediction = model(graphs.to(device))
 
         # checking that the outputs are one-dimensional (and has two elements) after squeezing:
         self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
@@ -266,20 +241,21 @@ class ModelTest(unittest.TestCase):
             * (RESNET_config["training_parameters"]["min_clique_size_proportion"])
         )
 
+        # generating 2 graphs:
+        graphs = gen_graphs.generate_graphs(
+            2,
+            RESNET_config["graph_size"],
+            clique_size,
+            RESNET_config["p_correction_type"],
+            False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+        )[0]
+
         # SCRATCH MODEL:
         print("testing RESNET50_scratch")
         model = load_model(RESNET_config["models"][0], RESNET_config["graph_size"])
         model.eval()
         # generating two graphs and predicting
-        prediction = model(
-            gen_graphs.generate_graphs(
-                2,
-                RESNET_config["graph_size"],
-                clique_size,
-                RESNET_config["p_correction_type"],
-                False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
-            )[0].to(device)
-        )
+        prediction = model(graphs.to(device))
         # checking that the outputs are one-dimensional (and has two elements) after squeezing:
         self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
         # checking that both predictions are between 0 and 1:
@@ -295,20 +271,12 @@ class ModelTest(unittest.TestCase):
         model.eval()
         # checking that requires_grad is True in pretrained model only in first and last layer
         for name, param in model.named_parameters():
-            if "model.conv1" in name or "model.fc" in name:
+            if "model.fc" in name:
                 self.assertTrue(param.requires_grad)
             else:
                 self.assertFalse(param.requires_grad)
         # generating two graphs and predicting
-        prediction = model(
-            gen_graphs.generate_graphs(
-                2,
-                RESNET_config["graph_size"],
-                clique_size,
-                RESNET_config["p_correction_type"],
-                False,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
-            )[0].to(device)
-        )
+        prediction = model(graphs.to(device))
 
         # checking that the outputs are one-dimensional (and has two elements) after squeezing:
         self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
@@ -319,121 +287,151 @@ class ModelTest(unittest.TestCase):
 
         print("ok")
 
-    # # VITscratch:
-    # def test_VITscratch_predictions(self):
+    # GOOGLENET (not working, automatically performing input resizing during inference):
+    def test_GOOGLENET_predictions(self):
 
-    #     # loading experiment configuration file of VITscratch experiment:
-    #     VITscratch_config = load_config("docs\VITscratch_exp_config.yml")
-    #     # checking correspondence of graph size:
-    #     self.assertEqual(grid_config["graph_size_values"][0], VITscratch_config["graph_size"])
-    #     # checking correspondence of p correction type:
-    #     self.assertEqual(
-    #         grid_config["p_correction_type"], VITscratch_config["p_correction_type"]
-    #     )
+        # loading experiment configuration file of GOOGLENET experiment:
+        GOOGLENET_config = load_config("docs\GOOGLENET_exp_config.yml")
+        # checking correspondence of p correction type:
+        self.assertEqual(
+            grid_config["p_correction_type"], GOOGLENET_config["p_correction_type"]
+        )
 
-    #     # checking that the VITscratch section in the global experiment configuration file is the same as the one in the VITscratch experiment configuration file:
-    #     self.assertEqual(
-    #         grid_config["models"][4]["model_name"],
-    #         VITscratch_config["models"][0]["model_name"],
-    #     )
-    #     # checking that hyperparameters correspond:
-    #     self.assertEqual(
-    #         grid_config["models"][4]["hyperparameters"],
-    #         VITscratch_config["models"][0]["hyperparameters"],
-    #     )
+        # checking correspondence of training parameters:
+        self.assertEqual(
+            grid_config["training_parameters"], GOOGLENET_config["training_parameters"]
+        )
+        # checking correspondence of testing parameters:
+        self.assertEqual(
+            grid_config["testing_parameters"], GOOGLENET_config["testing_parameters"]
+        )
 
-    #     # loading model
-    #     model = load_model(
-    #         VITscratch_config["models"][0]["model_name"],
-    #         VITscratch_config["graph_size"],
-    #         VITscratch_config["models"][0]["hyperparameters"],
-    #     )
+        # defining clique size (taking minimum clique size on which model will be trained):
+        clique_size = int(
+            GOOGLENET_config["graph_size"]
+            * (GOOGLENET_config["training_parameters"]["min_clique_size_proportion"])
+        )
 
-    #     # defining clique size (taking minimum clique size on which model will be trained):
-    #     clique_size = int(
-    #         VITscratch_config["graph_size"]
-    #         * (
-    #             VITscratch_config["models"][0]["hyperparameters"][
-    #                 "min_clique_size_proportion"
-    #             ]
-    #         )
-    #     )
+        # generating 2 graphs:
+        graphs = gen_graphs.generate_graphs(
+            2,
+            GOOGLENET_config["graph_size"],
+            clique_size,
+            GOOGLENET_config["p_correction_type"],
+            True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+        )[0]
 
-    #     # generating two graphs and predicting
-    #     prediction = model(
-    #         gen_graphs.generate_graphs(
-    #             2,
-    #             VITscratch_config["graph_size"],
-    #             clique_size,
-    #             VITscratch_config["p_correction_type"],
-    #             True,
-    #         )[0].to(device)
-    #     )
+        # SCRATCH MODEL:
+        print("testing GoogLeNet_scratch")
+        model = load_model(
+            GOOGLENET_config["models"][0], GOOGLENET_config["graph_size"]
+        )
+        model.eval()
 
-    #     # checking that the output is one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        prediction = model(graphs.to(device))
 
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        # checking that both predictions are between 0 and 1:
+        self.assertTrue(torch.all(prediction >= 0))
+        self.assertTrue(torch.all(prediction <= 1))
 
-    # # VITpretrained:
-    # def test_VITpretrained_predictions(self):
+        print("ok")
+        print("-------------------")
 
-    #     # loading experiment configuration file of VITpretrained experiment:
-    #     VITpretrained_config = load_config("docs\VITpretrained_exp_config.yml")
-    #     # checking correspondence of graph size:
-    #     self.assertEqual(
-    #         grid_config["graph_size_values"][0], VITpretrained_config["graph_size"]
-    #     )
-    #     # checking correspondence of p correction type:
-    #     self.assertEqual(
-    #         grid_config["p_correction_type"],
-    #         VITpretrained_config["p_correction_type"],
-    #     )
+        # PRETRAINED MODEL:
+        print("testing GoogLeNet_pretrained")
+        model = load_model(
+            GOOGLENET_config["models"][1], GOOGLENET_config["graph_size"]
+        )
+        model.eval()
 
-    #     # checking that the VITpretrained section in the global experiment configuration file is the same as the one in the VITpretrained experiment configuration file:
-    #     self.assertEqual(
-    #         grid_config["models"][5]["model_name"],
-    #         VITpretrained_config["models"][0]["model_name"],
-    #     )
-    #     # checking that hyperparameters correspond:
-    #     self.assertEqual(
-    #         grid_config["models"][5]["hyperparameters"],
-    #         VITpretrained_config["models"][0]["hyperparameters"],
-    #     )
+        # checking that requires_grad is True in pretrained model only in first and last layer
+        for name, param in model.named_parameters():
+            if "model.fc" in name:
+                self.assertTrue(param.requires_grad)
+            else:
+                self.assertFalse(param.requires_grad)
+        # predicting
+        prediction = model(graphs.to(device))
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        # checking that both predictions are between 0 and 1:
+        self.assertTrue(torch.all(prediction >= 0))
+        self.assertTrue(torch.all(prediction <= 1))
 
-    #     # loading model
-    #     model = load_model(
-    #         VITpretrained_config["models"][0]["model_name"],
-    #         VITpretrained_config["graph_size"],
-    #         VITpretrained_config["models"][0]["hyperparameters"],
-    #     )
+        print("ok")
 
-    #     # defining clique size (taking minimum clique size on which model will be trained):
-    #     clique_size = int(
-    #         VITpretrained_config["graph_size"]
-    #         * (
-    #             VITpretrained_config["models"][0]["hyperparameters"][
-    #                 "min_clique_size_proportion"
-    #             ]
-    #         )
-    #     )
+    # VIT:
+    def test_VIT_predictions(self):
+        # loading experiment configuration file of VIT experiment:
+        VIT_config = load_config("docs\VIT_exp_config.yml")
+        # checking correspondence of p correction type:
+        self.assertEqual(
+            grid_config["p_correction_type"], VIT_config["p_correction_type"]
+        )
 
-    #     # generating two graphs and predicting
-    #     prediction = model(
-    #         gen_graphs.generate_graphs(
-    #             2,
-    #             VITpretrained_config["graph_size"],
-    #             clique_size,
-    #             VITpretrained_config["p_correction_type"],
-    #             True,
-    #         )[0].to(device)
-    #     )
+        # checking correspondence of training parameters:
+        self.assertEqual(
+            grid_config["training_parameters"], VIT_config["training_parameters"]
+        )
+        # checking correspondence of testing parameters:
+        self.assertEqual(
+            grid_config["testing_parameters"], VIT_config["testing_parameters"]
+        )
 
-    #     # checking that the output is one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        # defining clique size (taking minimum clique size on which model will be trained):
+        clique_size = int(
+            2400 * (VIT_config["training_parameters"]["min_clique_size_proportion"])
+        )
 
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
+        # generating 2 graphs:
+        graphs = gen_graphs.generate_graphs(
+            2,
+            2400,
+            clique_size,
+            VIT_config["p_correction_type"],
+            True,  # SHOULD BE TRUE (when running test on laptop, set to False to avoid memory error)
+        )[0]
+
+        # SCRATCH MODEL:
+        print("testing VIT_scratch")
+        model = load_model(VIT_config["models"][0], 2400)
+        model.eval()
+
+        print(model)
+
+        # generating two graphs and predicting
+        prediction = model(graphs.to(device))
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+        # checking that both predictions are between 0 and 1:
+        self.assertTrue(torch.all(prediction >= 0))
+        self.assertTrue(torch.all(prediction <= 1))
+
+        print(prediction)
+
+        print("ok")
+        print("-------------------")
+
+        # PRETRAINED MODEL:
+        print("testing VIT_pretrained")
+        model = load_model(VIT_config["models"][1], 2400)
+        model.eval()
+        # checking that requires_grad is True in pretrained model only in first and last layer
+        for name, param in model.named_parameters():
+            if "model.head" in name:
+                self.assertTrue(param.requires_grad)
+            else:
+                self.assertFalse(param.requires_grad)
+        # generating two graphs and predicting
+        prediction = model(graphs.to(device))
+
+        # checking that the outputs are one-dimensional (and has two elements) after squeezing:
+        self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
+
+        # checking that both predictions are between 0 and 1:
+        self.assertTrue(torch.all(prediction >= 0))
+        self.assertTrue(torch.all(prediction <= 1))
+
+        print("ok")

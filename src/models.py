@@ -3,6 +3,11 @@ import torch.nn as nn
 import torchvision.models as models
 from src.input_transforms import find_patch_size
 
+# VIT PRETRAINED:
+from timm import create_model
+from timm.layers.pos_embed import resample_abs_pos_embed
+from flexivit_pytorch import pi_resize_patch_embed
+
 
 class MLP(nn.Module):
     def __init__(self, graph_size, architecture_specs):
@@ -121,25 +126,12 @@ class VGG16_scratch(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = models.vgg16()
-        # Make input have 3 channels
-        first_conv_layer = [
-            nn.Conv2d(
-                1,
-                3,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                dilation=1,
-                groups=1,
-                bias=True,
-            )
-        ]
-        first_conv_layer.extend(list(self.model.features))
-        self.model.features = nn.Sequential(*first_conv_layer)
         # Change the classifier
         self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -150,25 +142,12 @@ class VGG16_pretrained(nn.Module):
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
-        # Make input have 3 channels
-        first_conv_layer = [
-            nn.Conv2d(
-                1,
-                3,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-                dilation=1,
-                groups=1,
-                bias=True,
-            )
-        ]
-        first_conv_layer.extend(list(self.model.features))
-        self.model.features = nn.Sequential(*first_conv_layer)
         # Change the classifier
         self.model.classifier = nn.Sequential(nn.Linear(25088, 1), nn.Sigmoid())
 
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -176,20 +155,15 @@ class ResNet50_scratch(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = models.resnet50()
-        # Accept one-channel input
-        self.model.conv1 = nn.Conv2d(
-            1,
-            64,
-            kernel_size=7,
-            stride=2,
-            padding=3,
-            bias=False,
-        )
         # Change the classifier
         num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Sequential(nn.Linear(num_ftrs, 1), nn.Sigmoid())
 
     def forward(self, x):
+        print("Before reshape: ", x.shape)
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        print("After reshape: ", x.shape)
         return self.model(x)
 
 
@@ -200,33 +174,27 @@ class ResNet50_pretrained(nn.Module):
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
-        # Accept one-channel input
-        self.model.conv1 = nn.Conv2d(
-            1,
-            64,
-            kernel_size=7,
-            stride=2,
-            padding=3,
-            bias=False,
-        )
         # Change the classifier
         num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Sequential(nn.Linear(num_ftrs, 1), nn.Sigmoid())
 
-        self.model.fc = nn.Sequential(nn.Linear(2048, 1), nn.Sigmoid())
-
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
+# GOOGLENET NOT WORKING, RESIZING TO 224x224 AUTOMATICALLY DURING INFERENCE
 class GoogLeNet_scratch(nn.Module):
     def __init__(self):
         super().__init__()
-        self.model = models.googlenet()
+        self.model = models.googlenet(init_weights=True)
         # Change the classifier
         self.model.fc = nn.Sequential(nn.Linear(1024, 1), nn.Sigmoid())
 
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
@@ -241,39 +209,81 @@ class GoogLeNet_pretrained(nn.Module):
         self.model.fc = nn.Sequential(nn.Linear(1024, 1), nn.Sigmoid())
 
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
+
+
+# FROM HERE:
+# https://medium.com/thedeephub/building-vision-transformer-from-scratch-using-pytorch-an-image-worth-16x16-words-24db5f159e27
+# https://github.com/bwconrad/flexivit
+# DEFAULT PATCH SIZE IS 16X16
 
 
 class ViT_scratch(nn.Module):
-    def __init__(self, graph_size):
+    def __init__(self, graph_size, architecture_specs):
         super().__init__()
-        self.graph_size = graph_size
-        patch_size, image_size = find_patch_size(graph_size)
-        self.model = models.vit_b_16()
-        # manually setting patch size and image size:
-        self.model.patch_size = patch_size
-        self.model.image_size = image_size
-        # Change the head
-        self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+        self.model = models.VisionTransformer(
+            image_size=graph_size,
+            patch_size=architecture_specs["patch_size"],
+            num_classes=architecture_specs["num_classes"],
+            num_layers=architecture_specs["num_layers"],
+            num_heads=architecture_specs["num_heads"],
+            mlp_dim=architecture_specs["mlp_dim"],
+            hidden_dim=architecture_specs["hidden_dim"],
+        )
+        # Change the classifier
+        self.model.heads = nn.Sequential(
+            nn.Linear(architecture_specs["hidden_dim"], 1), nn.Sigmoid()
+        )
 
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)
 
 
+# PRETRAINED VIT (https://github.com/bwconrad/flexivit)
 class ViT_pretrained(nn.Module):
-    def __init__(self, graph_size):
+    def __init__(self, graph_size, architecture_specs):
         super().__init__()
-        self.graph_size = graph_size
-        patch_size, image_size = find_patch_size(graph_size)
-        self.model = models.vit_b_16(weights="DEFAULT")
-        # manually setting patch size and image size:
-        self.model.patch_size = patch_size
-        self.model.image_size = image_size
+
+        # Load the pretrained model's state_dict
+        state_dict = create_model("vit_base_patch16_224", pretrained=True).state_dict()
+
+        # Resize the patch embedding
+        new_patch_size = (
+            architecture_specs["patch_size"],
+            architecture_specs["patch_size"],
+        )
+        state_dict["patch_embed.proj.weight"] = pi_resize_patch_embed(
+            patch_embed=state_dict["patch_embed.proj.weight"],
+            new_patch_size=new_patch_size,
+        )
+
+        # Interpolate the position embedding size
+        image_size = graph_size
+        grid_size = image_size // new_patch_size[0]
+        state_dict["pos_embed"] = resample_abs_pos_embed(
+            posemb=state_dict["pos_embed"], new_size=[grid_size, grid_size]
+        )
+
+        # Load the new weights into a model with the target image and patch sizes
+        self.model = create_model(
+            "vit_base_patch16_224", img_size=image_size, patch_size=new_patch_size
+        )
+        self.model.load_state_dict(state_dict, strict=True)
+
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
-        # Change the head
-        self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+        # Change the classifier
+        self.model.head = nn.Sequential(
+            nn.Linear(architecture_specs["hidden_dim"], 1), nn.Sigmoid()
+        )
 
     def forward(self, x):
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
         return self.model(x)

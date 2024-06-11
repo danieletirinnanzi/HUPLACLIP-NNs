@@ -58,7 +58,7 @@ def find_patch_size(graph_size):
 
     # storing size of the input image:
     single_graph = gen_graphs(
-        1, graph_size, int(graph_size / 2), "p_increase", imageNet_input=True
+        1, graph_size, int(graph_size / 2), "p_increase", input_magnification=False
     )[
         0
     ]  # generating a single graph (already includes the magnification factor for ImageNet models)
@@ -82,5 +82,7 @@ def find_patch_size(graph_size):
         raise ValueError(
             "A patch size different than 1 cannot be found. The chosen graph size might be incompatible with the ViT model."
         )
+
+    print(f"Patch size: {patch_size}, Image size: {image_size}")
 
     return patch_size, image_size

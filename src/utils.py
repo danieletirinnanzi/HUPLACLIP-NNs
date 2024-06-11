@@ -54,14 +54,14 @@ def load_model(model_specs, graph_size):
             model = ResNet50_scratch()
         case "RESNET50pretrained":
             model = ResNet50_pretrained()
-        case "GoogLeNetscratch":
+        case "GOOGLENETscratch":
             model = GoogLeNet_scratch()
-        case "GoogLeNetpretrained":
+        case "GOOGLENETpretrained":
             model = GoogLeNet_pretrained()
         case "VITscratch":
-            model = ViT_scratch(graph_size)
+            model = ViT_scratch(graph_size, model_specs["architecture"])
         case "VITpretrained":
-            model = ViT_pretrained(graph_size)
+            model = ViT_pretrained(graph_size, model_specs["architecture"])
 
         # ADDITIONAL MODELS CAN BE ADDED HERE
 

@@ -2,13 +2,13 @@ exp_name: grid_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
   - 100
-  - 150
-  - 200
+#  - 150
+#  - 200
   - 300
-  - 400
-  - 480
-  - 600
-  - 800
+#  - 400
+#  - 480
+#  - 600
+#  - 800
   - 1200  
   
 # type of correction to use (in graphs_generation.py):
@@ -18,25 +18,29 @@ p_correction_type: p_reduce
 
 training_parameters:
   # training steps:
-  num_training_steps: 500
+  num_training_steps: 1000
   # training and validation set sizes:
-  num_train: 32
-  num_val: 32
+  num_train: 36
+  num_val: 36
   # other hyperparameters:
-  learning_rate: 0.01
+  learning_rate: 0.0001  # TO ADJUST
   # ADDITIONAL PARAMETERS GO HERE AND WILL BE READ IN train_test.py (line 106)
   # training structure:
-  max_clique_size_proportion: 0.6 # during training, clique will be at most 60% of the graph size
-  min_clique_size_proportion: 0.4 # during training, clique will be at most 40% of the graph size
-  clique_training_levels: 5
+  max_clique_size_proportion: 0.5 # during training, clique will be at most 50% of the graph size
+  # min_clique_size_proportion: 0.3 NOT USED, min clique size is statistical limit
+  clique_training_levels: 10
   save_step: 5
   # optimizer and loss function:
   optimizer: AdamW
   loss_function: BCELoss
+  # early stopping:
+  patience: 100  # since this makes the model move to the following training instance, it is more stringent
+  min_delta: 0.01
+  val_exit_loss: 0.1
 
 testing_parameters:
   max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-  num_test: 32  # number of graphs in each test iteration
+  num_test: 36  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 16 # number of times for which a single clique size is tested
 
@@ -109,18 +113,6 @@ models:
       kernel_size_conv: 5
       kernel_size_pool: 2
       # OUT: (256, 16, 16)
-
-  - model_name: VGG16scratch  
-
-  - model_name: VGG16pretrained
-
-  - model_name: ResNet50scratch
-
-  - model_name: ResNet50pretrained
-
-  - model_name: GoogLeNetscratch
-
-  - model_name: GoogLeNetpretrained
   
   - model_name: ViTscratch
 

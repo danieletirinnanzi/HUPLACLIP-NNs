@@ -9,12 +9,13 @@ import pandas as pd
 from .models import (
     MLP,
     CNN,
-    VGG16_scratch,
-    VGG16_pretrained,
-    ResNet50_scratch,
-    ResNet50_pretrained,
-    GoogLeNet_scratch,
-    GoogLeNet_pretrained,
+    # CNN_rudy,
+    # VGG16_scratch,
+    # VGG16_pretrained,
+    # ResNet50_scratch,
+    # ResNet50_pretrained,
+    # GoogLeNet_scratch,
+    # GoogLeNet_pretrained,
     ViT_scratch,
     ViT_pretrained,
 )
@@ -22,9 +23,6 @@ from torchvision.models.feature_extraction import (
     create_feature_extractor,
     get_graph_node_names,
 )
-
-# defining device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # -----------------------------------------
@@ -37,7 +35,7 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_specs, graph_size):
+def load_model(model_specs, graph_size, device):
 
     model_name = model_specs["model_name"]
 
@@ -45,24 +43,33 @@ def load_model(model_specs, graph_size):
     match model_name:
         case "MLP":
             model = MLP(graph_size, model_specs["architecture"])
-        case "CNN_small" | "CNN_medium" | "CNN_large":
+        case (
+            "CNN_small_1"
+            | "CNN_small_2"
+            | "CNN_medium_1"
+            | "CNN_medium_2"
+            | "CNN_large_1"
+            | "CNN_large_2"
+        ):
             model = CNN(graph_size, model_specs["architecture"])
-        case "VGG16scratch":
-            model = VGG16_scratch()
-        case "VGG16pretrained":
-            model = VGG16_pretrained()
-        case "ResNet50scratch":
-            model = ResNet50_scratch()
-        case "ResNet50pretrained":
-            model = ResNet50_pretrained()
-        case "GoogLeNetscratch":
-            model = GoogLeNet_scratch()
-        case "GoogLeNetpretrained":
-            model = GoogLeNet_pretrained()
+        # case "CNN_rudy":
+        #     model = CNN_rudy(graph_size, model_specs["architecture"])
+        # case "VGG16scratch":
+        #     model = VGG16_scratch()
+        # case "VGG16pretrained":
+        #     model = VGG16_pretrained()
+        # case "ResNet50scratch":
+        #     model = ResNet50_scratch()
+        # case "ResNet50pretrained":
+        #     model = ResNet50_pretrained()
+        # case "GoogLeNetscratch":
+        #     model = GoogLeNet_scratch()
+        # case "GoogLeNetpretrained":
+        #     model = GoogLeNet_pretrained()
         case "ViTscratch":
-            model = ViT_scratch(graph_size, model_specs["architecture"])
+            model = ViT_scratch(graph_size)
         case "ViTpretrained":
-            model = ViT_pretrained(graph_size, model_specs["architecture"])
+            model = ViT_pretrained(graph_size)
 
         # ADDITIONAL MODELS CAN BE ADDED HERE
 
@@ -71,7 +78,7 @@ def load_model(model_specs, graph_size):
 
     # - sending model to device:
     model.to(device)
-    print("- Model loaded successfully.")
+    print(f"- {model_name} Model loaded successfully.")
     return model
 
 
@@ -165,17 +172,17 @@ def save_test_results(
     # - saving the dictionary as a .csv file:
     pd.DataFrame([metrics_results]).to_csv(file_path, index=False)
 
-    print(f"- Results saved successfully in {results_dir}.")
+    print(f"- {model_name} Results saved successfully in {results_dir}.")
 
 
 # Save trained model as .pth file:
-def save_trained_model(trained_model, model_name, graph_size, results_dir):
+def save_model(model, model_name, graph_size, results_dir):
 
     # START OF TESTS
 
-    # Check if trained_model is passed correctly (NOTE: make more stringent checks if needed)
-    if not trained_model:
-        raise ValueError("Trained model not provided")
+    # Check if model is passed correctly (NOTE: make more stringent checks if needed)
+    if not model:
+        raise ValueError("Model not provided")
 
     # Check if model_name is passed correctly
     if not model_name:
@@ -191,85 +198,65 @@ def save_trained_model(trained_model, model_name, graph_size, results_dir):
 
     # END OF TESTS
 
-    # Saving .pth file in "results" folder (already exists, created in main.py)
+    # Saving .pth file in "results" folder (folder already exists, created in main.py)
 
-    # - defining file name:
-    file_name = f"{model_name}_N{graph_size}_trained"
-    # - defining file path:
-    file_path = f"{results_dir}/{file_name}.pth"
+    # - defining file name and path:
+    file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_trained.pth")
 
     # - saving the trained model as a .pth file:
-    torch.save(trained_model.state_dict(), file_path)
+    torch.save(model.state_dict(), file_path)
 
-    print(f"- Trained model saved successfully in {file_path}.")
+    print(f"- {model_name} Trained Model saved successfully in {file_path}.")
 
 
-def save_features(trained_model, model_name, graph_size, p_correction, results_dir):
+def save_features(model, model_name, graph_size, p_correction, results_dir, device):
     """
     Save the features extracted from a trained model and save the corresponding image in results folder.
 
     Args:
-        trained_model (torch.nn.Module): The trained model used for feature extraction.
+        model (torch.nn.Module): The trained model used for feature extraction.
         model_name (str): The name of the model.
         graph_size (int): The size of the graph.
         p_correction (str): The p-correction type.
         results_dir (str): The directory where the features image will be saved.
+        device (torch.device): The device where the model is stored.
 
     Returns:
         None
     """
 
-    # NOTE: add visualization of features also when graph has no clique?
+    # TODO: adapt feature extraction to new models (names defined in "models.py")
 
     # # Uncomment this to visualize the names of the nodes in the graph (also print model to see the names of the nodes):
-    # names = get_graph_node_names(trained_model)
+    # names = get_graph_node_names(model)
     # print(names)
 
-    from src.graphs_generation import generate_graphs
+    import src.graphs_generation as graphs_gen
 
-    #  generate graph with clique (70% of graph size, can be modified)
-    graph = generate_graphs(
-        1, graph_size, int(0.7 * graph_size), p_correction, True, p_clique=1
+    #  generate single graph with clique (70% of graph size, can be modified)
+    graph = graphs_gen.generate_batch(
+        1, graph_size, [int(0.7 * graph_size)], p_correction, True, p_clique=1
     )[0]
     graph = graph.to(device)
-    
+
     # Defining layers to extract features from:
     # - CNN features:
     if "CNN" in model_name:
-        # differentiating 3 CNN versions:
-        if model_name == "CNN_small":
+        # differentiating CNN versions:
+        if "1" in model_name:
             # creating features extractor with relevant node names:
-            trained_model = create_feature_extractor(
-                trained_model,
+            model = create_feature_extractor(
+                model,
                 {
                     "model.0.0": "feat1",
                     "model.1.0": "feat2",
                     "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                    "model.4.0": "feat5",
-                    "model.5.0": "feat6",
-                    "model.6.0": "feat7",
-                    "model.7.0": "feat8",
                 },
             )
-        elif model_name == "CNN_medium":
+        elif "2" in model_name:
             # creating features extractor with relevant node names:
-            trained_model = create_feature_extractor(
-                trained_model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                    "model.4.0": "feat5",
-                    "model.5.0": "feat6",
-                    "model.6.0": "feat7",
-                },
-            )
-        elif model_name == "CNN_large":
-            # creating features extractor with relevant node names:
-            trained_model = create_feature_extractor(
-                trained_model,
+            model = create_feature_extractor(
+                model,
                 {
                     "model.0.0": "feat1",
                     "model.1.0": "feat2",
@@ -277,62 +264,76 @@ def save_features(trained_model, model_name, graph_size, p_correction, results_d
                     "model.3.0": "feat4",
                 },
             )
+        # elif "rudy" in model_name:
+        #     # creating features extractor with relevant node names:
+        #     model = create_feature_extractor(
+        #         model,
+        #         {
+        #             "model.1.0": "feat1",
+        #             "model.4.conv1": "feat_res_1_1",
+        #             "model.4.conv2": "feat_res_1_2",
+        #             "model.5.0": "feat2",
+        #             "model.8.conv1": "feat_res_2_1",
+        #             "model.8.conv2": "feat_res_2_2",
+        #             "model.9.0": "feat3",
+        #         },
+        #     )
         else:
             raise ValueError("CNN Model not found. Model name might be incorrect.")
 
-    # - VGG features:
-    elif "VGG16" in model_name:
-        # creating features extractor with relevant node names:
-        trained_model = create_feature_extractor(
-            trained_model,
-            {
-                "model.features.2": "conv2",
-                "model.features.7": "conv4",
-                "model.features.12": "conv6",
-                "model.features.17": "conv8",
-                "model.features.21": "conv10",
-                "model.features.26": "conv12",
-                "model.features.28": "conv15",
-            },
-        )
+    # # - VGG features:
+    # elif "VGG16" in model_name:
+    #     # creating features extractor with relevant node names:
+    #     trained_model = create_feature_extractor(
+    #         trained_model,
+    #         {
+    #             "model.features.2": "conv2",
+    #             "model.features.7": "conv4",
+    #             "model.features.12": "conv6",
+    #             "model.features.17": "conv8",
+    #             "model.features.21": "conv10",
+    #             "model.features.26": "conv12",
+    #             "model.features.28": "conv15",
+    #         },
+    #     )
 
-    # - ResNet features:
-    elif "ResNet50" in model_name:
-        # creating features extractor with relevant node names:
-        trained_model = create_feature_extractor(
-            trained_model,
-            {
-                "model.layer1.0.conv1": "layer1.0_conv1",
-                "model.layer1.2.conv3": "layer1.2_conv3",
-                "model.layer2.0.conv1": "layer2.0_conv1",
-                "model.layer2.3.conv3": "layer2.3_conv3",
-                "model.layer3.0.conv1": "layer3.0_conv1",
-                "model.layer3.5.conv3": "layer3.5_conv3",
-                "model.layer4.2.conv3": "layer4.2_conv3",
-            },
-        )
+    # # - ResNet features:
+    # elif "ResNet50" in model_name:
+    #     # creating features extractor with relevant node names:
+    #     trained_model = create_feature_extractor(
+    #         trained_model,
+    #         {
+    #             "model.layer1.0.conv1": "layer1.0_conv1",
+    #             "model.layer1.2.conv3": "layer1.2_conv3",
+    #             "model.layer2.0.conv1": "layer2.0_conv1",
+    #             "model.layer2.3.conv3": "layer2.3_conv3",
+    #             "model.layer3.0.conv1": "layer3.0_conv1",
+    #             "model.layer3.5.conv3": "layer3.5_conv3",
+    #             "model.layer4.2.conv3": "layer4.2_conv3",
+    #         },
+    #     )
 
-    elif "GoogLeNet" in model_name:
-        # creating features extractor with relevant node names:
-        trained_model = create_feature_extractor(
-            trained_model,
-            {
-                "model.conv1.conv": "conv1",
-                "model.conv2.conv": "conv2",
-                "model.conv3.conv": "conv3",
-                "model.inception3a.branch2.0.conv": "inception3a_branch2",
-                "model.inception4a.branch2.0.conv": "inception4a_branch2",
-                "model.inception4c.branch2.0.conv": "inception4c_branch2",
-                "model.inception4d.branch2.0.conv": "inception4d_branch2",
-                "model.inception5a.branch2.0.conv": "inception5a_branch2",
-            },
-        )
+    # elif "GoogLeNet" in model_name:
+    #     # creating features extractor with relevant node names:
+    #     trained_model = create_feature_extractor(
+    #         trained_model,
+    #         {
+    #             "model.conv1.conv": "conv1",
+    #             "model.conv2.conv": "conv2",
+    #             "model.conv3.conv": "conv3",
+    #             "model.inception3a.branch2.0.conv": "inception3a_branch2",
+    #             "model.inception4a.branch2.0.conv": "inception4a_branch2",
+    #             "model.inception4c.branch2.0.conv": "inception4c_branch2",
+    #             "model.inception4d.branch2.0.conv": "inception4d_branch2",
+    #             "model.inception5a.branch2.0.conv": "inception5a_branch2",
+    #         },
+    #     )
 
     else:
         raise ValueError("Model not found. Model name might be incorrect.")
 
     # performing prediction on the single graph:
-    out = trained_model(graph)
+    out = model(graph)
     # Putting input as first element in the dictionary, before the features:
     out = {"input": graph, **out}
 

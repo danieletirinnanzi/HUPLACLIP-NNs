@@ -5,8 +5,12 @@ import torch.optim
 import torch.nn as nn
 from sklearn.metrics import roc_auc_score
 
+# defining random generator (used to define the clique size value of each graph in the batch during training)
+random_generator = np.random.default_rng()
+
 # custom import
 import src.graphs_generation as gen_graphs
+from src.utils import save_model
 
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,10 +18,36 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # TRAINING FUNCTIONS:
 
 
+# CHECKPOINTING
+class Checkpointer:
+    """Checkpointer is a simple class to track the minimum validation loss and determine if the model should be saved or not.
+
+    Attributes:
+        min_avg_val_loss (float): The minimum validation loss (averaged over all task versions) seen so far.
+    """
+
+    def __init__(self):
+        self.min_avg_val_loss = float("inf")
+
+    def should_save(self, mean_val_loss):
+        """Determines whether the current mean validation loss is lower than the minimum validation loss seen so far.
+
+        Args:
+            mean_val_loss (float): The current mean validation loss.
+
+        Returns:
+            bool: True if the current mean validation loss is lower than the minimum mean validation loss seen so far, False otherwise.
+        """
+        if mean_val_loss < self.min_avg_val_loss:
+            self.min_avg_val_loss = mean_val_loss
+            return True
+        return False
+
+
 # EARLY STOPPER ( adapted from: https://stackoverflow.com/a/73704579 )
 class EarlyStopper:
     """
-    EarlyStopper is a simple class to stop the training when the validation loss
+    EarlyStopper is a simple class to stop the training when the monitored validation loss
     is not improving or is below a certain value for a certain number of training steps.
 
     Attributes:
@@ -27,6 +57,7 @@ class EarlyStopper:
         min_val_loss (float): The minimum validation loss seen so far.
         val_exit_counter (int): Counter that increments when the validation loss is below the exit value.
         val_exit_loss (float): The validation loss under which the training should stop (exit early).
+        stop_reason (str): The reason for stopping the training.
     """
 
     def __init__(self, patience=4, min_delta=0.01, val_exit_loss=0.08):
@@ -38,13 +69,15 @@ class EarlyStopper:
         # validation loss under exit value:
         self.val_exit_counter = 0
         self.val_exit_loss = val_exit_loss
+        # stop reason:
+        self.stop_reason = None
 
     def should_stop(self, val_loss):
         """
-        Determines whether the training should stop based on the validation loss.
+        Determines whether the training should stop based on the monitored validation loss.
 
         Args:
-            val_loss (float): The current validation loss.
+            val_loss (float): The current mean validation loss (over all task versions).
 
         Returns:
             bool: True if the training should stop, False otherwise.
@@ -55,6 +88,7 @@ class EarlyStopper:
         elif val_loss > self.min_val_loss + self.min_delta:
             self.val_increase_counter += 1
             if self.val_increase_counter >= self.patience:
+                self.stop_reason = "no_improvement"
                 return True
         else:
             self.val_increase_counter = 0
@@ -62,6 +96,7 @@ class EarlyStopper:
         if val_loss < self.val_exit_loss:
             self.val_exit_counter += 1
             if self.val_exit_counter >= self.patience:
+                self.stop_reason = "min_loss"
                 return True
         else:
             self.val_exit_counter = 0
@@ -71,10 +106,32 @@ class EarlyStopper:
 
 # Training function:
 def train_model(
-    model, training_parameters, graph_size, p_correction_type, writer, model_name
+    model,
+    training_parameters,
+    graph_size,
+    p_correction_type,
+    writer,
+    model_name,
+    results_dir,
 ):
     """
-    Trains a model using the specified hyperparameters.
+    Trains a model using the specified hyperparameters, saving it as training progresses.
+    Training is structured as a curriculum learning task, where the model is trained on graphs with decreasing clique sizes.
+    Sketch of training structure:
+    FOR (decreasing clique size):
+        FOR (training steps):
+            - initialize early stopper
+            - generate training data
+            - forward pass on training data
+            - compute loss on training data
+            - backward pass and update weights
+            - at regular intervals (save_step):
+                - generate validation data
+                - save errors and print to Tensorboard
+            - check if checkpointing condition is met -> if yes, save model
+            - check if early stopping condition is met -> if yes, stop training current clique size
+        END FOR
+    END FOR
 
     Args:
         model (torch.nn.Module): The loaded model.
@@ -83,13 +140,11 @@ def train_model(
         p_correction_type (str): The type of p-correction.
         writer: The Tensorboard writer.
         model_name (str): The name of the model.
+        results_dir (str): The directory where the best model will be saved.
 
     Raises:
         ValueError: If the model is not provided, training_parameters is not a dictionary,
             graph_size is not a positive integer, p_correction_type is not a string, or writer is not provided.
-
-    Returns:
-        None
     """
 
     # START OF TESTS
@@ -116,16 +171,18 @@ def train_model(
 
     ## END OF TESTS
 
-    # Setting input magnification flag to True if needed:
+    # START OF TRAINING CONFIGURATION:
+
+    # - INPUT TRANSFORMATION FLAGS:
     if model_name == "MLP":
         input_magnification = False
     else:
         input_magnification = True
 
-    # Notify start of training:
-    print("||| Started training...")
-
-    # Defining optimizer with learning rate:
+    # - NUMBER OF TRAINING STEPS, OPTIMIZER and LEARNING RATE:
+    # reading number of training steps
+    num_training_steps = int(training_parameters["num_training_steps"])
+    # reading optimizer and learning rate
     if training_parameters["optimizer"] == "Adam":
         optim = torch.optim.Adam(
             model.parameters(), lr=training_parameters["learning_rate"]
@@ -138,48 +195,57 @@ def train_model(
         optim = torch.optim.SGD(
             model.parameters(),
             lr=training_parameters["learning_rate"],
-            momentum=0.9,
-        )  # DEFINE DYNAMICALLY?
-    # ADD MORE OPTIMIZERS?
+            momentum=0.9,  # default value is zero
+        )
     else:
         raise ValueError("Optimizer not found")
 
-    # Defining loss function:
+    # - LOSS FUNCTION:
     if training_parameters["loss_function"] == "BCELoss":
         criterion = nn.BCELoss()
     elif training_parameters["loss_function"] == "CrossEntropyLoss":
         criterion = nn.CrossEntropyLoss()
     elif training_parameters["loss_function"] == "MSELoss":
         criterion = nn.MSELoss()
-    # ADD MORE LOSS FUNCTIONS?
     else:
         raise ValueError("Loss function not found")
 
-    # Initializations
-    saved_steps = 0  # will increase every time we save a step, and will be on the x axis of tensorboard plots (global graphs with training and validation losses over all training)
+    # INITIALIZATIONS:
+    # X axis for Tensorboard plots (will increase every time a step is saved):
+    saved_steps = 0
 
-    # calculating min clique size and max clique size (proportion of graph size):
+    # Calculating min clique size and max clique size:
+    # - max clique size is a proportion of the graph size
     max_clique_size = int(
         training_parameters["max_clique_size_proportion"] * graph_size
     )
-    min_clique_size = int(
-        training_parameters["min_clique_size_proportion"] * graph_size
-    )
-    # calculating array of clique sizes for all training curriculum:
+    # - min clique size is the statistical limit associated with the graph size
+    min_clique_size = int(2 * np.log2(graph_size))
+
+    # Calculating array of clique sizes for all training curriculum:
     clique_sizes = np.linspace(
         max_clique_size,
         min_clique_size,
         num=training_parameters["clique_training_levels"],
     ).astype(int)
 
-    # training loop:
+    # initializing checkpointer (triggers model saving when mean validation loss is lower than the minimum seen so far):
+    checkpointer = Checkpointer()
+
+    # Notify start of training:
+    print(f"| Started training {model_name}...")
+
     # Loop for decreasing clique sizes
-    for current_clique_size in clique_sizes:
+    for i, current_clique_size in enumerate(clique_sizes):
 
         # printing value of clique size when it changes:
-        print("||| Clique size is now: ", current_clique_size)
+        print("||| Minimum clique size is now: ", current_clique_size)
 
-        # Initialize early stopper at the beginning of each task version training, with custom parameters:
+        # Defining clique list for current clique size value:
+        clique_size_list = clique_sizes[: i + 1]
+        print("||| List of available clique sizes is now: ", clique_size_list)
+
+        # initializing early stopper (triggers passage to following training instance)
         early_stopper = EarlyStopper(
             patience=training_parameters["patience"],
             min_delta=training_parameters["min_delta"],
@@ -189,19 +255,25 @@ def train_model(
         # Training steps loop:
         for training_step in range(training_parameters["num_training_steps"] + 1):
 
+            # Generate clique size value of each graph in the current batch
+            clique_size_array_train = gen_graphs.generate_batch_clique_sizes(
+                clique_size_list, training_parameters["num_train"]
+            )
+
             # Generating training data
-            train = gen_graphs.generate_graphs(
+            train = gen_graphs.generate_batch(
                 training_parameters["num_train"],
                 graph_size,
-                current_clique_size,
+                clique_size_array_train,
                 p_correction_type,
                 input_magnification,
             )
+
             # Forward pass on training data
             train_pred = model(train[0].to(device))
             train_pred = train_pred.squeeze()  # remove extra dimension
 
-            # Compute loss on training data
+            # Forward pass and train loss calculation:
             train_loss = criterion(
                 train_pred.type(torch.float).to(device),
                 torch.Tensor(train[1])
@@ -222,21 +294,64 @@ def train_model(
                 model.eval()
                 with torch.no_grad():
 
-                    # At each training step that has to be saved:
-                    # - increasing saved_steps: this will be the x axis of the tensorboard plots
+                    # Increasing saved_steps counter: this will be the x axis of the tensorboard plots
                     saved_steps += 1
 
-                    # - creating dictionary (that includes training loss) to store validation losses for all task versions (will be logged to Tensorboard):
-                    val_dict = {"train_loss": train_loss.item()}
+                    # CREATING TENSORBOARD DICTIONARIES:
+                    # - creating dictionary to store training, standard validation and mean validation losses
+                    train_val_dict = {
+                        f"train-loss-{current_clique_size}": train_loss.item()
+                    }
+                    # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
+                    complete_val_dict = {}
 
-                    # At each save_step, generate validation set and compute validation error for all the task versions:
+                    # STANDARD VALIDATION LOSS (mirrors training loss and is used for early stopping):
+                    # - Generate clique size value of each graph in the current batch
+                    clique_size_array_stdval = gen_graphs.generate_batch_clique_sizes(
+                        clique_size_list, training_parameters["num_val"]
+                    )
+
+                    # Generating standard validation data
+                    stdval = gen_graphs.generate_batch(
+                        training_parameters["num_val"],
+                        graph_size,
+                        clique_size_array_stdval,
+                        p_correction_type,
+                        input_magnification,
+                    )
+
+                    # Compute loss on standard validation set:
+                    stdval_pred = model(stdval[0].to(device))
+                    stdval_pred = stdval_pred.squeeze()  # remove extra dimension
+                    stdval_loss = criterion(
+                        stdval_pred.to(device),
+                        torch.Tensor(stdval[1])
+                        .type(torch.float)
+                        .to(device),  # labels should be float for BCELoss
+                    )
+
+                    # storing standard validation loss in the training and validation losses dictionary:
+                    train_val_dict[f"stdval-loss-{current_clique_size}"] = (
+                        stdval_loss.item()
+                    )
+
+                    # Check early stopping condition:
+                    early_stop = early_stopper.should_stop(stdval_loss.item())
+
+                    # VALIDATING MODEL ON ALL TASK VERSIONS:
                     for current_clique_size_val in clique_sizes:
 
+                        # Generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
+                        clique_size_array_val = gen_graphs.generate_batch_clique_sizes(
+                            np.array([current_clique_size_val]),
+                            training_parameters["num_val"],
+                        )
+
                         # Generating validation graphs:
-                        val = gen_graphs.generate_graphs(
+                        val = gen_graphs.generate_batch(
                             training_parameters["num_val"],
                             graph_size,
-                            current_clique_size_val,
+                            clique_size_array_val,
                             p_correction_type,
                             input_magnification,
                         )
@@ -246,36 +361,36 @@ def train_model(
                         val_loss = criterion(
                             val_pred.to(device),
                             torch.Tensor(val[1])
-                            .type(torch.float)
-                            .to(device),  # labels should be float for BCELoss
+                            .type(torch.float)  # labels should be float for BCELoss
+                            .to(device),
                         )
 
-                        # Checking early stopping condition for the current task version:
-                        if current_clique_size_val == current_clique_size:
-                            early_exit = early_stopper.should_stop(val_loss.item())
-
-                            print("Exiting early? ", early_exit)
-                            print("Validation loss: ", val_loss.item())
-                            print("Min validation loss: ", early_stopper.min_val_loss)
-                            print(
-                                "Validation increase counter: ",
-                                early_stopper.val_increase_counter,
-                            )
-                            print(
-                                "Validation exit counter: ",
-                                early_stopper.val_exit_counter,
-                            )
-                            print("====================================")
-
                         # updating dictionary with validation losses for all task versions:
-                        val_dict[f"val_loss_{current_clique_size_val}"] = (
+                        complete_val_dict[f"val-loss-{current_clique_size_val}"] = (
                             val_loss.item()
                         )
 
-                    # Tensorboard: plotting validation loss for other task versions in the same plot as training loss for current task version
+                    # Compute mean generalization loss for all task versions from the dictionary:
+                    mean_validation_loss = np.mean(list(complete_val_dict.values()))
+
+                    # Check if checkpointing condition is met:
+                    if checkpointer.should_save(mean_validation_loss):
+                        save_model(model, model_name, graph_size, results_dir)
+
+                    # Storing mean validation loss in the training and validation losses dictionary:
+                    train_val_dict["mean-val-loss"] = mean_validation_loss
+
+                    # Tensorboard:
+                    # - plotting training, standard validation and mean validation losses:
                     writer.add_scalars(
-                        f"Log_{model_name}",
-                        val_dict,
+                        f"{model_name}_train-stdval-meanval-losses",
+                        train_val_dict,
+                        saved_steps,
+                    )
+                    # - plotting validation losses for all task versions:
+                    writer.add_scalars(
+                        f"{model_name}_validation-losses",
+                        complete_val_dict,
                         saved_steps,
                     )
 
@@ -285,12 +400,26 @@ def train_model(
                 # Put model back in training mode after validation is done
                 model.train()
 
-                # Checking if early stopping condition was met:
-                if early_exit:
-
-                    print("||| Early stopping triggered.")
-
-                    break
+            # Check if early stopping condition is met:
+            if early_stop:
+                # Print the reason for early stopping
+                if early_stopper.stop_reason == "min_loss":
+                    print(
+                        f"||||| Early stopping triggered: standard validation loss was below the exit value for {early_stopper.patience} consecutive validation steps."
+                    )
+                elif early_stopper.stop_reason == "no_improvement":
+                    print(
+                        f"||||| Early stopping triggered: standard validation loss did not improve for {early_stopper.patience} consecutive validation steps."
+                    )
+                else:
+                    print(
+                        "||||| Early stopping triggered for unknown reason. Check for mistakes in the code."
+                    )
+                # Print the training step at which early stopping was triggered
+                print(
+                    f"||||| Breaking out at training step number {int(training_step)} out of {num_training_steps}."
+                )
+                break
 
         # After clique size has finished training (here we are inside the clique size decreasing loop):
 
@@ -299,37 +428,38 @@ def train_model(
         spacing_values = np.arange(0, 1.1, 0.10)
         # - dictionary with scalar values for the vertical lines:
         scalar_values = {
-            f"vert_line_{round(value,2)}_{current_clique_size}": value
+            f"vert-line-{round(value,2)}_{current_clique_size}": value
             for value in spacing_values
         }
-        # - add the scalars to the writer
-        writer.add_scalars(f"Log_{model_name}", scalar_values, saved_steps)
+        # - add the scalars to both writers:
+        writer.add_scalars(
+            f"{model_name}_train-stdval-meanval-losses", scalar_values, saved_steps
+        )
+        writer.add_scalars(
+            f"{model_name}_validation-losses", scalar_values, saved_steps
+        )
 
         # 2. Printing a message to indicate the end of training for the current task version:
         print("||| Completed training for clique = ", current_clique_size)
-        print("||| ==========================================")
+        print(
+            "||| ================================================================================="
+        )
 
     # After all task versions have been trained:
     # - notify completion of training:
-    print("||| Finished training.")
+    print(f"| Finished training {model_name}.")
     # - close the writer:
     writer.close()
-    # - notify completion of training function execution:
-    print("- Model trained successfully.")
-
-    return model
 
 
 # TESTING FUNCTION:
-def test_model(
-    model, testing_hyperparameters, graph_size, p_correction_type, model_name
-):
+def test_model(model, testing_parameters, graph_size, p_correction_type, model_name):
     """
-    Test the given, trained model.
+    Test the given model.
 
     Args:
         model (torch.nn.Module): The trained model to be tested.
-        testing_hyperparameters (dict): A dictionary containing hyperparameters for testing.
+        testing_parameters (dict): A dictionary containing parameters for testing.
         graph_size (int): The size of the graph.
         p_correction_type (str): The type of p-correction.
         model_name (str): The name of the model.
@@ -341,14 +471,14 @@ def test_model(
             - metrics_results: A dictionary containing various metrics calculated during testing.
     """
 
-    # Setting transformation flags to True if needed:
-    if model_name != "MLP":
-        input_magnification = True
-    else:
+    # - INPUT TRANSFORMATION FLAGS:
+    if model_name == "MLP":
         input_magnification = False
+    else:
+        input_magnification = True
 
     # Notify start of testing:
-    print("||| Started testing...")
+    print(f"| Started testing {model_name}...")
 
     # creating empty dictionaries for storing testing results:
     # - fraction correct for each clique size:
@@ -358,13 +488,13 @@ def test_model(
 
     # calculating max clique size (proportion of graph size):
     max_clique_size = int(
-        testing_hyperparameters["max_clique_size_proportion_test"] * graph_size
+        testing_parameters["max_clique_size_proportion_test"] * graph_size
     )
     # calculating array of clique sizes for all test curriculum:
     clique_sizes = np.linspace(
         max_clique_size,
         1,
-        num=testing_hyperparameters["clique_testing_levels"],
+        num=testing_parameters["clique_testing_levels"],
     ).astype(int)
 
     # initializing true positive, false positive, true negative, false negative
@@ -379,20 +509,31 @@ def test_model(
     # Loop for decreasing clique sizes
     for current_clique_size in clique_sizes:
 
+        # initializing fraction correct list, updated at each test iteration:
+        fraction_correct_list = []
+
         # Loop for testing iterations:
-        for test_iter in range(testing_hyperparameters["test_iterations"]):
+        for test_iter in range(testing_parameters["test_iterations"]):
 
             # Testing the network with test data
-            # - generating test data
-            test = gen_graphs.generate_graphs(
-                testing_hyperparameters["num_test"],
+
+            # - generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
+            clique_size_array_test = gen_graphs.generate_batch_clique_sizes(
+                np.array([current_clique_size]),
+                testing_parameters["num_test"],
+            )
+
+            # - generating validation graphs:
+            test = gen_graphs.generate_batch(
+                testing_parameters["num_test"],
                 graph_size,
-                current_clique_size,
+                clique_size_array_test,
                 p_correction_type,
                 input_magnification,
             )
+
             # - initializing tensor to store hard predictions
-            hard_output = torch.zeros([testing_hyperparameters["num_test"]])
+            hard_output = torch.zeros([testing_parameters["num_test"]])
             # - performing prediction on test data
             soft_output = model(test[0].to(device))
             soft_output = soft_output.squeeze()  # remove extra dimension
@@ -401,7 +542,7 @@ def test_model(
             # - storing true labels for AUC-ROC calculation:
             y_true.extend(test[1])
             # Converting soft predictions to hard predictions
-            for index in range(testing_hyperparameters["num_test"]):
+            for index in range(testing_parameters["num_test"]):
                 if soft_output[index] > 0.5:
                     # if the output is greater than 0.5, model predicts presence of clique
                     hard_output[index] = 1.0
@@ -418,27 +559,33 @@ def test_model(
                         TN += 1
                     elif test[1][index] == 1.0:
                         FN += 1
+
             # storing hard predictions
             predicted_output = hard_output
 
-        # Calculating fraction of correct predictions on test set, to be printed:
-        accuracy = (predicted_output == torch.Tensor(test[1])).sum().item() / (
-            1.0 * testing_hyperparameters["num_test"]
+            # updating fraction correct list with the accuracy of the current test iteration:
+            fraction_correct_list.append(
+                (predicted_output == torch.Tensor(test[1])).sum().item()
+                / (1.0 * testing_parameters["num_test"])
+            )
+
+        # Updating dictionary after all test iterations for current clique size have been completed:
+        fraction_correct_results[current_clique_size] = round(
+            sum(fraction_correct_list) / len(fraction_correct_list), 2
         )
-        fraction_correct_results[current_clique_size] = accuracy
 
         # Printing the size of the clique just tested and the corresponding test accuracy:
         print(
-            "|||Completed testing for clique = ",
+            "||| Completed testing for clique = ",
             current_clique_size,
-            ". Fraction correct on test set =",
-            accuracy,
+            ". Average fraction correct on test set = ",
+            round(sum(fraction_correct_list) / len(fraction_correct_list), 2),
         )
-        print("|||==========================================")
+        print("|||===========================================================")
 
     # After all task versions have been tested, calculating relevant metrics:
     # - calculating precision, recall, F1 score, Area Under ROC curve (AUC-ROC), Confusion Matrix:
-    epsilon = 1e-10 # to avoid divisions by zero
+    epsilon = 1e-10  # to avoid divisions by zero
     precision = TP / (TP + FP + epsilon)
     recall = TP / (TP + FN + epsilon)
     F1 = 2 * (precision * recall) / (precision + recall + epsilon)
@@ -454,8 +601,6 @@ def test_model(
     metrics_results["AUC_ROC"] = AUC_ROC
 
     # - notify completion of testing:
-    print("||| Finished testing.")
-    # - notify completion of testing function execution:
-    print("- Model tested successfully.")
+    print(f"| Finished testing {model_name}.")
 
     return fraction_correct_results, metrics_results

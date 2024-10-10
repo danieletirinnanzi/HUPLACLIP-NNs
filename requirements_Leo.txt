@@ -1,0 +1,196 @@
+# requirements.txt
+
+absl-py @ file:///dev/shm/propro01/spack-stage-py-absl-py-1.2.0-zfxw2lyfwc2q75u6vwowep3ljix4qbml/spack-src
+aiohttp @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-aiohttp-3.8.1-7763y6onvauz3tv6h5iptczreoe3ww4e/spack-src
+aiosignal @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-aiosignal-1.2.0-fgopumy2vba4wjuuwqmful2ulwdarqpw/spack-src
+apex==0.1
+argon2-cffi @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-argon2-cffi-21.3.0-nfie5equxvahsaqvkq2ueawvtp3yhbpb/spack-src
+argon2-cffi-bindings @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-argon2-cffi-bindings-21.2.0-gbn3nma6p3qmkd6vpboesxgmri46z3w6/spack-src
+asttokens @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-asttokens-2.0.8-j76o6nszeqq33ltt6qvtlfpxsvazzaoq/spack-src
+astunparse @ file:///dev/shm/propro01/spack-stage-py-astunparse-1.6.3-eo2ceercwacd5qji66oqmbenq3x5xnkk/spack-src
+async-timeout @ file:///dev/shm/propro01/spack-stage-py-async-timeout-4.0.2-6daijdipxifpezycutxt6tl5jkrqslnz/spack-src
+attrs @ file:///dev/shm/propro01/spack-stage-py-attrs-22.1.0-5enu4fbl645ier7uxnxcqhslihwdiaka/spack-src
+backcall @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-backcall-0.2.0-gucql6s7jbwoynlilvzjowgce7jy73ti/spack-src
+beautifulsoup4 @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-beautifulsoup4-4.11.1-f4rwgv4xxjyi4anbq2a5c6v5jh43mks7/spack-src
+bleach @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-bleach-5.0.1-sbcnu6j4tz6f2vlsd6gjs722e7w57xzz/spack-src
+Bottleneck @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-bottleneck-1.3.5-opcrj7pcyk7wcqhmzxnnqvibu5qizay6/spack-src
+cachetools @ file:///dev/shm/propro01/spack-stage-py-cachetools-5.2.0-45fgbh64zbbqnwvikiyfqwb3pjcvkmmf/spack-src
+certifi @ file:///dev/shm/propro01/spack-stage-py-certifi-2022.9.14-li5rw7lk34clieyohmdpjzsn7lihpu3v/spack-src
+cffi @ file:///dev/shm/propro01/spack-stage-py-cffi-1.15.0-fsotitvw6mlqugjnuxrbpepefe3hpfam/spack-src
+charset-normalizer @ file:///dev/shm/propro01/spack-stage-py-charset-normalizer-2.0.12-pvyad7l5d7ctny6b5xo5dsn2vhluludh/spack-src
+click @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-click-8.1.3-svfqebtig5cdw6mx63z2xpwhlx45ja5a/spack-src
+cloudpickle @ file:///dev/shm/propro01/spack-stage-py-cloudpickle-2.2.0-twympe5gllqh77n3mslytmaaah4ev5qw/spack-src
+cmake==3.29.5
+configparser @ file:///dev/shm/propro01/spack-stage-py-configparser-5.2.0-kugnfsu3nc7uptouswhzgc34jviutgp4/spack-src
+contourpy @ file:///dev/shm/propro01/spack-stage-py-contourpy-1.0.5-ly3yd2wjoworkxqeyiaktlfthgt2bber/spack-src
+cycler @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-cycler-0.11.0-e2prjkk2txihvuegnn2fph6poq3njqww/spack-src
+debugpy @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-debugpy-1.6.3-laffbfwpu6uggxgvbmy5chvlsihd6c7a/spack-src
+decorator @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-decorator-5.1.1-c37fizttgko6yye3ykn5ybv4zl7nvffo/spack-src
+defusedxml @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-defusedxml-0.7.1-kpxsufbzrw72ga63fmv6xgalkbo2g7sg/spack-src
+dill @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-dill-0.3.5.1-c427b4jfgaek2b6vsr6fcnolnpjhhvgz/spack-src
+dm-tree @ file:///dev/shm/propro01/spack-stage-py-dm-tree-0.1.6-ob66fnebkv2bqbpwjfi7esbeunm775qs/spack-src
+docker-pycreds @ file:///dev/shm/propro01/spack-stage-py-dockerpy-creds-0.4.0-5eenkk22obthxe2e3ejjazuemka7zcob/spack-src
+einops==0.8.0
+entrypoints @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-entrypoints-0.4-xtz2ubzyatwwj2vhpitau6w6kg4iclj4/spack-src
+executing @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-executing-1.1.0-b3phfo765rzsg4z36fzizxi5zvdfrxog/spack-src
+filelock==3.14.0
+flatbuffers @ file:///dev/shm/propro01/spack-stage-py-flatbuffers-2.0.7-nlnsxt5y7vldu3xmqg7l4hrz6ficy24k/spack-src
+flexivit-pytorch==0.0.1
+fonttools @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-fonttools-4.37.3-muruytdhlw3b7quofbhqtn4thyooe75u/spack-src
+frozenlist @ file:///dev/shm/propro01/spack-stage-py-frozenlist-1.3.1-vmok4uxrt3b6jz3noxdjwxmbcvlcjujh/spack-src
+fsspec==2024.6.0
+functorch==2.0.0
+future @ file:///dev/shm/propro01/spack-stage-py-future-0.18.2-nmmjmpt56hk3ev7tol7l73bomwenitld/spack-src
+gast @ file:///dev/shm/propro01/spack-stage-py-gast-0.4.0-3zrvxzqtj57d3ul3fsfmducrsamy6wym/spack-src
+gevent @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-gevent-1.5.0-xtofurqm2iuwoyuposlk4vkdmcafs7uj/spack-src
+gitdb @ file:///dev/shm/propro01/spack-stage-py-gitdb-4.0.9-435smbyt4l2co2jqrldvxjoulap6bany/spack-src
+GitPython @ file:///dev/shm/propro01/spack-stage-py-gitpython-3.1.27-57s27564db4x2dxsqxxkqqag3kpydagf/spack-src
+google-auth @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-google-auth-2.11.0-e5r27qq5le3ag7wphuzljks3ivlikznt/spack-src
+google-auth-oauthlib @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-google-auth-oauthlib-0.4.6-i2rct33xgnejnbchg5v2eawl4hwa2qbm/spack-src
+google-pasta @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-google-pasta-0.2.0-k4igsxo2yjzaosyhvm7eggzmtd2tf3oo/spack-src
+googleapis-common-protos @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-googleapis-common-protos-1.55.0-ku44lxzew3o7uqz24gqmqq4shumhqflq/spack-src
+gql @ file:///dev/shm/propro01/spack-stage-py-gql-0.4.0-7qulgau5vvqcryzjbxwi4i3f3v36h7qx/spack-src
+graphql-core @ file:///dev/shm/propro01/spack-stage-py-graphql-core-2.3.2-pucyuodtv6gtqdll47bkxplhke5ag7jr/spack-src
+greenlet @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-greenlet-1.1.3-yl2t4rblox2zecityzez2cbgi5ubu67u/spack-src
+grpcio @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-grpcio-1.48.1-mulnmwevcfij5rta7n5vzgpgwnylsixn/spack-src
+h5py @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-h5py-3.7.0-po4u3txcbd22icrwgmbj5fxpkekv3gs7/spack-src
+horovod @ file:///dev/shm/propro01/spack-stage-py-horovod-0.26.1-qns3bmvfe2obhhp4naat63q36iljpbeh/spack-src
+huggingface-hub==0.23.3
+idna @ file:///dev/shm/propro01/spack-stage-py-idna-3.4-mtdcenb2v7tujxav7hxzqd6n63i54o6f/spack-src
+ipykernel @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-ipykernel-6.16.0-mq5ct2ukrkgkuina5jzv3dp2bsphjmqt/spack-src
+ipython @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-ipython-8.5.0-m5om7yvzlbqyxcru4y67utaxq5qykolo/spack-src
+ipython-genutils @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-ipython-genutils-0.2.0-a7vofnaolymc6gko5boozqhi2wfgd5u7/spack-src
+jedi @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-jedi-0.18.1-qavfibpmcw2stgpodd2udjpdpxxdltf7/spack-src
+Jinja2 @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-jinja2-3.1.2-xyh37wfwlvl4fedqiwuvqamz7gkblkpc/spack-src
+joblib @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-joblib-1.2.0-qgnv6hky5wyg4piilu3hw7stes4j6sv6/spack-src
+jsonschema @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-jsonschema-4.16.0-bvw4yimq6r6i3762jmpdvf4uqnnv46eb/spack-src
+jupyter_client @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-jupyter-client-7.3.5-tkmfgc3y4m7v3hhj7v3spsvjjqa7jcsw/spack-src
+jupyter_core @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-jupyter-core-4.11.1-5oin7fpdoraj54risplgf5nnt4hkd4t3/spack-src
+jupyterlab-pygments @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-jupyterlab-pygments-0.2.2-alqrewtkrdaimzdcao6so7soymnfidqk/spack-src/jupyterlab_pygments-0.2.2-py2.py3-none-any.whl
+keras @ file:///dev/shm/propro01/spack-stage-py-keras-2.10.0-brbn4jita2bl52gt66o45jrnlnajlrrw/spack-src/spack-build
+Keras-Preprocessing @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-keras-preprocessing-1.1.2-iqzvrc32mckkng7xhm4qwoapd62xqwz2/spack-src
+kerberos @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-kerberos-1.3.0-mysenoh6ffqqs74xaxlspyk4gdnrvxf5/spack-src
+kiwisolver @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-kiwisolver-1.3.2-w4mdltuzzvqmeyw7smlacok2khw5wkur/spack-src
+libclang @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-libclang-14.0.6-akiujza5i3t7gihmaa7p7xm4rz3u2tem/spack-src
+lit==18.1.7
+lxml @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-lxml-4.9.1-zykzpzmemlllukyfylgnbi7trszzdjde/spack-src
+Markdown @ file:///dev/shm/propro01/spack-stage-py-markdown-3.4.1-ba3dwvbglcbq4gq6hneiewnhl43gwxyi/spack-src
+MarkupSafe @ file:///dev/shm/propro01/spack-stage-py-markupsafe-2.1.1-dvngu3ejl6ln3ryizjjcvzos6qjte7bn/spack-src
+matplotlib @ file:///dev/shm/propro01/spack-stage-py-matplotlib-3.6.2-f3iugfzrhqo3wjjzoqgqgtuhumcbdnpl/spack-src
+matplotlib-inline @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-matplotlib-inline-0.1.3-5jl3r7n257scz45rckyit3pqbztp5cys/spack-src
+mistune @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-mistune-2.0.4-pmqhklclasqvrhtobgdhzaavutkdl7kn/spack-src
+mpi4py @ file:///dev/shm/propro01/spack-stage-py-mpi4py-3.1.4-y25hnq7hdwtuxghmtmyxnmuwfl6tfvom/spack-src
+mpmath==1.3.0
+multidict @ file:///dev/shm/propro01/spack-stage-py-multidict-6.0.2-bhv22sfzibsqxz7f5yrq6wvyuoeewr4t/spack-src
+nbclient @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-nbclient-0.6.7-6jqjreehm6fkwmzcgmvq2rstohduivpe/spack-src
+nbconvert @ file:///dev/shm/propro01/spack-stage-py-nbconvert-7.0.0-rsofd233ykqp2hyqj6r2si26o3unqqsj/spack-src
+nbformat @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-nbformat-5.1.3-afjpnofssrzin4x2syffn2vcwlffdti4/spack-src
+nest-asyncio @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-nest-asyncio-1.5.5-kny37rwlhy366ok3ocdibb7ludv6hbc4/spack-src
+networkx==3.3
+notebook @ file:///dev/shm/propro01/spack-stage-py-notebook-6.4.12-jqf6hxuiuaaius36p4g5c4sow2wjoycz/spack-src
+numexpr @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-numexpr-2.8.3-clxuld523cnlqn2y5fyaz6qligixnc65/spack-src
+numpy==1.26.4
+nvidia-cublas-cu11==11.10.3.66
+nvidia-cuda-cupti-cu11==11.7.101
+nvidia-cuda-nvrtc-cu11==11.7.99
+nvidia-cuda-runtime-cu11==11.7.99
+nvidia-cudnn-cu11==8.5.0.96
+nvidia-cufft-cu11==10.9.0.58
+nvidia-curand-cu11==10.2.10.91
+nvidia-cusolver-cu11==11.4.0.1
+nvidia-cusparse-cu11==11.7.4.91
+nvidia-ml-py3 @ file:///dev/shm/propro01/spack-stage-py-nvidia-ml-py3-7.352.0-exwti7crd6razu5kuve3mpabsq37qhzn/spack-src
+nvidia-nccl-cu11==2.14.3
+nvidia-nvtx-cu11==11.7.91
+oauthlib @ file:///dev/shm/propro01/spack-stage-py-oauthlib-3.2.1-4xfzouapfs4uyc45euhd36p3pl7lgxks/spack-src
+opt-einsum @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-opt-einsum-3.3.0-6x5thkmre7rmf77xojxrhdp3xlvaqe5r/spack-src
+packaging @ file:///dev/shm/propro01/spack-stage-py-packaging-21.3-q2nnizyzbejhdixqvtdoz2y6nt4m4fux/spack-src
+pandas @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-pandas-1.5.1-7ohrc3gzune47shkc46yliplncoapds2/spack-src
+pandocfilters @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pandocfilters-1.5.0-ah4prpd24mb4h7j5gat52ymapolpryqw/spack-src
+parso @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-parso-0.8.3-zdr7bdssz5ezykqzjf63ixd5wxvdiwqa/spack-src
+pexpect @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pexpect-4.8.0-j5no62mvvllgykzemmkvk2z5sjtjcj75/spack-src
+pickleshare @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pickleshare-0.7.5-n3lyrbrxhpioeln46hzzglffq4jtsawu/spack-src
+Pillow @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pillow-9.2.0-5odd3bexnyhfp2siynnbnwisiris3rah/spack-src
+prettytable @ file:///dev/shm/propro01/spack-stage-py-prettytable-3.4.1-klktoprx7vrn3z4li5omlbag3eeqf2n3/spack-src
+prometheus-client @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-prometheus-client-0.12.0-nk4b2vv2xopoyhbhiq5nz4eyem3ha6sm/spack-src
+promise @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-promise-2.3-xuq6x6drlsi3akditkqjeowjdhcf6h37/spack-src
+prompt-toolkit @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-prompt-toolkit-3.0.31-35vx7nw5ly7up5hxfnvkwk3ezpkabd5k/spack-src
+protobuf @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-protobuf-3.19.4-xsdxflzdp4ttvxmvn4v5zwotxqymai6f/spack-src
+psutil @ file:///dev/shm/propro01/spack-stage-py-psutil-5.9.2-vja34dyjp2qeekakglpdbqmqjeror4hg/spack-src
+ptyprocess @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-ptyprocess-0.7.0-x2opgnwcfv2rysf55obdepmsjpobngv4/spack-src
+pure-eval @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pure-eval-0.2.2-dl4qz6coqesjfwjswxdgay5ti3ni4tkx/spack-src
+pure-sasl @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-pure-sasl-0.6.2-f7mwxwkkbv65lg2usp4bpspwmid3ggha/spack-src
+pyarrow @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-pyarrow-10.0.1-ueotvvnoxyq7gpbgrrzzkcjz2xthmvuv/spack-src
+pyasn1 @ file:///dev/shm/propro01/spack-stage-py-pyasn1-0.4.8-a7mkv3pd4ytpaznslcko3wu3peovr4mp/spack-src
+pyasn1-modules @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-pyasn1-modules-0.2.8-sf3vtwtkyui33i7ur4mb6gh27ej5z5pf/spack-src
+pybind11 @ file:///dev/shm/propro01/spack-stage-py-pybind11-2.10.0-jbdvyzuttvuse7libeks7d7qqkjuxr63/spack-src
+pycparser @ file:///dev/shm/propro01/spack-stage-py-pycparser-2.21-47wdyeb4zngw2yvdtfxqxmpbbnwsw347/spack-src
+pyDeprecate @ file:///dev/shm/propro01/spack-stage-py-pydeprecate-0.3.1-y65sjrbih5wv2ks5pzc55y45nvcuhcnf/spack-src
+pydot @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-pydot-1.4.2-cb5lk7zw5sihjotfk5ylqjyx7cpysqpk/spack-src
+Pygments @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pygments-2.13.0-kfrrrdnhkstgg27uafp2jxu4aqpkxqkg/spack-src
+pyparsing @ file:///dev/shm/propro01/spack-stage-py-pyparsing-3.0.9-easekbuhurewi3khmoyuep2oom56wotq/spack-src
+pyrsistent @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pyrsistent-0.18.1-xi2gbhd3w7yxylkhfiwbzme54mfy6qvl/spack-src
+python-dateutil @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-python-dateutil-2.8.2-bt4t6pwpn2ecsbl6tpkncmu4ddkhk4di/spack-src
+pytorch-lightning @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-pytorch-lightning-1.5.3-pbw5xlyikigr2vnjznvhpujrbjrsenh2/spack-src
+pytz @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pytz-2022.2.1-gvpjyn6mwko5xtaf6jdhrlxtewzsfufd/spack-src
+PyYAML @ file:///dev/shm/propro01/spack-stage-py-pyyaml-6.0-2pscqphentihkgjgi3cwkmkqc4qliz3q/spack-src
+pyzmq @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-pyzmq-24.0.1-qadp56goftwx6poalgzblrlb7ih44ns5/spack-src
+regex @ file:///dev/shm/propro01/spack-stage-py-regex-2022.8.17-vehq4fnkiyebzazbd44vocdemh3rb4qi/spack-src
+requests @ file:///dev/shm/propro01/spack-stage-py-requests-2.28.1-vrbsszfe47injc3jqhyu6jfmfxzpjyfk/spack-src
+requests-oauthlib @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-requests-oauthlib-1.3.1-fq3oifhsh7jts2eln2ku3epz5ego3it6/spack-src
+rsa @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-rsa-4.7.2-be5fh53se2lpunwgdjijazf5elc55thw/spack-src
+safetensors==0.4.3
+scikit-learn @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-scikit-learn-1.1.3-mm3lowgz4q2fbh22upvb3gk4fsrs2nyt/spack-src
+scipy @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-scipy-1.5.4-a4qvjrzm73ahtd3mm5zy243a26dmic7r/spack-src
+SCons @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-scons-4.3.0-4qhtyu5y7twzaea26u5zss2ayq27kl6v/spack-src
+seaborn==0.13.2
+Send2Trash @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-send2trash-1.8.0-hahfajom53bnzh7oncetiunzz4p4ofk7/spack-src
+sentry-sdk @ file:///dev/shm/propro01/spack-stage-py-sentry-sdk-1.5.5-vpk2asx3svhjkeenp7or5owm7ge5qamm/spack-src
+shortuuid @ file:///dev/shm/propro01/spack-stage-py-shortuuid-1.0.11-2i5y7wkpf5kd4seoxgdayiav6j3eail4/spack-src
+six @ file:///dev/shm/propro01/spack-stage-py-six-1.16.0-shzkwmse7tr2ldig6pusynxpi7cvpv32/spack-src
+smmap @ file:///dev/shm/propro01/spack-stage-py-smmap-5.0.0-nckvq7qwqk4mfgmptpxtgyhlq3z6pas4/spack-src
+soupsieve @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-soupsieve-2.3.2.post1-bqcf4436nvsgvt4ufvk3wmya2gt7pzvr/spack-src
+stack-data @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-stack-data-0.5.0-gljvoeujtezgdpmsg75j6j7balk6m3fb/spack-src
+subprocess32 @ file:///dev/shm/propro01/spack-stage-py-subprocess32-3.5.4-wzjkhuquxgcfliwabtrhm27mrigzbbbf/spack-src
+sympy==1.12.1
+tabulate @ file:///dev/shm/propro01/spack-stage-py-tabulate-0.8.9-ifjtl7yndg73n4sqkllwxcajfmikxgtn/spack-src
+tensorboard @ file:///dev/shm/propro01/spack-stage-py-tensorboard-2.10.0-crrn2p7afth5n6bevqms6hyrbpluf35d/spack-src/tensorboard-2.10.0-py3-none-any.whl
+tensorboard-data-server @ file:///dev/shm/propro01/spack-stage-py-tensorboard-data-server-0.6.1-zxonprt4x5r43o2htmsmvji2yrt7xkps/spack-src/tensorboard_data_server-0.6.1-py3-none-manylinux2010_x86_64.whl
+tensorboard-plugin-wit @ file:///dev/shm/propro01/spack-stage-py-tensorboard-plugin-wit-1.8.1-dmuwhqtaloelr7bvsy6c6oelmex3sbgd/spack-src/tensorboard_plugin_wit-1.8.1-py3-none-any.whl
+tensorflow @ file:///dev/shm/propro01/spack-stage-py-tensorflow-2.10.0-2yytxxr5jxcgd5ilqzznv6yd37a5f4m7/spack-src/spack-build
+tensorflow-datasets @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-tensorflow-datasets-4.4.0-tdx6n2w4awakt4qrq554txvew3cqp5es/spack-src
+tensorflow-estimator @ file:///dev/shm/propro01/spack-stage-py-tensorflow-estimator-2.10-ti6tjddwqowt6vi2tqnul7t2pkowlbb2/spack-src/spack-build
+tensorflow-hub @ file:///dev/shm/propro01/spacktwvneqt2
+tensorflow-metadata @ file:///dev/shm/propro01/spack-stage-py-tensorflow-metadata-1.10.0-4h74kem53wwdikmeobq4co2n7h42sxb7/spack-src
+termcolor @ file:///dev/shm/propro01/spack-stage-py-termcolor-1.1.0-gmo43lhexlmp63dcifrq4x5suadp74gk/spack-src
+terminado @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-terminado-0.15.0-vjwul2zff66jyqkjvsmmnph3hkn63t3q/spack-src
+tfp-nightly @ file:///dev/shm/propro01/spackujbkr4e_/27cd4ce161cbf02eedb7f3ff8d43fa0d/execroot/tensorflow_probability/bazel-out/k8-fastbuild/bin/pip_pkg.runfiles/tensorflow_probability
+threadpoolctl @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-threadpoolctl-3.1.0-s4seseavjxxq6qtejkvv7r7we32qaxh5/spack-src
+thrift==0.16.0
+timm==1.0.3
+tinycss2 @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-tinycss2-1.1.1-6y3ntjtqdzmww6pkcsdelealg3hlu2tj/spack-src
+torch==2.0.1
+torch-cluster @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-torch-cluster-1.5.8-4hjx4eido55lmvh22wjfpegvlvnlec5l/spack-src
+torch-geometric @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-torch-geometric-2.1.0.post1-psap4lbda5azjpkjz75mskps5tv6l4t3/spack-src
+torch-scatter @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-torch-scatter-2.0.5-srb6g7jwd4f62unmeu6r4uf2eeqv52yg/spack-src
+torch-spline-conv @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-torch-spline-conv-1.2.0-t4xdsjti6t7bbo2i4rzpsvmkkswaitcf/spack-src
+torch-tb-profiler==0.4.3
+torchfile @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-torchfile-0.1.0-xzaqpecrg6ly3ic5pdcxvrj6tu2uogke/spack-src
+torchmetrics @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-torchmetrics-0.10.2-5watztyu5gkdb4ojmwx5lpk2cxwe4cmo/spack-src
+torchtext @ file:///dev/shm/propro01/spack-stage-py-torchtext-0.14.0-rzb6nzrafkemp6dwhb3t6dh5mjmq35qr/spack-src
+torchvision @ file:///dev/shm/slurm_job.554715/propro01/spack-stage-py-torchvision-0.14.0-gsg4cdvhaezgynd2f62px6ueq77yin6q/spack-src
+tornado @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-tornado-6.2-5txabtzgi4pt2lvjqmegys4s24hbrmjj/spack-src
+tqdm @ file:///dev/shm/propro01/spack-stage-py-tqdm-4.64.1-xtqz2dym4zxons6x5jg2f7qj37sfl232/spack-src
+traitlets @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-traitlets-5.3.0-yvzj3rybfcbbjtgs3cpqng3zfkqptbhc/spack-src
+triton==2.0.0
+Twisted @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-twisted-15.4.0-5otlqb6sgvhbmcty336j3hgczcxa67zy/spack-src
+typing_extensions @ file:///dev/shm/propro01/spack-stage-py-typing-extensions-4.3.0-o4gsvl42xtheqyvkhrf5y2cfr7ckdyc7/spack-src
+urllib3 @ file:///dev/shm/propro01/spack-stage-py-urllib3-1.26.12-iky3rkl232ybrp5g2uqzkmz24qedrd3w/spack-src
+wandb @ file:///dev/shm/propro01/spack-stage-py-wandb-0.10.1-lic6m5h7q4fjrkujaiyy4nigp6n3lhcf/spack-src
+watchdog @ file:///dev/shm/propro01/spack-stage-py-watchdog-2.1.6-dqhnjkxnt4cgyspggzehfwn6c75rktvd/spack-src
+wcwidth @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-wcwidth-0.2.5-ibceehkpc2yqp4o2oq7iiz3dzwrrarwt/spack-src
+webencodings @ file:///dev/shm/slurm_job.193358/propro01/spack-stage-py-webencodings-0.5.1-q7uy3llynnb3ync67ihn4vsirfksplmm/spack-src
+Werkzeug @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-werkzeug-2.2.2-ti5iman5bhs6fdsxsswvqhzrkex2gbrl/spack-src
+wrapt @ file:///dev/shm/propro01/spack-stage-py-wrapt-1.14.1-url6sz4qe23mxs6jc47hxjaxwldiyti6/spack-src
+yarl @ file:///dev/shm/slurm_job.243981/propro01/spack-stage-py-yarl-1.8.1-hcwlv7wr44tttsa3o2wbiosmqmyf57nb/spack-src
+zope.interface @ file:///dev/shm/slurm_job.245066/propro01/spack-stage-py-zope-interface-5.4.0-63wp2nqnrobg2ponhmhy4qcggsp7bi2l/spack-src

@@ -9,7 +9,6 @@ from src.utils import load_config
 from src.utils import load_model
 from src.utils import save_exp_config
 from src.utils import save_test_results
-from src.utils import save_trained_model
 from src.utils import save_features
 from src.train_test import train_model
 from src.train_test import test_model
@@ -20,8 +19,11 @@ from src.tensorboard_save import (
     # tensorboard_save_models,
 )
 
+# defining device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "nndl_exp_config.yml"))
+config = load_config(os.path.join("docs", "grid_exp_config.yml"))
 
 # storing starting time of the experiment in string format:
 start_time = datetime.datetime.now()
@@ -64,41 +66,10 @@ for graph_size in config["graph_size_values"]:
 
     # inside experiment results folder, create a new directory for each graph size value:
     graph_size_results_dir = os.path.join(experiment_results_dir, f"N{graph_size}")
-    # os.makedirs(graph_size_results_dir)
+    os.makedirs(graph_size_results_dir)
 
     # loading, training, and testing models:
     for model_specs in config["models"]:
-
-        # printing model name
-        print(model_specs["model_name"])
-
-        # loading model
-        model = load_model(model_specs, graph_size)
-
-        # put model in training mode
-        model.train()
-
-        # training model and visualizing training progression on Tensorboard
-        trained_model = train_model(
-            model,
-            config["training_parameters"],
-            graph_size,
-            config["p_correction_type"],
-            writer,
-            model_specs["model_name"],
-        )
-
-        # put trained model in evaluation mode
-        trained_model.eval()
-
-        # testing trained model
-        fraction_correct_results, metrics_results = test_model(
-            trained_model,
-            config["testing_parameters"],
-            graph_size,
-            config["p_correction_type"],
-            model_specs["model_name"],
-        )
 
         # creating model subfolder in current graph size folder:
         model_results_dir = os.path.join(
@@ -106,44 +77,83 @@ for graph_size in config["graph_size_values"]:
         )
         os.makedirs(model_results_dir)
 
-        # - saving test results as csv file
+        # printing model name
+        print(model_specs["model_name"])
+
+        # loading model
+        model = load_model(model_specs, graph_size, device)
+
+        # put model in training mode
+        model.train()
+
+        # training model and visualizing training progression on Tensorboard
+        train_model(
+            model,
+            config["training_parameters"],
+            config["graph_size"],
+            config["p_correction_type"],
+            writer,
+            model_specs["model_name"],
+            model_results_dir,
+        )
+
+        # load the best model from the training process
+        # - defining file name and path:
+        file_path = os.path.join(
+            model_results_dir,
+            f"{model_specs['model_name']}_N{config['graph_size']}_trained.pth",
+        )
+        # - loading the model:
+        model.load_state_dict(torch.load(file_path))
+        # - sending the model to the device:
+        model.to(device)
+        # - putting the model in evaluation mode:
+        model.eval()
+
+        # testing best model
+        fraction_correct_results, metrics_results = test_model(
+            model,
+            config["testing_parameters"],
+            config["graph_size"],
+            config["p_correction_type"],
+            model_specs["model_name"],
+        )
+
+        # saving test results as csv file
         save_test_results(
             fraction_correct_results,
             metrics_results,
             model_specs["model_name"],
-            graph_size,
+            config["graph_size"],
             model_results_dir,
         )
 
-        # - saving the trained model (will not be synched with git due to size)
-        save_trained_model(
-            trained_model,
-            model_specs["model_name"],
-            graph_size,
-            model_results_dir,
-        )
-
-        # - for CNN, VGG and ResNet, saving the features extracted by the model in the results folder:
+        # when possible, saving the features extracted by the model:
         if model_specs["model_name"] in [
-            "CNN_small",
-            "CNN_medium",
-            "CNN_large",
-            "VGG16scratch",
-            "VGG16pretrained",
-            "ResNet50scratch",
-            "ResNet50pretrained",
-            "GoogLeNetscratch",
-            "GoogLeNetpretrained",
+            "CNN_small_1",
+            "CNN_small_2",
+            "CNN_medium_1",
+            "CNN_medium_2",
+            "CNN_large_1",
+            "CNN_large_2",
+            # "CNN_rudy",
+            # "VGG16scratch",
+            # "VGG16pretrained",
+            # "ResNet50scratch",
+            # "ResNet50pretrained",
+            # "GoogLeNetscratch",
+            # "GoogLeNetpretrained",
         ]:
             save_features(
-                trained_model,
+                model,
                 model_specs["model_name"],
-                graph_size,
+                config["graph_size"],
                 config["p_correction_type"],
                 model_results_dir,
+                device,
             )
 
-# saving copy of the configuration file in the experiment folder just created (to keep track of the experiment settings), adding an indication regarding the elapsed time from the start of the experiment:
+# saving copy of the configuration file in the experiment folder, adding the time elapsed from the start of the experiment:
 end_time = datetime.datetime.now()
 save_exp_config(
     config, experiment_results_dir, exp_name_with_time, start_time, end_time

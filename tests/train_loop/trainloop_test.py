@@ -13,9 +13,11 @@ from src.train_test import train_model
 
 # Setting device:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
-# Loading MLP configuration:
-config = load_config(os.path.join("docs", "MLP_exp_config.yml"))
+config = load_config(os.path.join("docs", "grid_exp_config.yml"))  # CHANGE THIS
+
+model_name = "MLP"  # CHANGE THIS
 
 # Create mock_writer to visualize training:
 log_dir = os.path.join(
@@ -25,19 +27,35 @@ log_dir = os.path.join(
 )
 mock_writer = SummaryWriter(log_dir=log_dir)
 
-# Create an instance of the MLP model
-model = MLP(config["graph_size"], config["models"][0]["architecture"])
+# Create mock results folder:
+results_dir = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "mock_results",
+    config["models"][0]["model_name"],
+)
+os.makedirs(results_dir)
+
+# model config:
+model_config = [
+    model for model in config["models"] if model["model_name"] == model_name
+][0]
+
+# Initialize the model (choosing lower graph size for testing)
+model = MLP(config["graph_size"][0], model_config["architecture"])
+
+print(model)
 
 # Sending model to device:
 model.to(device)
 
 # Train the model
 model.train()
-trained_model = train_model(
+train_model(
     model,
     config["training_parameters"],
     config["graph_size"],
     config["p_correction_type"],
     mock_writer,
     config["models"][0]["model_name"],
+    results_dir,
 )

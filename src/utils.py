@@ -16,8 +16,10 @@ from .models import (
     # ResNet50_pretrained,
     # GoogLeNet_scratch,
     # GoogLeNet_pretrained,
-    ViT_scratch,
-    ViT_pretrained,
+    # ViT_scratch,
+    # ViT_pretrained,
+    FlexiViT_scratch,
+    FlexiViT_pretrained,
 )
 from torchvision.models.feature_extraction import (
     create_feature_extractor,
@@ -66,10 +68,14 @@ def load_model(model_specs, graph_size, device):
         #     model = GoogLeNet_scratch()
         # case "GoogLeNetpretrained":
         #     model = GoogLeNet_pretrained()
+        # case "ViTscratch":
+        #     model = ViT_scratch(graph_size)
+        # case "ViTpretrained":
+        #     model = ViT_pretrained(graph_size)
         case "ViTscratch":
-            model = ViT_scratch(graph_size)
+            model = FlexiViT_scratch(graph_size)
         case "ViTpretrained":
-            model = ViT_pretrained(graph_size)
+            model = FlexiViT_pretrained(graph_size)
 
         # ADDITIONAL MODELS CAN BE ADDED HERE
 
@@ -251,6 +257,8 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.0.0": "feat1",
                     "model.1.0": "feat2",
                     "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                    "model.4.0": "feat5",
                 },
             )
         elif "2" in model_name:
@@ -262,6 +270,9 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.1.0": "feat2",
                     "model.2.0": "feat3",
                     "model.3.0": "feat4",
+                    "model.4.0": "feat5",
+                    "model.5.0": "feat6",
+                    "model.6.0": "feat7",
                 },
             )
         # elif "rudy" in model_name:

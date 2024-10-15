@@ -254,8 +254,8 @@ def generate_batch(
             on_off[i],
             graph_size,
             clique_size_array[i],
-            input_magnification,
             p_correction_type,
+            input_magnification,
             p_nodes,
         )
 

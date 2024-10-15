@@ -21,9 +21,14 @@ def tensorboard_save_images(writer, graph_size, p_correction_type, num_images=10
     clique_size_array = [int(0.5 * graph_size)] * num_images
     # Generate random graphs for visualization
     graph_pool = gen_graphs.generate_batch(
-        num_images, graph_size, clique_size_array, p_correction_type
+        num_images,
+        graph_size,
+        clique_size_array,
+        p_correction_type,
+        False,
     )
 
+    # Convert graphs to images
     img = torchvision.utils.make_grid(graph_pool[0], nrow=5)
 
     # adding to tensorboard

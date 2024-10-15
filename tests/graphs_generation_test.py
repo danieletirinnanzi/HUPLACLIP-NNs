@@ -220,7 +220,11 @@ class TestGraphsGeneration(unittest.TestCase):
         # Test case 7: Generating 5 graphs with graph size 10 and clique size 3, p_correction_type 'p_increase', inputs to MLP (input_magnification False)
         clique_size_array = [3, 3, 3, 3, 3]
         graphs, on_off = gen_graphs.generate_batch(
-            5, 10, clique_size_array, "p_increase"
+            5,
+            10,
+            clique_size_array,
+            "p_increase",
+            False,
         )
         self.assertEqual(len(graphs), 5)
         self.assertEqual(len(on_off), 5)

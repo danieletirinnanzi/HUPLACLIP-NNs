@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-# # for VIT PRETRAINED  with variable input size(https://github.com/bwconrad/flexivit):
-# from timm import create_model
-# from timm.layers.pos_embed import resample_abs_pos_embed
-# from flexivit_pytorch import pi_resize_patch_embed
+# custom import:
+from src.input_transforms import find_patch_size
+
+# ViT model from timm library (for flexibility in input size)
+from timm.models import create_model
 
 
 class MLP(nn.Module):
@@ -14,32 +15,41 @@ class MLP(nn.Module):
         self.graph_size = graph_size
         self.architecture_specs = architecture_specs
 
-        # TODO: scale number of neurons in each layer based on graph size
+        # Defining a scaling factor based on graph size
+        scale_factor = (
+            graph_size / 224
+        )  # Original MLP model was tuned for 224x224 images
+
+        # Dynamically scale the number of neurons in each layer based on graph size
+        l1_scaled = int(architecture_specs["l1"] * scale_factor)
+        l2_scaled = int(architecture_specs["l2"] * scale_factor)
+        l3_scaled = int(architecture_specs["l3"] * scale_factor)
+        l4_scaled = int(architecture_specs["l4"] * scale_factor)
 
         self.model = nn.Sequential(
             # Flatten layer
             nn.Flatten(),
             # First linear layer
-            nn.Linear(graph_size * graph_size, architecture_specs["l1"]),
-            nn.BatchNorm1d(architecture_specs["l1"]),
+            nn.Linear(graph_size * graph_size, l1_scaled),
+            nn.BatchNorm1d(l1_scaled),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Second linear layer
-            nn.Linear(architecture_specs["l1"], architecture_specs["l2"]),
-            nn.BatchNorm1d(architecture_specs["l2"]),
+            nn.Linear(l1_scaled, l2_scaled),
+            nn.BatchNorm1d(l2_scaled),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Third linear layer
-            nn.Linear(architecture_specs["l2"], architecture_specs["l3"]),
-            nn.BatchNorm1d(architecture_specs["l3"]),
+            nn.Linear(l2_scaled, l3_scaled),
+            nn.BatchNorm1d(l3_scaled),
             nn.ReLU(),
             # Fourth linear layer
-            nn.Linear(architecture_specs["l3"], architecture_specs["l4"]),
-            nn.BatchNorm1d(architecture_specs["l4"]),
+            nn.Linear(l3_scaled, l4_scaled),
+            nn.BatchNorm1d(l4_scaled),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Output layer
-            nn.Linear(architecture_specs["l4"], 1),
+            nn.Linear(l4_scaled, 1),
             nn.Sigmoid(),
         )
 
@@ -48,8 +58,6 @@ class MLP(nn.Module):
 
 
 class CNN(nn.Module):
-
-    # TODO: scale number of neurons in each layer based on graph size
 
     def __init__(self, graph_size, architecture_specs):
         super().__init__()
@@ -116,39 +124,92 @@ class CNN(nn.Module):
         # getting the flattened size of the output tensor
         model_output_size = model_output.view(-1).size(0)
 
-        # # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
-        # print("model_output: ", model_output.shape)
+        # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
+        print("CNN model_output: ", model_output.shape)
 
         return model_output_size
 
 
-# TODO: adapt the ViT models to handle variable input sizes
+# class ViT_scratch(nn.Module):
+#     def __init__(self, graph_size):
+#         super().__init__()
+#         self.graph_size = graph_size
+#         self.model = models.vit_b_16()
+#         # Change the head
+#         self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+#     def forward(self, x):
+#         x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+#         return self.model(x)
 
 
-class ViT_scratch(nn.Module):
+# class ViT_pretrained(nn.Module):
+#     def __init__(self, graph_size):
+#         super().__init__()
+#         self.graph_size = graph_size
+#         self.model = models.vit_b_16(weights="DEFAULT")
+#         # Freeze the architecture
+#         for param in self.model.parameters():
+#             param.requires_grad = False
+#         # Change the head
+#         self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+#     def forward(self, x):
+#         x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+#         return self.model(x)
+
+
+class FlexiViT_scratch(nn.Module):
+
     def __init__(self, graph_size):
         super().__init__()
         self.graph_size = graph_size
-        self.model = models.vit_b_16()
-        # Change the head
-        self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+        # Define patch size dynamically using find_patch_size function
+        patch_size = find_patch_size(graph_size)
+        print(f"Using patch size: {patch_size}")
+
+        # Train from scratch without pretrained weights
+        self.model = create_model(
+            "vit_base_patch16_224",
+            pretrained=False,
+            img_size=graph_size,
+            patch_size=patch_size,
+        )
+
+        # Modify the head for binary classification
+        self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
     def forward(self, x):
-        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # Repeat the single channel 3 times
         return self.model(x)
 
 
-class ViT_pretrained(nn.Module):
+class FlexiViT_pretrained(nn.Module):
+
     def __init__(self, graph_size):
         super().__init__()
         self.graph_size = graph_size
-        self.model = models.vit_b_16(weights="DEFAULT")
+
+        # Define patch size dynamically using find_patch_size function
+        patch_size = find_patch_size(graph_size)
+        print(f"Using patch size: {patch_size}")
+
+        # Use pretrained weights
+        self.model = create_model(
+            "vit_base_patch16_224",
+            pretrained=True,
+            img_size=graph_size,
+            patch_size=patch_size,
+        )
+
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
-        # Change the head
-        self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
+
+        # Modify the head for binary classification
+        self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
     def forward(self, x):
-        x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
+        x = x.repeat(1, 3, 1, 1)  # Repeat the single channel 3 times
         return self.model(x)

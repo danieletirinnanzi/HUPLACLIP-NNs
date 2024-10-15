@@ -23,7 +23,7 @@ def magnify_input(adjacency_matrix, output_size=(2400, 2400)):
         or output_size[1] % adjacency_matrix.shape[1] != 0
     ):
         raise ValueError(
-            f"The shape of the graph is not evenly divisible by the output size. Graph size is {adjacency_matrix.shape}, output size is {output_size}."
+            f"The shape of the graph is not evenly divisible by the output size. Graph size is {adjacency_matrix.shape[0]}, output size is {output_size[0]}."
         )
 
     # calculating magnification factor:
@@ -36,3 +36,53 @@ def magnify_input(adjacency_matrix, output_size=(2400, 2400)):
     adjacency_matrix = adjacency_matrix.repeat_interleave(factor, dim=0)
 
     return adjacency_matrix
+
+
+# - Function needed to define the patch size based on the graph size:
+def find_patch_size(graph_size):
+    """
+    Find the patch size for the ViT model based on the size of the input image. The patch size is the size of the square
+    that is used as an input to the model.
+
+    Args:
+        graph_size (int): The size of the graph.
+
+    Returns:
+        int: The patch size.
+
+    Raises:
+        ValueError: If a patch size different than 1 cannot be found.
+    """
+
+    from src.graphs_generation import generate_batch
+
+    # storing size of the input image:
+    single_graph = generate_batch(
+        1, graph_size, [int(graph_size / 2)], "p_reduce", False
+    )[
+        0
+    ]  # generating a single graph
+
+    # getting the size of the image
+    image_size = single_graph.shape[-1]
+
+    # defining patch size based on the image size:
+    patch_size = (
+        image_size // 20  # floor division
+    )  # initial value of patch_size is 1/20 of the image size, is then increased until it is a divisor of the graph size
+    # increase patch size until an integer divisor of the image size is found:
+    while patch_size <= image_size:
+        if image_size % patch_size == 0:
+            break
+        patch_size += 1
+
+    if patch_size == image_size:  # if no divisor is found, patch size is set to 1
+        patch_size = 1
+
+    # notifying user if patch size different than 1 cannot be found:
+    if patch_size == 1:
+        raise ValueError(
+            "A patch size different than 1 cannot be found. The chosen graph size might be incompatible with the ViT model."
+        )
+
+    return patch_size

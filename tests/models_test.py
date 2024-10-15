@@ -11,6 +11,9 @@ grid_doc_path = os.path.join(
 )
 grid_config = load_config(grid_doc_path)
 
+# defining a graph size between the ones in the grid experiment:
+graph_size = grid_config["graph_size_values"][2]
+
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -24,45 +27,22 @@ class ModelTest(unittest.TestCase):
     # MLP:
     def test_MLP_predictions(self):
 
-        # loading experiment configuration file of MLP experiment:
-        MLP_config = load_config(
-            os.path.join(os.path.dirname(__file__), "..", "docs", "MLP_exp_config.yml")
-        )
-        # checking correspondence of p correction type:
-        self.assertEqual(
-            grid_config["p_correction_type"], MLP_config["p_correction_type"]
-        )
-        # checking correspondence of training parameters:
-        self.assertEqual(
-            grid_config["training_parameters"], MLP_config["training_parameters"]
-        )
-        # checking correspondence of testing parameters:
-        self.assertEqual(
-            grid_config["testing_parameters"], MLP_config["testing_parameters"]
-        )
-
-        # checking that the MLP architecture in the grid experiment configuration file is the same as the one in the MLP experiment configuration file:
-        self.assertEqual(
-            grid_config["models"][0]["architecture"],
-            MLP_config["models"][0]["architecture"],
-        )
-
         # loading model
-        model = load_model(MLP_config["models"][0], MLP_config["graph_size"], device)
+        model = load_model(grid_config["models"][0], graph_size, device)
 
         # defining clique size (taking maximum clique size on which model will be trained):
         clique_size = int(
-            MLP_config["graph_size"]
-            * (MLP_config["training_parameters"]["max_clique_size_proportion"])
+            graph_size
+            * (grid_config["training_parameters"]["max_clique_size_proportion"])
         )
 
         # generating two graphs and predicting
         prediction = model(
             gen_graphs.generate_batch(
                 2,
-                MLP_config["graph_size"],
+                graph_size,
                 [clique_size, clique_size],
-                MLP_config["p_correction_type"],
+                grid_config["p_correction_type"],
                 False,
             )[0].to(device)
         )
@@ -77,43 +57,13 @@ class ModelTest(unittest.TestCase):
     # CNN:
     def test_CNN_predictions(self):
 
-        # loading experiment configuration file of CNN experiment:
-        CNN_config = load_config(
-            os.path.join(os.path.dirname(__file__), "..", "docs", "CNN_exp_config.yml")
-        )
-        # checking correspondence of p correction type:
-        self.assertEqual(
-            grid_config["p_correction_type"], CNN_config["p_correction_type"]
-        )
-
-        # checking correspondence of training parameters:
-        self.assertEqual(
-            grid_config["training_parameters"], CNN_config["training_parameters"]
-        )
-        # checking correspondence of testing parameters:
-        self.assertEqual(
-            grid_config["testing_parameters"], CNN_config["testing_parameters"]
-        )
-
         # loading models
-        small_model_1 = load_model(
-            CNN_config["models"][0], CNN_config["graph_size"], device
-        )
-        small_model_2 = load_model(
-            CNN_config["models"][1], CNN_config["graph_size"], device
-        )
-        large_model_1 = load_model(
-            CNN_config["models"][2], CNN_config["graph_size"], device
-        )
-        large_model_2 = load_model(
-            CNN_config["models"][3], CNN_config["graph_size"], device
-        )
-        medium_model_1 = load_model(
-            CNN_config["models"][4], CNN_config["graph_size"], device
-        )
-        medium_model_2 = load_model(
-            CNN_config["models"][5], CNN_config["graph_size"], device
-        )
+        small_model_1 = load_model(grid_config["models"][1], graph_size, device)
+        small_model_2 = load_model(grid_config["models"][2], graph_size, device)
+        large_model_1 = load_model(grid_config["models"][3], graph_size, device)
+        large_model_2 = load_model(grid_config["models"][4], graph_size, device)
+        medium_model_1 = load_model(grid_config["models"][5], graph_size, device)
+        medium_model_2 = load_model(grid_config["models"][6], graph_size, device)
         # rudy_model = load_model(
         #     CNN_config["models"][6], CNN_config["graph_size"], device
         # )
@@ -122,16 +72,16 @@ class ModelTest(unittest.TestCase):
 
         # defining clique size (taking maximum clique size on which model will be trained):
         clique_size = int(
-            CNN_config["graph_size"]
-            * (CNN_config["training_parameters"]["max_clique_size_proportion"])
+            graph_size
+            * (grid_config["training_parameters"]["max_clique_size_proportion"])
         )
 
         # generating 2 graphs:
         graphs = gen_graphs.generate_batch(
             2,
-            CNN_config["graph_size"],
+            graph_size,
             [clique_size, clique_size],
-            CNN_config["p_correction_type"],
+            grid_config["p_correction_type"],
             True,
         )[0]
 
@@ -418,41 +368,25 @@ class ModelTest(unittest.TestCase):
 
     # VIT:
     def test_VIT_predictions(self):
-        # loading experiment configuration file of VIT experiment:
-        VIT_config = load_config(
-            os.path.join(os.path.dirname(__file__), "..", "docs", "VIT_exp_config.yml")
-        )
-        # checking correspondence of p correction type:
-        self.assertEqual(
-            grid_config["p_correction_type"], VIT_config["p_correction_type"]
-        )
-
-        # checking correspondence of training parameters:
-        self.assertEqual(
-            grid_config["training_parameters"], VIT_config["training_parameters"]
-        )
-        # checking correspondence of testing parameters:
-        self.assertEqual(
-            grid_config["testing_parameters"], VIT_config["testing_parameters"]
-        )
 
         # defining clique size (taking maximum clique size on which model will be trained):
         clique_size = int(
-            VIT_config["graph_size"]
-            * (VIT_config["training_parameters"]["max_clique_size_proportion"])
+            graph_size
+            * (grid_config["training_parameters"]["max_clique_size_proportion"])
         )
 
         # generating 2 graphs:
         graphs = gen_graphs.generate_batch(
             2,
-            VIT_config["graph_size"],
+            graph_size,
             [clique_size, clique_size],
-            VIT_config["p_correction_type"],
+            grid_config["p_correction_type"],
+            False,
         )[0]
 
         # SCRATCH MODEL:
         print("testing VIT_scratch")
-        model = load_model(VIT_config["models"][0], VIT_config["graph_size"], device)
+        model = load_model(grid_config["models"][7], graph_size, device)
         model.eval()
 
         print(model)
@@ -472,7 +406,7 @@ class ModelTest(unittest.TestCase):
 
         # PRETRAINED MODEL:
         print("testing VIT_pretrained")
-        model = load_model(VIT_config["models"][1], VIT_config["graph_size"], device)
+        model = load_model(grid_config["models"][8], graph_size, device)
         model.eval()
         # checking that requires_grad is True in pretrained model only in first and last layer
         for name, param in model.named_parameters():

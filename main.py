@@ -90,7 +90,7 @@ for graph_size in config["graph_size_values"]:
         train_model(
             model,
             config["training_parameters"],
-            config["graph_size"],
+            graph_size,
             config["p_correction_type"],
             writer,
             model_specs["model_name"],
@@ -101,7 +101,7 @@ for graph_size in config["graph_size_values"]:
         # - defining file name and path:
         file_path = os.path.join(
             model_results_dir,
-            f"{model_specs['model_name']}_N{config['graph_size']}_trained.pth",
+            f"{model_specs['model_name']}_N{graph_size}_trained.pth",
         )
         # - loading the model:
         model.load_state_dict(torch.load(file_path))
@@ -114,7 +114,7 @@ for graph_size in config["graph_size_values"]:
         fraction_correct_results, metrics_results = test_model(
             model,
             config["testing_parameters"],
-            config["graph_size"],
+            graph_size,
             config["p_correction_type"],
             model_specs["model_name"],
         )
@@ -124,7 +124,7 @@ for graph_size in config["graph_size_values"]:
             fraction_correct_results,
             metrics_results,
             model_specs["model_name"],
-            config["graph_size"],
+            graph_size,
             model_results_dir,
         )
 
@@ -147,11 +147,15 @@ for graph_size in config["graph_size_values"]:
             save_features(
                 model,
                 model_specs["model_name"],
-                config["graph_size"],
+                graph_size,
                 config["p_correction_type"],
                 model_results_dir,
                 device,
             )
+        
+        # deleting model from device to save memory:
+        del model
+        torch.cuda.empty_cache()
 
 # saving copy of the configuration file in the experiment folder, adding the time elapsed from the start of the experiment:
 end_time = datetime.datetime.now()

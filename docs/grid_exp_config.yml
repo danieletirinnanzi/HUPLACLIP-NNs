@@ -4,10 +4,10 @@ graph_size_values:
   - 100
 #  - 150
 #  - 200
-  - 300
-#  - 400
+#  - 300
+  - 400
 #  - 480
-  - 600
+#  - 600
 #  - 800
   - 1200  
   
@@ -20,8 +20,8 @@ training_parameters:
   # training steps:
   num_training_steps: 1000
   # training and validation set sizes:
-  num_train: 36
-  num_val: 36
+  num_train: 24
+  num_val: 24
   # other hyperparameters:
   learning_rate: 0.0001  # TO ADJUST
   # ADDITIONAL PARAMETERS GO HERE AND WILL BE READ IN train_test.py (line 106)
@@ -40,7 +40,7 @@ training_parameters:
 
 testing_parameters:
   max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-  num_test: 36  # number of graphs in each test iteration
+  num_test: 24  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 16 # number of times for which a single clique size is tested
 
@@ -60,22 +60,22 @@ models:
 
   # CNN models (http://layer-calc.com/ -> NB: in Pytorch, by default, in "Maxpool2D" stride == kernel_size, unless otherwise specified)
   # SMALL FILTERS, MANY LAYERS 
-  - model_name: CNN_small_1   # Kernel size 3, pooling size 3
-    architecture:
-      num_conv_layers: 5    # Increased number of layers
-      c0: 1
-      c1: 16
-      c2: 32
-      c3: 64
-      c4: 128
-      c5: 256
-      l1: 1000
-      stride: 1
-      padding: 1
-      dropout_prob: 0.3
-      kernel_size_conv: 3
-      kernel_size_pool: 3   # Pooling kernel size 3 for downsampling
-      # OUT: (256, 9, 9)  # Final feature map size will depend on input size of 2400x2400
+  # - model_name: CNN_small_1   # Kernel size 3, pooling size 3
+  #   architecture:
+  #     num_conv_layers: 5    # Increased number of layers
+  #     c0: 1
+  #     c1: 16
+  #     c2: 32
+  #     c3: 64
+  #     c4: 128
+  #     c5: 256
+  #     l1: 1000
+  #     stride: 1
+  #     padding: 1
+  #     dropout_prob: 0.3
+  #     kernel_size_conv: 3
+  #     kernel_size_pool: 3   # Pooling kernel size 3 for downsampling
+  #     # OUT: (256, 9, 9)  # Final feature map size will depend on input size of 2400x2400
 
   - model_name: CNN_small_2   # Kernel size 3, pooling size 2
     architecture:
@@ -96,22 +96,22 @@ models:
       kernel_size_pool: 2   # Pooling kernel size 2 for faster downsampling
       # OUT: (1024, 18, 18)
 
-  # LARGE FILTERS, FEW LAYERS
-  - model_name: CNN_large_1   # Kernel size 20, pooling size 3
-    architecture:
-      num_conv_layers: 4    # Fewer layers but larger filters
-      c0: 1
-      c1: 16
-      c2: 32
-      c3: 64
-      c4: 128
-      l1: 1000
-      stride: 1
-      padding: 1
-      dropout_prob: 0.3
-      kernel_size_conv: 20   # Larger kernel for bigger receptive fields
-      kernel_size_pool: 3   # Pooling kernel size 3 for downsampling
-      # OUT: (128, 21, 21)
+  # # LARGE FILTERS, FEW LAYERS
+  # - model_name: CNN_large_1   # Kernel size 20, pooling size 3
+  #   architecture:
+  #     num_conv_layers: 4    # Fewer layers but larger filters
+  #     c0: 1
+  #     c1: 16
+  #     c2: 32
+  #     c3: 64
+  #     c4: 128
+  #     l1: 1000
+  #     stride: 1
+  #     padding: 1
+  #     dropout_prob: 0.3
+  #     kernel_size_conv: 20   # Larger kernel for bigger receptive fields
+  #     kernel_size_pool: 3   # Pooling kernel size 3 for downsampling
+  #     # OUT: (128, 21, 21)
 
   - model_name: CNN_large_2   # Kernel size 20, pooling size 2
     architecture:
@@ -131,22 +131,22 @@ models:
       kernel_size_pool: 2   # Pooling kernel size 2 for faster downsampling
       # OUT: (1024, 20, 20)
 
-  # MEDIUM FILTERS, MEDIUM LAYERS
-  - model_name: CNN_medium_1   # Kernel size 9, pooling size 3
-    architecture:
-      num_conv_layers: 4   # Added more layers for better control of downsampling
-      c0: 1
-      c1: 16
-      c2: 32
-      c3: 64
-      c4: 128
-      l1: 1000
-      stride: 1
-      padding: 1
-      dropout_prob: 0.3
-      kernel_size_conv: 9
-      kernel_size_pool: 3   # Pooling kernel size 3 for moderate downsampling
-      # OUT: (128, 26, 26)
+  # # MEDIUM FILTERS, MEDIUM LAYERS
+  # - model_name: CNN_medium_1   # Kernel size 9, pooling size 3
+  #   architecture:
+  #     num_conv_layers: 4   # Added more layers for better control of downsampling
+  #     c0: 1
+  #     c1: 16
+  #     c2: 32
+  #     c3: 64
+  #     c4: 128
+  #     l1: 1000
+  #     stride: 1
+  #     padding: 1
+  #     dropout_prob: 0.3
+  #     kernel_size_conv: 9
+  #     kernel_size_pool: 3   # Pooling kernel size 3 for moderate downsampling
+  #     # OUT: (128, 26, 26)
 
   - model_name: CNN_medium_2   # Kernel size 9, pooling size 2
     architecture:

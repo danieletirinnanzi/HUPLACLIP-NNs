@@ -174,10 +174,10 @@ def train_model(
     # START OF TRAINING CONFIGURATION:
 
     # - INPUT TRANSFORMATION FLAGS:
-    if model_name == "MLP":
-        input_magnification = False
-    else:
+    if "CNN" in model_name:
         input_magnification = True
+    else:
+        input_magnification = False
 
     # - NUMBER OF TRAINING STEPS, OPTIMIZER and LEARNING RATE:
     # reading number of training steps
@@ -287,6 +287,10 @@ def train_model(
             # Clear gradients
             optim.zero_grad(set_to_none=True)
 
+            # Free up memory for training data
+            del train_pred, train
+            torch.cuda.empty_cache()
+
             # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
             if training_step % training_parameters["save_step"] == 0:
 
@@ -330,6 +334,10 @@ def train_model(
                         .to(device),  # labels should be float for BCELoss
                     )
 
+                    # Free up memory for validation data
+                    del stdval_pred, stdval
+                    torch.cuda.empty_cache()
+
                     # storing standard validation loss in the training and validation losses dictionary:
                     train_val_dict[f"stdval-loss-{current_clique_size}"] = (
                         stdval_loss.item()
@@ -369,6 +377,10 @@ def train_model(
                         complete_val_dict[f"val-loss-{current_clique_size_val}"] = (
                             val_loss.item()
                         )
+
+                        # Free up memory for validation data
+                        del val_pred, val
+                        torch.cuda.empty_cache()
 
                     # Compute mean generalization loss for all task versions from the dictionary:
                     mean_validation_loss = np.mean(list(complete_val_dict.values()))
@@ -472,58 +484,44 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
     """
 
     # - INPUT TRANSFORMATION FLAGS:
-    if model_name == "MLP":
-        input_magnification = False
-    else:
-        input_magnification = True
+    input_magnification = True if "CNN" in model_name else False
 
     # Notify start of testing:
     print(f"| Started testing {model_name}...")
 
-    # creating empty dictionaries for storing testing results:
-    # - fraction correct for each clique size:
-    fraction_correct_results = {}
-    # - other metrics:
-    metrics_results = {}
+    # Create empty dictionaries for storing testing results:
+    fraction_correct_results = {}  # Fraction correct for each clique size
+    metrics_results = {}  # Metrics dictionary
 
-    # calculating max clique size (proportion of graph size):
-    max_clique_size = int(
-        testing_parameters["max_clique_size_proportion_test"] * graph_size
-    )
-    # calculating array of clique sizes for all test curriculum:
-    clique_sizes = np.linspace(
-        max_clique_size,
-        1,
-        num=testing_parameters["clique_testing_levels"],
-    ).astype(int)
+    # Calculate max clique size (proportion of graph size):
+    max_clique_size = int(testing_parameters["max_clique_size_proportion_test"] * graph_size)
 
-    # initializing true positive, false positive, true negative, false negative
-    TP = 0
-    FP = 0
-    TN = 0
-    FN = 0
-    # initializing predicted output array and true output array (needed for AUC-ROC calculation)
+    # Calculate array of clique sizes for all test curriculum:
+    clique_sizes = np.linspace(max_clique_size, 1, num=testing_parameters["clique_testing_levels"]).astype(int)
+
+    # Initialize true positive, false positive, true negative, false negative
+    TP, FP, TN, FN = 0, 0, 0, 0
+
+    # Initialize arrays for AUC-ROC calculation
     y_scores = []
     y_true = []
 
     # Loop for decreasing clique sizes
     for current_clique_size in clique_sizes:
 
-        # initializing fraction correct list, updated at each test iteration:
+        # Initialize fraction correct list, updated at each test iteration
         fraction_correct_list = []
 
         # Loop for testing iterations:
         for test_iter in range(testing_parameters["test_iterations"]):
 
-            # Testing the network with test data
-
-            # - generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
+            # Generate clique size value of each graph in the current batch
             clique_size_array_test = gen_graphs.generate_batch_clique_sizes(
                 np.array([current_clique_size]),
                 testing_parameters["num_test"],
             )
 
-            # - generating validation graphs:
+            # Generate validation graphs
             test = gen_graphs.generate_batch(
                 testing_parameters["num_test"],
                 graph_size,
@@ -532,65 +530,65 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
                 input_magnification,
             )
 
-            # - initializing tensor to store hard predictions
-            hard_output = torch.zeros([testing_parameters["num_test"]])
-            # - performing prediction on test data
-            soft_output = model(test[0].to(device))
-            soft_output = soft_output.squeeze()  # remove extra dimension
-            # - storing soft predictions for AUC-ROC calculation:
+            # Perform prediction on test data
+            soft_output = model(test[0].to(device)).squeeze()
+
+            # Store soft predictions for AUC-ROC calculation
             y_scores.extend(soft_output.cpu().detach().numpy())
-            # - storing true labels for AUC-ROC calculation:
+
+            # Store true labels for AUC-ROC calculation
             y_true.extend(test[1])
+
+            # Initialize tensor to store hard predictions
+            hard_output = torch.zeros([testing_parameters["num_test"]])
+
             # Converting soft predictions to hard predictions
             for index in range(testing_parameters["num_test"]):
                 if soft_output[index] > 0.5:
-                    # if the output is greater than 0.5, model predicts presence of clique
                     hard_output[index] = 1.0
-                    # Updating true positive and false positive rates
                     if test[1][index] == 1.0:
                         TP += 1
-                    elif test[1][index] == 0.0:
+                    else:
                         FP += 1
                 else:
-                    # if the output is less than 0.5, model predicts absence of clique
                     hard_output[index] = 0.0
-                    # Updating true negative and false negative rates
                     if test[1][index] == 0.0:
                         TN += 1
-                    elif test[1][index] == 1.0:
+                    else:
                         FN += 1
 
-            # storing hard predictions
+            # Storing hard predictions
             predicted_output = hard_output
 
-            # updating fraction correct list with the accuracy of the current test iteration:
+            # Updating fraction correct list with the accuracy of the current test iteration:
             fraction_correct_list.append(
-                (predicted_output == torch.Tensor(test[1])).sum().item()
-                / (1.0 * testing_parameters["num_test"])
+                (predicted_output == torch.Tensor(test[1])).sum().item() / testing_parameters["num_test"]
             )
 
-        # Updating dictionary after all test iterations for current clique size have been completed:
+            # Free up memory after this test iteration
+            del soft_output, hard_output, test  # Delete unnecessary variables from GPU
+            torch.cuda.empty_cache()  # Clear cached memory on the GPU
+
+        # Update dictionary after all test iterations for the current clique size:
         fraction_correct_results[current_clique_size] = round(
             sum(fraction_correct_list) / len(fraction_correct_list), 2
         )
 
-        # Printing the size of the clique just tested and the corresponding test accuracy:
+        # Print test progress for the current clique size:
         print(
-            "||| Completed testing for clique = ",
-            current_clique_size,
-            ". Average fraction correct on test set = ",
-            round(sum(fraction_correct_list) / len(fraction_correct_list), 2),
+            f"||| Completed testing for clique = {current_clique_size}. "
+            f"Average fraction correct on test set = {fraction_correct_results[current_clique_size]}"
         )
         print("|||===========================================================")
 
-    # After all task versions have been tested, calculating relevant metrics:
-    # - calculating precision, recall, F1 score, Area Under ROC curve (AUC-ROC), Confusion Matrix:
-    epsilon = 1e-10  # to avoid divisions by zero
+    # Calculate relevant metrics:
+    epsilon = 1e-10  # To avoid division by zero
     precision = TP / (TP + FP + epsilon)
     recall = TP / (TP + FN + epsilon)
     F1 = 2 * (precision * recall) / (precision + recall + epsilon)
     AUC_ROC = roc_auc_score(y_true, y_scores)
-    # storing metrics in results dictionary:
+
+    # Store metrics in results dictionary:
     metrics_results["TP"] = TP
     metrics_results["FP"] = FP
     metrics_results["TN"] = TN
@@ -600,7 +598,8 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
     metrics_results["F1"] = F1
     metrics_results["AUC_ROC"] = AUC_ROC
 
-    # - notify completion of testing:
+    # Notify completion of testing:
     print(f"| Finished testing {model_name}.")
 
     return fraction_correct_results, metrics_results
+

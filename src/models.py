@@ -124,8 +124,8 @@ class CNN(nn.Module):
         # getting the flattened size of the output tensor
         model_output_size = model_output.view(-1).size(0)
 
-        # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
-        print("CNN model_output: ", model_output.shape)
+        # # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
+        # print("CNN model_output: ", model_output.shape)
 
         return model_output_size
 

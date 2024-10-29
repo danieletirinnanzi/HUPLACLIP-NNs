@@ -152,8 +152,8 @@ for graph_size in config["graph_size_values"]:
                 model_results_dir,
                 device,
             )
-        
-        # deleting model from device to save memory:
+
+        # deleting model from device to free up memory:
         del model
         torch.cuda.empty_cache()
 

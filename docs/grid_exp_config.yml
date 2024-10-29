@@ -49,14 +49,14 @@ models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
   
-  - model_name: MLP
-    architecture:
-      l1: 1000
-      l2: 500
-      l3: 100
-      l4: 50
-      dropout_prob: 0.2
-      learning_rate: 0.01      
+  # - model_name: MLP
+  #   architecture:
+  #     l1: 1000
+  #     l2: 500
+  #     l3: 100
+  #     l4: 50
+  #     dropout_prob: 0.2
+  #     learning_rate: 0.01      
 
   # CNN models (http://layer-calc.com/ -> NB: in Pytorch, by default, in "Maxpool2D" stride == kernel_size, unless otherwise specified)
   # SMALL FILTERS, MANY LAYERS 

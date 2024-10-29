@@ -374,4 +374,8 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
     file_path = os.path.join(results_dir, f"{model_name}_features_N{graph_size}.png")
     plt.savefig(file_path, dpi=300)
 
+    # deleting temporary variables from memory to save space:
+    del graph
+    torch.cuda.empty_cache()
+
     print(f"- Features image saved successfully in {file_path}.")

@@ -174,10 +174,7 @@ def train_model(
     # START OF TRAINING CONFIGURATION:
 
     # - INPUT TRANSFORMATION FLAGS:
-    if "CNN" in model_name:
-        input_magnification = True
-    else:
-        input_magnification = False
+    input_magnification = True if "CNN" in model_name else False
 
     # - NUMBER OF TRAINING STEPS, OPTIMIZER and LEARNING RATE:
     # reading number of training steps
@@ -494,10 +491,14 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
     metrics_results = {}  # Metrics dictionary
 
     # Calculate max clique size (proportion of graph size):
-    max_clique_size = int(testing_parameters["max_clique_size_proportion_test"] * graph_size)
+    max_clique_size = int(
+        testing_parameters["max_clique_size_proportion_test"] * graph_size
+    )
 
     # Calculate array of clique sizes for all test curriculum:
-    clique_sizes = np.linspace(max_clique_size, 1, num=testing_parameters["clique_testing_levels"]).astype(int)
+    clique_sizes = np.linspace(
+        max_clique_size, 1, num=testing_parameters["clique_testing_levels"]
+    ).astype(int)
 
     # Initialize true positive, false positive, true negative, false negative
     TP, FP, TN, FN = 0, 0, 0, 0
@@ -562,7 +563,8 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
 
             # Updating fraction correct list with the accuracy of the current test iteration:
             fraction_correct_list.append(
-                (predicted_output == torch.Tensor(test[1])).sum().item() / testing_parameters["num_test"]
+                (predicted_output == torch.Tensor(test[1])).sum().item()
+                / testing_parameters["num_test"]
             )
 
             # Free up memory after this test iteration
@@ -602,4 +604,3 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
     print(f"| Finished testing {model_name}.")
 
     return fraction_correct_results, metrics_results
-

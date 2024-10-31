@@ -16,7 +16,6 @@ This repository evaluates the performance of various AI models on the **Planted 
 - **`docs/`**: Contains documentation files.
   - **`grid_exp_config.yml`**: Specifies all experiment parameters, such as model types, hyperparameters, and graph settings.
 - **`results/`**: Directory where experiment results are saved.
-- **`runs/`**: Contains Tensorboard files from training runs.
 - **`scripts/`**: Additional scripts for setup, preprocessing, or visualizations.
 - **`src/`**: Source files that include modules for data generation, model definitions, and training functions.
 - **`tests/`**: Contains unit tests for the various functions and modules in the project.

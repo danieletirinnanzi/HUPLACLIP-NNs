@@ -12,7 +12,6 @@ This repository evaluates the performance of various AI models on the **Planted 
 
 ### Folders
 
-- **`.vscode/`**: Configuration files for the Visual Studio Code development environment.
 - **`docs/`**: Contains documentation files.
   - **`grid_exp_config.yml`**: Specifies all experiment parameters, such as model types, hyperparameters, and graph settings.
 - **`results/`**: Directory where experiment results are saved.

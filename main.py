@@ -19,8 +19,9 @@ from src.tensorboard_save import (
     # tensorboard_save_models,
 )
 
-# defining device
+# defining device and cleaning cache:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.cuda.empty_cache()
 
 # loading experiment configuration file:
 config = load_config(os.path.join("docs", "grid_exp_config.yml"))

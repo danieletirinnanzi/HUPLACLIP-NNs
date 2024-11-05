@@ -8,8 +8,8 @@ graph_size_values:
   - 400
 #  - 480
 #  - 600
-#  - 800
-  - 1200  
+  - 800
+#  - 1200  #CUDA ERRORS WITH MLP (also when smaller)
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -29,12 +29,12 @@ training_parameters:
   max_clique_size_proportion: 0.5 # during training, clique will be at most 50% of the graph size
   # min_clique_size_proportion: 0.3 NOT USED, min clique size is statistical limit
   clique_training_levels: 10
-  save_step: 5
+  save_step: 10
   # optimizer and loss function:
   optimizer: AdamW
   loss_function: BCELoss
   # early stopping:
-  patience: 100  # since this makes the model move to the following training instance, it is more stringent
+  patience: 50  # since this makes the model move to the following training instance, it is more stringent
   min_delta: 0.01
   val_exit_loss: 0.1
 
@@ -51,12 +51,11 @@ models:
   
   # - model_name: MLP
   #   architecture:
-  #     l1: 1000
-  #     l2: 500
-  #     l3: 100
-  #     l4: 50
+  #     l1: 500
+  #     l2: 250
+  #     l3: 50
+  #     l4: 25
   #     dropout_prob: 0.2
-  #     learning_rate: 0.01      
 
   # CNN models (http://layer-calc.com/ -> NB: in Pytorch, by default, in "Maxpool2D" stride == kernel_size, unless otherwise specified)
   # SMALL FILTERS, MANY LAYERS 
@@ -77,24 +76,24 @@ models:
   #     kernel_size_pool: 3   # Pooling kernel size 3 for downsampling
   #     # OUT: (256, 9, 9)  # Final feature map size will depend on input size of 2400x2400
 
-  - model_name: CNN_small_2   # Kernel size 3, pooling size 2
-    architecture:
-      num_conv_layers: 7    # Added more layers to further downsample
-      c0: 1
-      c1: 16
-      c2: 32
-      c3: 64
-      c4: 128
-      c5: 256
-      c6: 512
-      c7: 1024
-      l1: 1000
-      stride: 1
-      padding: 1
-      dropout_prob: 0.3
-      kernel_size_conv: 3
-      kernel_size_pool: 2   # Pooling kernel size 2 for faster downsampling
-      # OUT: (1024, 18, 18)
+  # - model_name: CNN_small_2   # Kernel size 3, pooling size 2
+  #   architecture:
+  #     num_conv_layers: 7    # Added more layers to further downsample
+  #     c0: 1
+  #     c1: 16
+  #     c2: 32
+  #     c3: 64
+  #     c4: 128
+  #     c5: 256
+  #     c6: 512
+  #     c7: 1024
+  #     l1: 1000
+  #     stride: 1
+  #     padding: 1
+  #     dropout_prob: 0.3
+  #     kernel_size_conv: 3
+  #     kernel_size_pool: 2   # Pooling kernel size 2 for faster downsampling
+  #     # OUT: (1024, 18, 18)
 
   # # LARGE FILTERS, FEW LAYERS
   # - model_name: CNN_large_1   # Kernel size 20, pooling size 3
@@ -113,25 +112,25 @@ models:
   #     kernel_size_pool: 3   # Pooling kernel size 3 for downsampling
   #     # OUT: (128, 21, 21)
 
-  - model_name: CNN_large_2   # Kernel size 20, pooling size 2
-    architecture:
-      num_conv_layers: 6
-      c0: 1
-      c1: 32
-      c2: 64
-      c3: 128
-      c4: 256
-      c5: 512
-      c6: 1024
-      l1: 1000
-      stride: 1
-      padding: 1
-      dropout_prob: 0.3
-      kernel_size_conv: 20
-      kernel_size_pool: 2   # Pooling kernel size 2 for faster downsampling
-      # OUT: (1024, 20, 20)
+  # - model_name: CNN_large_2   # Kernel size 20, pooling size 2
+  #   architecture:
+  #     num_conv_layers: 6
+  #     c0: 1
+  #     c1: 32
+  #     c2: 64
+  #     c3: 128
+  #     c4: 256
+  #     c5: 512
+  #     c6: 1024
+  #     l1: 1000
+  #     stride: 1
+  #     padding: 1
+  #     dropout_prob: 0.3
+  #     kernel_size_conv: 20
+  #     kernel_size_pool: 2   # Pooling kernel size 2 for faster downsampling
+  #     # OUT: (1024, 20, 20)
 
-  # # MEDIUM FILTERS, MEDIUM LAYERS
+  # MEDIUM FILTERS, MEDIUM LAYERS
   # - model_name: CNN_medium_1   # Kernel size 9, pooling size 3
   #   architecture:
   #     num_conv_layers: 4   # Added more layers for better control of downsampling

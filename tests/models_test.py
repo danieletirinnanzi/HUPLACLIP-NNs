@@ -16,13 +16,9 @@ graph_size = grid_config["graph_size_values"][2]
 
 # defining device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
-
-class ModelTest(unittest.TestCase):
-
-    # for each model:
-    # - first testing correspondence between single model experiment file and corresponding section of "single" experiment;
-    # - then testing that model predictions are either 0 or 1
+class ModelPredictionTest(unittest.TestCase):
 
     # MLP:
     def test_MLP_predictions(self):
@@ -64,11 +60,6 @@ class ModelTest(unittest.TestCase):
         large_model_2 = load_model(grid_config["models"][4], graph_size, device)
         medium_model_1 = load_model(grid_config["models"][5], graph_size, device)
         medium_model_2 = load_model(grid_config["models"][6], graph_size, device)
-        # rudy_model = load_model(
-        #     CNN_config["models"][6], CNN_config["graph_size"], device
-        # )
-
-        # print(rudy_model)
 
         # defining clique size (taking maximum clique size on which model will be trained):
         clique_size = int(
@@ -95,8 +86,6 @@ class ModelTest(unittest.TestCase):
         # - medium model
         prediction_medium_1 = medium_model_1(graphs.to(device))
         prediction_medium_2 = medium_model_2(graphs.to(device))
-        # - rudy model
-        # prediction_rudy = rudy_model(graphs.to(device))
 
         # checking that the all outputs are one-dimensional (and have two elements) after squeezing:
         self.assertEqual(prediction_small_1.squeeze().size(), torch.Size([2]))
@@ -105,7 +94,6 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(prediction_large_2.squeeze().size(), torch.Size([2]))
         self.assertEqual(prediction_medium_1.squeeze().size(), torch.Size([2]))
         self.assertEqual(prediction_medium_2.squeeze().size(), torch.Size([2]))
-        # self.assertEqual(prediction_rudy.squeeze().size(), torch.Size([2]))
 
         # checking that all predictions are between 0 and 1:
         # - small model 1
@@ -126,246 +114,7 @@ class ModelTest(unittest.TestCase):
         # - large model 2
         self.assertTrue(torch.all(prediction_large_2 >= 0))
         self.assertTrue(torch.all(prediction_large_2 <= 1))
-        # - rudy model
-        # self.assertTrue(torch.all(prediction_rudy >= 0))
-        # self.assertTrue(torch.all(prediction_rudy <= 1))
-
-    # # VGG:
-    # def test_VGG_predictions(self):
-
-    #     # loading experiment configuration file of VGG experiment:
-    #     VGG_config = load_config(
-    #         os.path.join(os.path.dirname(__file__), "..", "docs", "VGG_exp_config.yml")
-    #     )
-    #     # checking correspondence of p correction type:
-    #     self.assertEqual(
-    #         grid_config["p_correction_type"], VGG_config["p_correction_type"]
-    #     )
-
-    #     # checking correspondence of training parameters:
-    #     self.assertEqual(
-    #         grid_config["training_parameters"], VGG_config["training_parameters"]
-    #     )
-    #     # checking correspondence of testing parameters:
-    #     self.assertEqual(
-    #         grid_config["testing_parameters"], VGG_config["testing_parameters"]
-    #     )
-
-    #     # defining clique size (taking maximum clique size on which model will be trained):
-    #     clique_size = int(
-    #         VGG_config["graph_size"]
-    #         * (VGG_config["training_parameters"]["max_clique_size_proportion"])
-    #     )
-
-    #     # generating 2 graphs:
-    #     graphs = gen_graphs.generate_batch(
-    #         2,
-    #         VGG_config["graph_size"],
-    #         [clique_size, clique_size],
-    #         VGG_config["p_correction_type"],
-    #     )[0]
-
-    #     # SCRATCH MODEL:
-    #     print("testing VGG16_scratch")
-    #     model = load_model(VGG_config["models"][0], VGG_config["graph_size"], device)
-    #     model.eval()
-    #     # generating two graphs and predicting
-    #     prediction = model(graphs.to(device))
-
-    #     # checking that the outputs are one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
-
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
-
-    #     print("ok")
-    #     print("-------------------")
-
-    #     # PRETRAINED MODEL:
-    #     print("testing VGG16_pretrained")
-    #     model = load_model(VGG_config["models"][1], VGG_config["graph_size"], device)
-    #     model.eval()
-    #     # making sure that requires_grad is True in pretrained model only in first and last layer
-    #     for name, param in model.named_parameters():
-    #         if "model.classifier" in name:
-    #             self.assertTrue(param.requires_grad)
-    #         else:
-    #             self.assertFalse(param.requires_grad)
-
-    #     prediction = model(graphs.to(device))
-
-    #     # checking that the outputs are one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
-
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
-
-    #     print("ok")
-
-    # # RESNET:
-    # def test_RESNET_predictions(self):
-
-    #     # loading experiment configuration file of RESNET experiment:
-    #     RESNET_config = load_config(
-    #         os.path.join(
-    #             os.path.dirname(__file__), "..", "docs", "RESNET_exp_config.yml"
-    #         )
-    #     )
-    #     # checking correspondence of p correction type:
-    #     self.assertEqual(
-    #         grid_config["p_correction_type"], RESNET_config["p_correction_type"]
-    #     )
-
-    #     # checking correspondence of training parameters:
-    #     self.assertEqual(
-    #         grid_config["training_parameters"], RESNET_config["training_parameters"]
-    #     )
-    #     # checking correspondence of testing parameters:
-    #     self.assertEqual(
-    #         grid_config["testing_parameters"], RESNET_config["testing_parameters"]
-    #     )
-
-    #     # defining clique size (taking maximum clique size on which model will be trained):
-    #     clique_size = int(
-    #         RESNET_config["graph_size"]
-    #         * (RESNET_config["training_parameters"]["max_clique_size_proportion"])
-    #     )
-
-    #     # generating 2 graphs:
-    #     graphs = gen_graphs.generate_batch(
-    #         2,
-    #         RESNET_config["graph_size"],
-    #         [clique_size, clique_size],
-    #         RESNET_config["p_correction_type"],
-    #     )[0]
-
-    #     # SCRATCH MODEL:
-    #     print("testing RESNET50_scratch")
-    #     model = load_model(
-    #         RESNET_config["models"][0], RESNET_config["graph_size"], device
-    #     )
-    #     model.eval()
-    #     # generating two graphs and predicting
-    #     prediction = model(graphs.to(device))
-    #     # checking that the outputs are one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
-
-    #     print("ok")
-    #     print("-------------------")
-
-    #     # PRETRAINED MODEL:
-    #     print("testing RESNET50_pretrained")
-    #     model = load_model(
-    #         RESNET_config["models"][1], RESNET_config["graph_size"], device
-    #     )
-    #     model.eval()
-    #     # checking that requires_grad is True in pretrained model only in first and last layer
-    #     for name, param in model.named_parameters():
-    #         if "model.fc" in name:
-    #             self.assertTrue(param.requires_grad)
-    #         else:
-    #             self.assertFalse(param.requires_grad)
-    #     # generating two graphs and predicting
-    #     prediction = model(graphs.to(device))
-
-    #     # checking that the outputs are one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
-
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
-
-    #     print("ok")
-
-    # # GOOGLENET (not working, automatically performing input resizing during inference):
-    # def test_GOOGLENET_predictions(self):
-
-    #     # loading experiment configuration file of GOOGLENET experiment:
-    #     GOOGLENET_config = load_config(
-    #         os.path.join(
-    #             os.path.dirname(__file__), "..", "docs", "GOOGLENET_exp_config.yml"
-    #         )
-    #     )
-    #     # checking correspondence of p correction type:
-    #     self.assertEqual(
-    #         grid_config["p_correction_type"], GOOGLENET_config["p_correction_type"]
-    #     )
-
-    #     # checking correspondence of training parameters:
-    #     self.assertEqual(
-    #         grid_config["training_parameters"], GOOGLENET_config["training_parameters"]
-    #     )
-    #     # checking correspondence of testing parameters:
-    #     self.assertEqual(
-    #         grid_config["testing_parameters"], GOOGLENET_config["testing_parameters"]
-    #     )
-
-    #     # defining clique size (taking maximum clique size on which model will be trained):
-    #     clique_size = int(
-    #         GOOGLENET_config["graph_size"]
-    #         * (GOOGLENET_config["training_parameters"]["max_clique_size_proportion"])
-    #     )
-
-    #     # generating 2 graphs:
-    #     graphs = gen_graphs.generate_batch(
-    #         2,
-    #         GOOGLENET_config["graph_size"],
-    #         [clique_size, clique_size],
-    #         GOOGLENET_config["p_correction_type"],
-    #     )[0]
-
-    #     # SCRATCH MODEL:
-    #     print("testing GoogLeNet_scratch")
-    #     model = load_model(
-    #         GOOGLENET_config["models"][0], GOOGLENET_config["graph_size"], device
-    #     )
-
-    #     # NOTE: only in scratch model, prediction.logits is needed when in train mode
-    #     # TRAIN:
-    #     model.train()
-    #     prediction = model(graphs.to(device)).logits
-    #     # # TEST
-    #     # model.eval()
-    #     # prediction = model(graphs.to(device))
-
-    #     # checking that the outputs are one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
-
-    #     print("ok")
-    #     print("-------------------")
-
-    #     # PRETRAINED MODEL:
-    #     print("testing GoogLeNet_pretrained")
-    #     model = load_model(
-    #         GOOGLENET_config["models"][1], GOOGLENET_config["graph_size"], device
-    #     )
-    #     # model.eval()
-    #     model.train()
-
-    #     # checking that requires_grad is True in pretrained model only in first and last layer
-    #     for name, param in model.named_parameters():
-    #         if "model.fc" in name:
-    #             self.assertTrue(param.requires_grad)
-    #         else:
-    #             self.assertFalse(param.requires_grad)
-    #     # predicting
-    #     prediction = model(graphs.to(device))
-    #     # checking that the outputs are one-dimensional (and has two elements) after squeezing:
-    #     self.assertEqual(prediction.squeeze().size(), torch.Size([2]))
-    #     # checking that both predictions are between 0 and 1:
-    #     self.assertTrue(torch.all(prediction >= 0))
-    #     self.assertTrue(torch.all(prediction <= 1))
-
-    #     print("ok")
-
+ 
     # VIT:
     def test_VIT_predictions(self):
 
@@ -425,3 +174,106 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(torch.all(prediction <= 1))
 
         print("ok")
+
+
+class ModelMemoryTest(unittest.TestCase):
+
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA not available, skipping CUDA memory tests")
+    def check_trainability(self, model, batch_size = grid_config["training_parameters"]["num_train"]):
+        """Helper function to test forward and backward pass on a given model for memory issues."""
+        # Define maximum clique size for the graph
+        clique_size = int(
+            graph_size
+            * (grid_config["training_parameters"]["max_clique_size_proportion"])
+        )
+        # Generate a batch of graphs
+        graphs = gen_graphs.generate_batch(
+            batch_size, graph_size, [clique_size] * batch_size,
+            grid_config["p_correction_type"], True
+        )[0].to(device)
+
+        model.train()  # Set model to training mode
+        optimizer = torch.optim.Adam(model.parameters(), lr=grid_config["training_parameters"]["learning_rate"])
+        criterion = torch.nn.BCEWithLogitsLoss()
+        
+        # - OPTIMIZER:        
+        if grid_config["training_parameters"]["optimizer"] == "Adam":
+            optim = torch.optim.Adam(
+                model.parameters(), lr=grid_config["training_parameters"]["learning_rate"]
+            )
+        elif grid_config["training_parameters"]["optimizer"] == "AdamW":
+            optim = torch.optim.AdamW(
+                model.parameters(), lr=grid_config["training_parameters"]["learning_rate"]
+            )
+        elif grid_config["training_parameters"]["optimizer"] == "SGD":
+            optim = torch.optim.SGD(
+                model.parameters(),
+                lr=grid_config["training_parameters"]["learning_rate"],
+                momentum=0.9,  # default value is zero
+            )
+        else:
+            raise ValueError("Optimizer not found")
+
+        # - LOSS FUNCTION:
+        if grid_config["training_parameters"]["loss_function"] == "BCELoss":
+            criterion = torch.nn.BCELoss()
+        elif grid_config["training_parameters"]["loss_function"] == "CrossEntropyLoss":
+            criterion = torch.nn.CrossEntropyLoss()
+        elif grid_config["training_parameters"]["loss_function"] == "MSELoss":
+            criterion = torch.nn.MSELoss()
+        else:
+            raise ValueError("Loss function not found")    
+            
+
+        try:
+            # Perform a forward pass
+            predictions = model(graphs)
+            loss = criterion(predictions.squeeze(), torch.ones(batch_size, device=device))
+
+            # Perform a backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        except RuntimeError as e:
+            # Capture CUDA out of memory errors
+            if 'out of memory' in str(e):
+                self.fail(f"CUDA out of memory encountered for model {model}")
+            else:
+                raise e
+
+    def test_MLP_trainability(self):
+        model = load_model(grid_config["models"][0], graph_size, device)
+        self.check_trainability(model)
+
+    def test_CNN_small_1_trainability(self):
+        model = load_model(grid_config["models"][1], graph_size, device)
+        self.check_trainability(model)
+        
+    def test_CNN_small_2_trainability(self):
+        model = load_model(grid_config["models"][2], graph_size, device)
+        self.check_trainability(model)
+
+    def test_CNN_large_1_trainability(self):
+        model = load_model(grid_config["models"][3], graph_size, device)
+        self.check_trainability(model)
+        
+    def test_CNN_large_2_trainability(self):
+        model = load_model(grid_config["models"][4], graph_size, device)
+        self.check_trainability(model)       
+        
+    def test_CNN_medium_1_trainability(self):
+        model = load_model(grid_config["models"][5], graph_size, device)
+        self.check_trainability(model)
+        
+    def test_CNN_medium_2_trainability(self):
+        model = load_model(grid_config["models"][6], graph_size, device)
+        self.check_trainability(model)                
+
+    def test_VIT_scratch_trainability(self):
+        model = load_model(grid_config["models"][7], graph_size, device)
+        self.check_trainability(model)
+
+    def test_VIT_pretrained_trainability(self):
+        model = load_model(grid_config["models"][8], graph_size, device)
+        self.check_trainability(model)

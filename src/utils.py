@@ -231,8 +231,6 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
         None
     """
 
-    # TODO: adapt feature extraction to new models (names defined in "models.py")
-
     # # Uncomment this to visualize the names of the nodes in the graph (also print model to see the names of the nodes):
     # names = get_graph_node_names(model)
     # print(names)
@@ -249,7 +247,7 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
     # - CNN features:
     if "CNN" in model_name:
         # differentiating CNN versions:
-        if "1" in model_name:
+        if model_name == "CNN_small_1":
             # creating features extractor with relevant node names:
             model = create_feature_extractor(
                 model,
@@ -261,11 +259,10 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.4.0": "feat5",
                 },
             )
-        elif "2" in model_name:
-            # creating features extractor with relevant node names:
-            model = create_feature_extractor(
-                model,
-                {
+        elif model_name == "CNN_small_2": 
+                model = create_feature_extractor(
+                    model,
+                    {
                     "model.0.0": "feat1",
                     "model.1.0": "feat2",
                     "model.2.0": "feat3",
@@ -273,73 +270,61 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.4.0": "feat5",
                     "model.5.0": "feat6",
                     "model.6.0": "feat7",
+                    },
+                )                
+        elif model_name == "CNN_large_1":
+            # creating features extractor with relevant node names:
+            model = create_feature_extractor(
+                model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
                 },
             )
-        # elif "rudy" in model_name:
-        #     # creating features extractor with relevant node names:
-        #     model = create_feature_extractor(
-        #         model,
-        #         {
-        #             "model.1.0": "feat1",
-        #             "model.4.conv1": "feat_res_1_1",
-        #             "model.4.conv2": "feat_res_1_2",
-        #             "model.5.0": "feat2",
-        #             "model.8.conv1": "feat_res_2_1",
-        #             "model.8.conv2": "feat_res_2_2",
-        #             "model.9.0": "feat3",
-        #         },
-        #     )
+        elif model_name == "CNN_large_2":
+            # creating features extractor with relevant node names:
+            model = create_feature_extractor(
+                model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                    "model.4.0": "feat5",
+                    "model.5.0": "feat6",                    
+                },
+            )         
+        elif model_name == "CNN_medium_1":
+            # creating features extractor with relevant node names:
+            model = create_feature_extractor(
+                model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                },
+            )
+        elif model_name == "CNN_medium_2":
+            # creating features extractor with relevant node names:
+            model = create_feature_extractor(
+                model,
+                {
+                    "model.0.0": "feat1",
+                    "model.1.0": "feat2",
+                    "model.2.0": "feat3",
+                    "model.3.0": "feat4",
+                    "model.4.0": "feat5",
+                    "model.5.0": "feat6",                    
+                },
+            )                        
         else:
             raise ValueError("CNN Model not found. Model name might be incorrect.")
 
-    # # - VGG features:
-    # elif "VGG16" in model_name:
-    #     # creating features extractor with relevant node names:
-    #     trained_model = create_feature_extractor(
-    #         trained_model,
-    #         {
-    #             "model.features.2": "conv2",
-    #             "model.features.7": "conv4",
-    #             "model.features.12": "conv6",
-    #             "model.features.17": "conv8",
-    #             "model.features.21": "conv10",
-    #             "model.features.26": "conv12",
-    #             "model.features.28": "conv15",
-    #         },
-    #     )
-
-    # # - ResNet features:
-    # elif "ResNet50" in model_name:
-    #     # creating features extractor with relevant node names:
-    #     trained_model = create_feature_extractor(
-    #         trained_model,
-    #         {
-    #             "model.layer1.0.conv1": "layer1.0_conv1",
-    #             "model.layer1.2.conv3": "layer1.2_conv3",
-    #             "model.layer2.0.conv1": "layer2.0_conv1",
-    #             "model.layer2.3.conv3": "layer2.3_conv3",
-    #             "model.layer3.0.conv1": "layer3.0_conv1",
-    #             "model.layer3.5.conv3": "layer3.5_conv3",
-    #             "model.layer4.2.conv3": "layer4.2_conv3",
-    #         },
-    #     )
-
-    # elif "GoogLeNet" in model_name:
-    #     # creating features extractor with relevant node names:
-    #     trained_model = create_feature_extractor(
-    #         trained_model,
-    #         {
-    #             "model.conv1.conv": "conv1",
-    #             "model.conv2.conv": "conv2",
-    #             "model.conv3.conv": "conv3",
-    #             "model.inception3a.branch2.0.conv": "inception3a_branch2",
-    #             "model.inception4a.branch2.0.conv": "inception4a_branch2",
-    #             "model.inception4c.branch2.0.conv": "inception4c_branch2",
-    #             "model.inception4d.branch2.0.conv": "inception4d_branch2",
-    #             "model.inception5a.branch2.0.conv": "inception5a_branch2",
-    #         },
-    #     )
-
+    # TODO: Visualization of features for ViTs?
+    
     else:
         raise ValueError("Model not found. Model name might be incorrect.")
 

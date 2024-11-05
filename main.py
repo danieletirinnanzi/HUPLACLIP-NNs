@@ -1,23 +1,26 @@
 import datetime
 import os
 import torch
-
 from torch.utils.tensorboard import SummaryWriter
 
 # custom imports
-from src.utils import load_config
-from src.utils import load_model
-from src.utils import save_exp_config
-from src.utils import save_test_results
-from src.utils import save_features
-from src.train_test import train_model
-from src.train_test import test_model
-from src.tensorboard_save import (
-    tensorboard_save_images,
-    # # MODEL SAVING (not working):
-    # ModelsWrapper,
-    # tensorboard_save_models,
+from src.utils import (
+    load_config,
+    load_model,
+    save_exp_config,
+    save_partial_time,
+    save_test_results,
+    save_features,
 )
+from src.train_test import (
+    train_model,
+    test_model,
+)
+from tests.run_tests import run_all_tests
+from src.tensorboard_save import tensorboard_save_images
+
+# running all tests before running the experiment:
+run_all_tests()
 
 # defining device and cleaning cache:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -38,12 +41,19 @@ exp_name_with_time = f"{config['exp_name']}_{start_time_string}"
 
 # creating folder in "results/data" folder to save the results of the whole experiment
 experiment_results_dir = os.path.join(
-    current_dir, "results", "data", exp_name_with_time
+    current_dir,
+    "results",
+    "data",
+    exp_name_with_time,
 )
 os.makedirs(experiment_results_dir)
 
 # creating experiment folder in "runs" folder
-experiment_runs_dir = os.path.join(current_dir, "runs", exp_name_with_time)
+experiment_runs_dir = os.path.join(
+    current_dir,
+    "runs",
+    exp_name_with_time,
+)
 
 # looping over the different graph sizes in the experiment:
 for graph_size in config["graph_size_values"]:
@@ -74,7 +84,8 @@ for graph_size in config["graph_size_values"]:
 
         # creating model subfolder in current graph size folder:
         model_results_dir = os.path.join(
-            graph_size_results_dir, model_specs["model_name"]
+            graph_size_results_dir,
+            model_specs["model_name"],
         )
         os.makedirs(model_results_dir)
 
@@ -82,7 +93,11 @@ for graph_size in config["graph_size_values"]:
         print(model_specs["model_name"])
 
         # loading model
-        model = load_model(model_specs, graph_size, device)
+        model = load_model(
+            model_specs,
+            graph_size,
+            device,
+        )
 
         # put model in training mode
         model.train()
@@ -137,13 +152,6 @@ for graph_size in config["graph_size_values"]:
             "CNN_medium_2",
             "CNN_large_1",
             "CNN_large_2",
-            # "CNN_rudy",
-            # "VGG16scratch",
-            # "VGG16pretrained",
-            # "ResNet50scratch",
-            # "ResNet50pretrained",
-            # "GoogLeNetscratch",
-            # "GoogLeNetpretrained",
         ]:
             save_features(
                 model,
@@ -156,35 +164,25 @@ for graph_size in config["graph_size_values"]:
 
         # deleting model from device to free up memory:
         del model
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    # At the end of each graph size value, saving .yml file with time elapsed from the start of the experiment (to calculate the time needed for each graph size value):
+    current_time = datetime.datetime.now()
+    save_partial_time(
+        graph_size,
+        graph_size_results_dir,
+        exp_name_with_time,
+        start_time,
+        current_time,
+    )
 
 # saving copy of the configuration file in the experiment folder, adding the time elapsed from the start of the experiment:
 end_time = datetime.datetime.now()
 save_exp_config(
-    config, experiment_results_dir, exp_name_with_time, start_time, end_time
+    config,
+    experiment_results_dir,
+    exp_name_with_time,
+    start_time,
+    end_time,
 )
-
-
-# -----------------------------DO NOT UNCOMMENT THIS, NOT WORKING
-
-# # SAVING MODELS (NOT WORKING)
-# # create empty dictionary to store models (used to store models for tensorboard saving, not working)
-# models_dict = {}
-
-# # saving model to dictionary (used to store models for tensorboard saving, not working)
-# models_dict[model_specs["model_name"]] = model
-
-# # saving single model to tensorboard (not working for VGG16, model name should be passed instead of model itself):
-# # Got error: "RuntimeError: Given groups=1, weight of size [64, 3, 3, 3], expected input[1, 1, 300, 300] to have 3 channels, but got 1 channels instead"
-# tensorboard_save_models(writer, model, config["graph_size"])
-
-
-# # saving all models to tensorboard (not working):
-# # - creating wrapper class:
-# models_wrapper = ModelsWrapper(models_dict)
-# tensorboard_save_models(
-#     writer,
-#     models_wrapper,
-#     config["graph_size"],
-#     config["models"],
-# )

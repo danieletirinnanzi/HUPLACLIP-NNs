@@ -9,15 +9,6 @@ import pandas as pd
 from .models import (
     MLP,
     CNN,
-    # CNN_rudy,
-    # VGG16_scratch,
-    # VGG16_pretrained,
-    # ResNet50_scratch,
-    # ResNet50_pretrained,
-    # GoogLeNet_scratch,
-    # GoogLeNet_pretrained,
-    # ViT_scratch,
-    # ViT_pretrained,
     FlexiViT_scratch,
     FlexiViT_pretrained,
 )
@@ -54,24 +45,6 @@ def load_model(model_specs, graph_size, device):
             | "CNN_large_2"
         ):
             model = CNN(graph_size, model_specs["architecture"])
-        # case "CNN_rudy":
-        #     model = CNN_rudy(graph_size, model_specs["architecture"])
-        # case "VGG16scratch":
-        #     model = VGG16_scratch()
-        # case "VGG16pretrained":
-        #     model = VGG16_pretrained()
-        # case "ResNet50scratch":
-        #     model = ResNet50_scratch()
-        # case "ResNet50pretrained":
-        #     model = ResNet50_pretrained()
-        # case "GoogLeNetscratch":
-        #     model = GoogLeNet_scratch()
-        # case "GoogLeNetpretrained":
-        #     model = GoogLeNet_pretrained()
-        # case "ViTscratch":
-        #     model = ViT_scratch(graph_size)
-        # case "ViTpretrained":
-        #     model = ViT_pretrained(graph_size)
         case "ViTscratch":
             model = FlexiViT_scratch(graph_size)
         case "ViTpretrained":
@@ -88,6 +61,35 @@ def load_model(model_specs, graph_size, device):
     return model
 
 
+# save time needed for training the completed graph size in a .yml file:
+def save_partial_time(
+    graph_size, graph_size_results_dir, exp_name_with_time, start_time, current_time
+):
+    """
+    Save the time needed to train up to the graph size just completed in a .yml file.
+
+    Args:
+    graph_size (int): The size of the graphs that has been trained.
+    graph_size_results_dir (str): The directory corresponding to the current graph size, where the results have been saved.
+    exp_name_with_time (str): The name of the experiment with starting time.
+    start_time (datetime): The time when the experiment started.
+    current_time (datetime): The time at the end of the training of the current graph size.
+
+    Returns:
+    None
+    """
+    elapsed_time_file_path = os.path.join(
+        graph_size_results_dir, f"{exp_name_with_time}_{graph_size}_elapsed_time.yml"
+    )
+    # Calculate the elapsed time since the start of the experiment
+    elapsed_time = current_time - start_time
+    # Convert the elapsed time to a string format
+    elapsed_time_str = str(elapsed_time)
+    # Saving the elapsed time in a .yml file
+    with open(elapsed_time_file_path, "w") as file:
+        yaml.dump(elapsed_time_str, file)
+
+
 # save experiment configuration file in results folder:
 def save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time):
     """
@@ -96,7 +98,7 @@ def save_exp_config(config, results_dir, exp_name_with_time, start_time, end_tim
     Args:
     config (dict): The configuration settings.
     results_dir (str): The directory where the results will be saved.
-    exp_name_with_time (str): The name of the experiment with time.
+    exp_name_with_time (str): The name of the experiment with starting time.
     start_time (datetime): The time when the experiment started.
     end_time (datetime): The time when the experiment ended.
 
@@ -259,10 +261,10 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.4.0": "feat5",
                 },
             )
-        elif model_name == "CNN_small_2": 
-                model = create_feature_extractor(
-                    model,
-                    {
+        elif model_name == "CNN_small_2":
+            model = create_feature_extractor(
+                model,
+                {
                     "model.0.0": "feat1",
                     "model.1.0": "feat2",
                     "model.2.0": "feat3",
@@ -270,8 +272,8 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.4.0": "feat5",
                     "model.5.0": "feat6",
                     "model.6.0": "feat7",
-                    },
-                )                
+                },
+            )
         elif model_name == "CNN_large_1":
             # creating features extractor with relevant node names:
             model = create_feature_extractor(
@@ -293,9 +295,9 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.2.0": "feat3",
                     "model.3.0": "feat4",
                     "model.4.0": "feat5",
-                    "model.5.0": "feat6",                    
+                    "model.5.0": "feat6",
                 },
-            )         
+            )
         elif model_name == "CNN_medium_1":
             # creating features extractor with relevant node names:
             model = create_feature_extractor(
@@ -317,14 +319,14 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
                     "model.2.0": "feat3",
                     "model.3.0": "feat4",
                     "model.4.0": "feat5",
-                    "model.5.0": "feat6",                    
+                    "model.5.0": "feat6",
                 },
-            )                        
+            )
         else:
             raise ValueError("CNN Model not found. Model name might be incorrect.")
 
     # TODO: Visualization of features for ViTs?
-    
+
     else:
         raise ValueError("Model not found. Model name might be incorrect.")
 

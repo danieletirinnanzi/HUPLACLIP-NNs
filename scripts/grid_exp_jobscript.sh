@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Format SLURM_JOB_START_TIME to a readable date-time format
+START_TIME=$(date -d "@$SLURM_JOB_START_TIME" +%Y-%m-%d_%H-%M-%S)
+
 #SBATCH --nodes=1
 #SBATCH --time=23:55:00
 #SBATCH --ntasks=1
@@ -11,8 +14,8 @@
 #SBATCH --job-name=grid_exp
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=dtirinna@sissa.it
-#SBATCH --output=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j.out
-#SBATCH --error=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j.err
+#SBATCH --output=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/${START_TIME}%x.%j.out
+#SBATCH --error=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/${START_TIME}%x.%j.err
 
 source $HOME/virtualenvs/dl/bin/activate
 

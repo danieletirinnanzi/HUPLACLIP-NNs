@@ -377,7 +377,6 @@ class TestGraphsGeneration(unittest.TestCase):
         result = generate_batch_clique_sizes(allowed_clique_sizes, batch_size)
         unique, counts = np.unique(result, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        print(counts_dict)
         self.assertGreater(
             counts_dict[1],
             max(

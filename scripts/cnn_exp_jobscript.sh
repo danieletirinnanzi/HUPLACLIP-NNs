@@ -6,9 +6,9 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G
-#SBATCH --account=Sis24_piasini       # account name
-#SBATCH --partition=boost_usr_prod # partition name
-#SBATCH --job-name=grid_exp
+#SBATCH --account=Sis24_piasini         # account name
+#SBATCH --partition=boost_usr_prod      # partition name
+#SBATCH --job-name=cnn_exp
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=dtirinna@sissa.it
 #SBATCH --output=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j..out

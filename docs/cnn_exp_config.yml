@@ -1,7 +1,7 @@
-exp_name: grid_exp
+exp_name: cnn_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-#  - 100
+  - 100
 #  - 150
 #  - 200
 #  - 300
@@ -48,14 +48,6 @@ testing_parameters:
 models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
-  
-  - model_name: MLP
-    architecture:
-      l1: 500
-      l2: 250
-      l3: 50
-      l4: 25
-      dropout_prob: 0.2
 
   - model_name: CNN_small
     architecture:
@@ -114,7 +106,3 @@ models:
       stride_pool: 2
       dropout_prob: 0.5                # Higher dropout rate to prevent overfitting
       # OUT: (512, 8, 8)
-    
-  - model_name: ViTscratch
-
-  - model_name: ViTpretrained

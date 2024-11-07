@@ -19,15 +19,15 @@ from src.train_test import (
 from tests.run_tests import run_all_tests
 from src.tensorboard_save import tensorboard_save_images
 
-# running all tests before running the experiment:
-run_all_tests()
-
 # defining device and cleaning cache:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.cuda.empty_cache()
 
 # loading experiment configuration file:
-config = load_config(os.path.join("docs", "grid_exp_config.yml"))
+config = load_config(os.path.join("docs", "cnn_exp_config.yml"))   # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
+
+# running all tests before running the experiment:
+run_all_tests()
 
 # storing starting time of the experiment in string format:
 start_time = datetime.datetime.now()
@@ -144,23 +144,24 @@ for graph_size in config["graph_size_values"]:
             model_results_dir,
         )
 
-        # when possible, saving the features extracted by the model:
-        if model_specs["model_name"] in [
-            "CNN_small_1",
-            "CNN_small_2",
-            "CNN_medium_1",
-            "CNN_medium_2",
-            "CNN_large_1",
-            "CNN_large_2",
-        ]:
-            save_features(
-                model,
-                model_specs["model_name"],
-                graph_size,
-                config["p_correction_type"],
-                model_results_dir,
-                device,
-            )
+        # TODO: ADAPT TO NEW CNNs
+        # # when possible, saving the features extracted by the model:
+        # if model_specs["model_name"] in [
+        #     "CNN_small_1",
+        #     "CNN_small_2",
+        #     "CNN_medium_1",
+        #     "CNN_medium_2",
+        #     "CNN_large_1",
+        #     "CNN_large_2",
+        # ]:
+        #     save_features(
+        #         model,
+        #         model_specs["model_name"],
+        #         graph_size,
+        #         config["p_correction_type"],
+        #         model_results_dir,
+        #         device,
+        #     )
 
         # deleting model from device to free up memory:
         del model

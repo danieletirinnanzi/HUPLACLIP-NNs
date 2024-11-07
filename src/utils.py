@@ -43,6 +43,9 @@ def load_model(model_specs, graph_size, device):
             | "CNN_medium_2"
             | "CNN_large_1"
             | "CNN_large_2"
+            | "CNN_small"
+            | "CNN_large"
+            | "CNN_AlexNet_style"            
         ):
             model = CNN(graph_size, model_specs["architecture"])
         case "ViTscratch":

@@ -64,23 +64,29 @@ class CNN(nn.Module):
         self.graph_size = graph_size
         self.architecture_specs = architecture_specs
 
-        # dynamically create convolutional layers based on architecture_specs
+        # Dynamically create convolutional layers based on architecture_specs
         conv_layers = []
         for i in range(architecture_specs["num_conv_layers"]):
             in_channels = architecture_specs[f"c{i}"]
             out_channels = architecture_specs[f"c{i+1}"]
-            kernel_size_conv = architecture_specs["kernel_size_conv"]
+            kernel_size_conv = architecture_specs["kernel_size_conv"][i]
+            stride_conv = architecture_specs["stride_conv"][i]
+            padding_conv = architecture_specs["padding_conv"][i]
             kernel_size_pool = architecture_specs["kernel_size_pool"]
-            stride = architecture_specs["stride"]
-            padding = architecture_specs["padding"]
+            stride_pool = architecture_specs["stride_pool"]
+            dropout_prob = architecture_specs["dropout_prob"]
+
+            # Append each layer block
             conv_layers.append(
                 self.create_block(
                     in_channels,
                     out_channels,
                     kernel_size_conv,
+                    stride_conv,
+                    padding_conv,
                     kernel_size_pool,
-                    stride,
-                    padding,
+                    stride_pool,
+                    dropout_prob,
                 )
             )
 
@@ -106,28 +112,27 @@ class CNN(nn.Module):
         in_channels,
         out_channels,
         kernel_size_conv,
+        stride_conv,
+        padding_conv,
         kernel_size_pool,
-        stride,
-        padding,
+        stride_pool,
+        dropout_prob,
     ):
         return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size_conv, stride, padding),
+            nn.Conv2d(in_channels, out_channels, kernel_size_conv, stride_conv, padding_conv),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size_pool),
-            nn.Dropout(self.architecture_specs["dropout_prob"]),
+            nn.MaxPool2d(kernel_size_pool, stride_pool),
+            nn.Dropout(dropout_prob),
         )
 
     def calculate_output_size(self):
-        # performing forward pass on random input to get the size of the feature maps (gradients are unused here)
         model_output = self.model(torch.bernoulli(torch.rand(1, 1, 2400, 2400)))
-        # getting the flattened size of the output tensor
         model_output_size = model_output.view(-1).size(0)
-
-        # # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
-        # print("CNN model_output: ", model_output.shape)
-
+        # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:        
+        print("CNN model final feature map: ", model_output.shape)
         return model_output_size
+    
 
 
 # class ViT_scratch(nn.Module):

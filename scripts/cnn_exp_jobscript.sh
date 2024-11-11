@@ -11,8 +11,8 @@
 #SBATCH --job-name=cnn_exp
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=dtirinna@sissa.it
-#SBATCH --output=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j..out
-#SBATCH --error=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j..err
+#SBATCH --output=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j.out
+#SBATCH --error=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j.err
 
 source $HOME/virtualenvs/dl/bin/activate
 

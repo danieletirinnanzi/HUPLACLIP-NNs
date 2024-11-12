@@ -57,26 +57,6 @@ models:
       l4: 25
       dropout_prob: 0.2
 
-  - model_name: CNN_small
-    architecture:
-      num_conv_layers: 7
-      c0: 1
-      c1: 32
-      c2: 64
-      c3: 128
-      c4: 256
-      c5: 512
-      c6: 512
-      c7: 512
-      l1: 1024
-      kernel_size_conv: [3, 3, 3, 3, 3, 3, 3]
-      stride_conv: [1, 1, 1, 1, 1, 1, 1]
-      padding_conv: [1, 1, 1, 1, 1, 1, 1]
-      kernel_size_pool: 2
-      stride_pool: 2
-      dropout_prob: 0.3
-      # OUT: (512, 18, 18)
-
   - model_name: CNN_large
     architecture:
       num_conv_layers: 6
@@ -95,25 +75,6 @@ models:
       stride_pool: 2
       dropout_prob: 0.3 
       # OUT: (512, 10, 10)
-
-  - model_name: CNN_AlexNet_style
-    architecture:
-      num_conv_layers: 6              # Increased number of convolutional layers
-      c0: 1
-      c1: 64
-      c2: 128
-      c3: 256
-      c4: 512
-      c5: 512
-      c6: 512
-      l1: 4096                         # Large dense layer
-      kernel_size_conv: [11, 5, 3, 3, 3, 3]  # Kernel sizes for each layer
-      stride_conv: [4, 1, 1, 1, 1, 1]       # Strides for each layer
-      padding_conv: [2, 2, 1, 1, 1, 1]      # Padding for each layer
-      kernel_size_pool: 3              # Pooling kernel size
-      stride_pool: 2
-      dropout_prob: 0.5                # Higher dropout rate to prevent overfitting
-      # OUT: (512, 8, 8)
     
   - model_name: ViTscratch
 

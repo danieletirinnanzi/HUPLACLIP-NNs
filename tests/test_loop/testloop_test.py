@@ -138,7 +138,7 @@ with open(file_path, "w") as file:
 # Saving metrics results in .csv file:
 # - defining file name and path:
 file_path = os.path.join(
-    current_dir, f"{model_name}_N{config['graph_size_values'][2]}_metrics.csv"
+    current_dir, f"{model_name}_N{config['graph_size_values'][0]}_metrics.csv"
 )
 # - saving the dictionary as a .csv file:
 pd.DataFrame([metrics_results]).to_csv(file_path, index=False)

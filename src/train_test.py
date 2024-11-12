@@ -496,9 +496,14 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
     )
 
     # Calculate array of clique sizes for all test curriculum:
-    clique_sizes = np.linspace(
-        max_clique_size, 1, num=testing_parameters["clique_testing_levels"]
-    ).astype(int)
+    if max_clique_size < testing_parameters["clique_testing_levels"]:
+        # If max clique size is less than the the number of test levels, use max clique size as the number of test levels
+        clique_sizes = np.linspace(max_clique_size, 1, num=max_clique_size).astype(int)
+    else:
+        # If max clique size is greater than the minimum clique size, use the default number of test levels
+        clique_sizes = np.linspace(
+            max_clique_size, 1, num=testing_parameters["clique_testing_levels"]
+        ).astype(int)
 
     # Initialize true positive, false positive, true negative, false negative
     TP, FP, TN, FN = 0, 0, 0, 0

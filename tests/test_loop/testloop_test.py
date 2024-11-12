@@ -28,9 +28,9 @@ from src.models import (
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
-config = load_config(os.path.join("docs", "grid_exp_config.yml"))  # CHANGE THIS
+config = load_config(os.path.join("docs", "cnn_exp_config.yml"))  # CHANGE THIS
 
-model_name = "CNN_small_2"  # CHANGE THIS
+model_name = "CNN_large"  # CHANGE THIS
 
 if "CNN" in model_name:
     # reading model configuration:
@@ -53,7 +53,7 @@ if "CNN" in model_name:
     #         )
     #     )
     # )
-    
+
     # - from \results folder
     model.load_state_dict(
         torch.load(
@@ -63,16 +63,17 @@ if "CNN" in model_name:
                 "..",
                 "results",
                 "data",
-                "grid_exp_2024-10-16_20-04-02",
+                "cnn_exp_2024-11-10_17-46-54",
                 "N100",
                 model_name,
                 f"{model_name}_N{config['graph_size_values'][0]}_trained.pth",
-            )
+            ),
+            map_location=device,
         )
     )
 elif "ViT" in model_name:
     # Initialize the model (choosing lower graph size for testing)
-    model = FlexiViT_pretrained(config["graph_size_values"][2])
+    model = FlexiViT_pretrained(config["graph_size_values"][0])
     # # loading state dictionary:
     # # - from \tests folder
     # model.load_state_dict(
@@ -87,23 +88,24 @@ elif "ViT" in model_name:
     #         )
     #     )
     # )
-    
-    # # - from \results folder
-    # model.load_state_dict(
-    #     torch.load(
-    #         os.path.join(
-    #             current_dir,
-    #             "..",
-    #             "..",
-    #             "results",
-    #             "data",
-    #             "grid_exp_2024-10-16_20-04-02",
-    #             "N100",
-    #             model_name,
-    #             f"{model_name}_N{config['graph_size_values'][0]}_trained.pth",
-    #         )
-    #     )
-    # )
+
+    # - from \results folder
+    model.load_state_dict(
+        torch.load(
+            os.path.join(
+                current_dir,
+                "..",
+                "..",
+                "results",
+                "data",
+                "grid_exp_2024-11-05_23-43-51",
+                "N100",
+                model_name,
+                f"{model_name}_N{config['graph_size_values'][0]}_trained.pth",
+            ),
+            map_location=device,
+        )
+    )
 
 
 # Sending model to device:

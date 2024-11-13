@@ -2,14 +2,14 @@ exp_name: grid_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
   - 100
-#  - 150
-#  - 200
-#  - 300
+  - 150
+  - 200
+  - 300
   - 400
-#  - 480
-#  - 600
+  - 480
+  - 600
   - 800
-#  - 1200  #CUDA ERRORS WITH MLP (also when smaller -> reduce batch size to 4?)
+  - 1200
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -20,8 +20,8 @@ training_parameters:
   # training steps:
   num_training_steps: 1000
   # training and validation set sizes:
-  num_train: 8
-  num_val: 8
+  num_train: 32
+  num_val: 32
   # other hyperparameters:
   learning_rate: 0.0001  # TO ADJUST
   # ADDITIONAL PARAMETERS GO HERE AND WILL BE READ IN train_test.py (line 106)
@@ -40,7 +40,7 @@ training_parameters:
 
 testing_parameters:
   max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-  num_test: 8  # number of graphs in each test iteration
+  num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 16 # number of times for which a single clique size is tested
 
@@ -51,15 +51,15 @@ models:
   
   - model_name: MLP
     architecture:
-      l1: 500
-      l2: 250
-      l3: 50
-      l4: 25
+      l1: 200
+      l2: 100
+      l3: 25
+      l4: 12
       dropout_prob: 0.2
 
   - model_name: CNN_large
     architecture:
-      num_conv_layers: 6
+      num_conv_layers: 7
       c0: 1
       c1: 32
       c2: 64
@@ -67,14 +67,15 @@ models:
       c4: 256
       c5: 512
       c6: 512
+      c7: 512
       l1: 1024
-      kernel_size_conv: [30, 30, 30, 30, 30, 30]
-      stride_conv: [1, 1, 1, 1, 1, 1]
-      padding_conv: [1, 1, 1, 1, 1, 1]
+      kernel_size_conv: [30, 30, 15, 15, 3, 3, 3]
+      stride_conv: [1, 1, 1, 1, 1, 1, 1]
+      padding_conv: [1, 1, 1, 1, 1, 1, 1]
       kernel_size_pool: 2
       stride_pool: 2
       dropout_prob: 0.3 
-      # OUT: (512, 10, 10)
+      # OUT: (512, 16, 16)
     
   - model_name: ViTscratch
 

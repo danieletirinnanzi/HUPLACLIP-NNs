@@ -270,6 +270,11 @@ def train_model(
             train_pred = model(train[0].to(device))
             train_pred = train_pred.squeeze()  # remove extra dimension
 
+            # TO REMOVE:
+            # Printing outside dimension input and output shapes for debugging
+            print(f"Input size: {train[0].size()}")
+            print(f"Output size: {train_pred.size()}")
+
             # Forward pass and train loss calculation:
             train_loss = criterion(
                 train_pred.type(torch.float).to(device),

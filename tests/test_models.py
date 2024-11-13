@@ -8,7 +8,10 @@ import src.graphs_generation as gen_graphs
 
 # Load experiment configuration file
 configfile_path = os.path.join(
-    os.path.dirname(__file__), "..", "docs", "cnn_exp_config.yml"   #CHANGE THIS TO TEST DIFFERENT CONFIGURATIONS
+    os.path.dirname(__file__),
+    "..",
+    "docs",
+    "grid_exp_config.yml",  # CHANGE THIS TO TEST DIFFERENT CONFIGURATIONS
 )
 configfile = load_config(configfile_path)
 
@@ -68,6 +71,9 @@ class ModelPredictionTest(unittest.TestCase):
                 self.generate_and_predict(model, model_name)
             elif "ViTscratch" in model_name:
                 self.generate_and_predict(model, model_name)
+                # Check that all layers are trainable
+                for name, param in model.named_parameters():
+                    self.assertTrue(param.requires_grad)
             elif "ViTpretrained" in model_name:
                 # Additional check for the pretrained model layers
                 for name, param in model.named_parameters():
@@ -90,10 +96,13 @@ class ModelMemoryTest(unittest.TestCase):
         not torch.cuda.is_available(), "CUDA not available, skipping CUDA memory tests"
     )
     def check_trainability(
-        self, model, model_name, batch_size=configfile["training_parameters"]["num_train"]
+        self,
+        model,
+        model_name,
+        batch_size=configfile["training_parameters"]["num_train"],
     ):
         """Helper function to test forward and backward pass on a given model for memory issues."""
-        print(f"Testing trainability for model: {model_name}")        
+        print(f"Testing trainability for model: {model_name}")
         clique_size = int(
             graph_size
             * (configfile["training_parameters"]["max_clique_size_proportion"])
@@ -137,11 +146,11 @@ class ModelMemoryTest(unittest.TestCase):
             [clique_size] * batch_size,
             configfile["p_correction_type"],
             input_magnification,
-        )                
+        )
         # Run forward and backward pass
         try:
             train_pred = model(train[0].to(device))
-            train_pred = train_pred.squeeze()  # remove extra dimension            
+            train_pred = train_pred.squeeze()  # remove extra dimension
             loss = criterion(
                 train_pred.squeeze(), torch.ones(batch_size, device=device)
             )
@@ -156,7 +165,7 @@ class ModelMemoryTest(unittest.TestCase):
             # Update weights
             optimizer.step()
             # Clear gradients
-            optimizer.zero_grad(set_to_none=True)            
+            optimizer.zero_grad(set_to_none=True)
 
         except RuntimeError as e:
             if "out of memory" in str(e):
@@ -175,7 +184,7 @@ for idx, model_specs in enumerate(configfile["models"]):
     def generate_test(model_index, model_specifications):
         def test_func(self):
             model = load_model(model_specifications, graph_size, device)
-            self.check_trainability(model, model_specifications['model_name'])
+            self.check_trainability(model, model_specifications["model_name"])
             # Clear memory
             del model
             torch.cuda.empty_cache()
@@ -186,3 +195,7 @@ for idx, model_specs in enumerate(configfile["models"]):
     test_name = f"test_{model_specs['model_name']}_trainability"
     # Attach the dynamically created test to `ModelMemoryTest`
     setattr(ModelMemoryTest, test_name, generate_test(idx, model_specs))
+
+
+# class VarianceAlgoTest(unittest.TestCase):
+#     return

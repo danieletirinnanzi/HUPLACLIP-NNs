@@ -15,45 +15,44 @@ class MLP(nn.Module):
         self.graph_size = graph_size
         self.architecture_specs = architecture_specs
 
-        # Defining a scaling factor based on graph size
-        scale_factor = (
-            graph_size / 224
-        )  # Original MLP model was tuned for 224x224 images
-
-        # Dynamically scale the number of neurons in each layer based on graph size
-        l1_scaled = int(architecture_specs["l1"] * scale_factor)
-        l2_scaled = int(architecture_specs["l2"] * scale_factor)
-        l3_scaled = int(architecture_specs["l3"] * scale_factor)
-        l4_scaled = int(architecture_specs["l4"] * scale_factor)
-
+        # Define the model architecture
         self.model = nn.Sequential(
             # Flatten layer
             nn.Flatten(),
             # First linear layer
-            nn.Linear(graph_size * graph_size, l1_scaled),
-            nn.BatchNorm1d(l1_scaled),
+            nn.Linear(graph_size * graph_size, architecture_specs["l1"]),
+            nn.BatchNorm1d(architecture_specs["l1"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Second linear layer
-            nn.Linear(l1_scaled, l2_scaled),
-            nn.BatchNorm1d(l2_scaled),
+            nn.Linear(architecture_specs["l1"], architecture_specs["l2"]),
+            nn.BatchNorm1d(architecture_specs["l2"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Third linear layer
-            nn.Linear(l2_scaled, l3_scaled),
-            nn.BatchNorm1d(l3_scaled),
+            nn.Linear(architecture_specs["l2"], architecture_specs["l3"]),
+            nn.BatchNorm1d(architecture_specs["l3"]),
             nn.ReLU(),
             # Fourth linear layer
-            nn.Linear(l3_scaled, l4_scaled),
-            nn.BatchNorm1d(l4_scaled),
+            nn.Linear(architecture_specs["l3"], architecture_specs["l4"]),
+            nn.BatchNorm1d(architecture_specs["l4"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Output layer
-            nn.Linear(l4_scaled, 1),
+            nn.Linear(architecture_specs["l4"], 1),
             nn.Sigmoid(),
         )
 
     def forward(self, x):
+
+        # TO REMOVE:
+        # Printing outside dimension input and output shapes for debugging
+        print(
+            "\tIn Model: input size",
+            x.size(),
+            "output size",
+            self.model(x).size(),
+        )
         return self.model(x)
 
 
@@ -119,7 +118,9 @@ class CNN(nn.Module):
         dropout_prob,
     ):
         return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size_conv, stride_conv, padding_conv),
+            nn.Conv2d(
+                in_channels, out_channels, kernel_size_conv, stride_conv, padding_conv
+            ),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size_pool, stride_pool),
@@ -129,10 +130,9 @@ class CNN(nn.Module):
     def calculate_output_size(self):
         model_output = self.model(torch.bernoulli(torch.rand(1, 1, 2400, 2400)))
         model_output_size = model_output.view(-1).size(0)
-        # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:        
-        print("CNN model final feature map: ", model_output.shape)
+        # # UNCOMMENT TO VISUALIZE MODEL OUTPUT SIZE:
+        # print("CNN model final feature map: ", model_output.shape)
         return model_output_size
-    
 
 
 # class ViT_scratch(nn.Module):

@@ -3,9 +3,9 @@
 #SBATCH --nodes=1
 #SBATCH --time=23:55:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:1
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=8
+#SBATCH --gres=gpu:4
+#SBATCH --mem=128G
 #SBATCH --account=Sis24_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
 #SBATCH --job-name=grid_exp

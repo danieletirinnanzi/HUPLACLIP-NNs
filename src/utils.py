@@ -36,29 +36,27 @@ def load_model(model_specs, graph_size, device):
     match model_name:
         case "MLP":
             model = MLP(graph_size, model_specs["architecture"])
-        case (
-            "CNN_small_1"
-            | "CNN_small_2"
-            | "CNN_medium_1"
-            | "CNN_medium_2"
-            | "CNN_large_1"
-            | "CNN_large_2"
-            | "CNN_small"
-            | "CNN_large"
-            | "CNN_AlexNet_style"            
-        ):
+        case "CNN_large":
             model = CNN(graph_size, model_specs["architecture"])
         case "ViTscratch":
             model = FlexiViT_scratch(graph_size)
         case "ViTpretrained":
             model = FlexiViT_pretrained(graph_size)
 
-        # ADDITIONAL MODELS CAN BE ADDED HERE
+        # ADD MODELS HERE
 
         case _:
             raise ValueError("Model not found")
 
-    # - sending model to device:
+    # - defining device to use
+    if torch.cuda.is_available():
+        if torch.cuda.device_count() > 1:
+            # If multiple GPUs are available, use DataParallel to use them all
+            print("Let's use", torch.cuda.device_count(), "GPUs!")
+            model = torch.nn.DataParallel(model)
+        else:
+            print("Let's use", torch.cuda.device_count(), "GPU!")
+    # - moving model to device  (CPU or GPU)
     model.to(device)
     print(f"- {model_name} Model loaded successfully.")
     return model

@@ -1,9 +1,13 @@
 import unittest
 import torch
 import os
+import numpy as np
+import scipy.special as special
+
 from src.utils import load_model
 from src.utils import load_config
 import src.graphs_generation as gen_graphs
+from src.variance_test import Variance_algo
 
 
 # Load experiment configuration file
@@ -16,7 +20,7 @@ configfile_path = os.path.join(
 configfile = load_config(configfile_path)
 
 # Define a graph size for the test (choosing the last value, which is the largest graph size)
-graph_size = configfile["graph_size_values"][-1]
+graph_size = configfile["graph_size_values"][-9]
 print("Performing tests for graph size = ", graph_size)
 
 # Define device
@@ -77,7 +81,7 @@ class ModelPredictionTest(unittest.TestCase):
             elif "ViTpretrained" in model_name:
                 # Additional check for the pretrained model layers
                 for name, param in model.named_parameters():
-                    if "model.head" in name:
+                    if any(key in name for key in ["cls_token", "embed", "head"]):
                         self.assertTrue(param.requires_grad)
                     else:
                         self.assertFalse(param.requires_grad)
@@ -197,5 +201,53 @@ for idx, model_specs in enumerate(configfile["models"]):
     setattr(ModelMemoryTest, test_name, generate_test(idx, model_specs))
 
 
-# class VarianceAlgoTest(unittest.TestCase):
-#     return
+class VarianceAlgoTest(unittest.TestCase):
+
+    def setUp(self):
+        # Set up a valid configuration file and graph size for testing
+        self.config_file = {"p_correction_type": "p_reduce"}
+        self.graph_size = graph_size
+        self.p0 = 0.5
+        self.variance_algo = Variance_algo(self.config_file, self.graph_size)
+
+    def test_initialization(self):
+        # Test valid initialization
+        self.assertEqual(self.variance_algo.graph_size, self.graph_size)
+        self.assertEqual(self.variance_algo.p0, 0.5)
+
+        # Test invalid initialization
+        with self.assertRaises(ValueError):
+            invalid_config = {"p_correction_type": "p_increase"}
+            Variance_algo(invalid_config, self.graph_size)
+
+    def test_calculate_fraction_correct(self):
+        # Test the calculate_fraction_correct method with a known value
+        clique_size = 10
+        q_val = clique_size / self.graph_size
+        z_val = (q_val**2 / (1 - q_val**2)) * ((1 - self.p0) / self.p0)
+        fraction_correct = self.variance_algo.calculate_fraction_correct(clique_size)
+        expected_fraction_correct = 0.5 + 0.5 * (
+            special.erf(np.sqrt(np.log(1 / (1 - z_val)) / z_val))
+            - special.erf(np.sqrt((1 - z_val) / z_val * np.log((1 / (1 - z_val)))))
+        )
+        self.assertAlmostEqual(fraction_correct, expected_fraction_correct, places=5)
+
+    def test_find_k0(self):
+        # Test the find_k0 method
+        k0 = self.variance_algo.find_k0()
+        self.assertIsInstance(k0, int)
+        self.assertGreater(k0, 0)
+
+    def test_save_k0(self):
+        # Test the save_k0 method
+        results_dir = "test_results"
+        os.makedirs(results_dir, exist_ok=True)
+        self.variance_algo.save_k0(results_dir)
+        file_path = os.path.join(
+            results_dir, f"Variance_test_N{self.graph_size}_K0.csv"
+        )
+        self.assertTrue(os.path.exists(file_path))
+
+        # Clean up
+        os.remove(file_path)
+        os.rmdir(results_dir)

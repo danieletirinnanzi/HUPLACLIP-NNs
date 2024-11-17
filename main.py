@@ -18,7 +18,7 @@ from src.train_test import (
 )
 from tests.run_tests import run_all_tests
 from src.tensorboard_save import tensorboard_save_images
-from src.utils import Variance_algo
+from src.variance_test import Variance_algo
 
 # defining device and cleaning cache:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -147,7 +147,7 @@ for graph_size in config["graph_size_values"]:
             model_results_dir,
         )
 
-        # TODO: ADAPT TO NEW CNNs -> implement GradCAM
+        # TODO: implement GradCAM for CNN model + Attention Visualization for ViT model
         # # when possible, saving the features extracted by the model:
         # if model_specs["model_name"] in [
         #     "CNN_small_1",
@@ -179,8 +179,8 @@ for graph_size in config["graph_size_values"]:
     )
     os.makedirs(model_results_dir)
     # - adding variance algorithm to set of models tested:
-    variance_algo = Variance_algo(graph_size, config)
-    variance_algo.test_and_save(model_results_dir)
+    variance_algo = Variance_algo(config, graph_size)
+    variance_algo.save_k0(model_results_dir)
 
     # Saving .yml file with time elapsed from the start of the experiment (to calculate the time needed for each graph size value):
     current_time = datetime.datetime.now()

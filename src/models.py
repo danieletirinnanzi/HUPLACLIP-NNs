@@ -135,36 +135,8 @@ class CNN(nn.Module):
         return model_output_size
 
 
-# class ViT_scratch(nn.Module):
-#     def __init__(self, graph_size):
-#         super().__init__()
-#         self.graph_size = graph_size
-#         self.model = models.vit_b_16()
-#         # Change the head
-#         self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
-
-#     def forward(self, x):
-#         x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
-#         return self.model(x)
-
-
-# class ViT_pretrained(nn.Module):
-#     def __init__(self, graph_size):
-#         super().__init__()
-#         self.graph_size = graph_size
-#         self.model = models.vit_b_16(weights="DEFAULT")
-#         # Freeze the architecture
-#         for param in self.model.parameters():
-#             param.requires_grad = False
-#         # Change the head
-#         self.model.heads.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
-
-#     def forward(self, x):
-#         x = x.repeat(1, 3, 1, 1)  # repeat the single channel 3 times
-#         return self.model(x)
-
-
-class FlexiViT_scratch(nn.Module):
+# ViT models - documentation: https://github.com/huggingface/pytorch-image-models/blob/e35ea733ab1ee9cc35b29b88bf10fc841421eedf/timm/models/vision_transformer.py
+class ViT_scratch(nn.Module):
 
     def __init__(self, graph_size):
         super().__init__()
@@ -172,40 +144,42 @@ class FlexiViT_scratch(nn.Module):
 
         # Define patch size dynamically using find_patch_size function
         patch_size = find_patch_size(graph_size)
-        print(f"Using patch size: {patch_size}")
+        print(f"Using patch size = {patch_size}")
 
-        # Train from scratch without pretrained weights
+        # Define model architecture with the desired img_size and patch_size
         self.model = create_model(
-            "vit_base_patch16_224",
+            "vit_base_patch16_224",  # ViT base model with patch size 16 and image_size 224, overwritten by chosen patch_size and img_size
             pretrained=False,
             img_size=graph_size,
             patch_size=patch_size,
+            in_chans=1,
+            dynamic_img_size=True,  # Enable dynamic image size
         )
 
         # Modify the head for binary classification
         self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
     def forward(self, x):
-        x = x.repeat(1, 3, 1, 1)  # Repeat the single channel 3 times
         return self.model(x)
 
 
-class FlexiViT_pretrained(nn.Module):
-
+class ViT_pretrained(nn.Module):
     def __init__(self, graph_size):
         super().__init__()
         self.graph_size = graph_size
 
-        # Define patch size dynamically using find_patch_size function
+        # Consistent patch size, or a function that finds the right balance
         patch_size = find_patch_size(graph_size)
         print(f"Using patch size: {patch_size}")
 
-        # Use pretrained weights
+        # Initialize the model with the desired img_size and patch_size
         self.model = create_model(
             "vit_base_patch16_224",
             pretrained=True,
             img_size=graph_size,
             patch_size=patch_size,
+            in_chans=1,
+            dynamic_img_size=True,  # Enable dynamic image size
         )
 
         # Freeze the architecture
@@ -215,6 +189,16 @@ class FlexiViT_pretrained(nn.Module):
         # Modify the head for binary classification
         self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
+        # Set the positional encoding layers and the head to require grad:
+        for name, param in self.model.named_parameters():
+            if any(
+                key in name for key in ["cls_token", "embed", "head"]
+            ):  # add more layers here if needed
+                param.requires_grad = True
+
     def forward(self, x):
-        x = x.repeat(1, 3, 1, 1)  # Repeat the single channel 3 times
         return self.model(x)
+
+
+# ADDITIONAL MODELS from timm library:
+# https://github.com/huggingface/pytorch-image-models/tree/e35ea733ab1ee9cc35b29b88bf10fc841421eedf/timm/models

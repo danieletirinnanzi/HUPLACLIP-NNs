@@ -9,8 +9,8 @@ import pandas as pd
 from .models import (
     MLP,
     CNN,
-    FlexiViT_scratch,
-    FlexiViT_pretrained,
+    ViT_scratch,
+    ViT_pretrained,
 )
 from torchvision.models.feature_extraction import (
     create_feature_extractor,
@@ -39,9 +39,9 @@ def load_model(model_specs, graph_size, device):
         case "CNN_large":
             model = CNN(graph_size, model_specs["architecture"])
         case "ViTscratch":
-            model = FlexiViT_scratch(graph_size)
+            model = ViT_scratch(graph_size)
         case "ViTpretrained":
-            model = FlexiViT_pretrained(graph_size)
+            model = ViT_pretrained(graph_size)
 
         # ADD MODELS HERE
 

@@ -92,3 +92,8 @@ class TestInputTransform(unittest.TestCase):
         # Test case where graph size is 331 -> it is a prime number, so the function should return 1 as patch_size, and notify the user with a ValueError
         with self.assertRaises(ValueError):
             find_patch_size(331)
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()        

@@ -1,0 +1,5 @@
+STANDARD JOB (adjust time):
+salloc --nodes=1 --gres=gpu:4 --mem=128G --ntasks=4 --cpus-per-task=2 -A Sis24_piasini -p boost_usr_prod --time=01:00:00
+
+DBG job (2GPUs, less resources, higher priority):
+salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=2 --cpus-per-task=1 -A Sis24_piasini -p boost_usr_prod --qos=boost_qos_dbg

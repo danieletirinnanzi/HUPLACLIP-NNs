@@ -2,6 +2,8 @@ import os
 import unittest
 import sys
 
+# To run tests from command line (from home folder):
+# python -m unittest discover -s test -p "test_*.py"
 
 def run_all_tests():
     # Define the directory where test files are located

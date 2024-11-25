@@ -1,5 +1,6 @@
 import datetime
 import os
+# os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'   # ADD to remove error when executing on Leonardo?
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -16,21 +17,40 @@ from src.train_test import (
     train_model,
     test_model,
 )
+from src.distributed_data_parallel import setup_ddp, cleanup_ddp
 from tests.run_tests import run_all_tests
 from src.tensorboard_save import tensorboard_save_images
 from src.variance_test import Variance_algo
 
-# defining device and cleaning cache:
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-torch.cuda.empty_cache()
+# running all tests before running the experiment:
+# run_all_tests()
+
+# DDP setup: get environment variables
+if torch.cuda.is_available():
+    world_size = torch.cuda.device_count()  # Total number of GPUs available (e.g., 4 for 4 GPUs on a single node)
+
+# DDP setup:
+if torch.cuda.is_available() and world_size > 1:
+    rank = int(os.environ.get('RANK', 0))  # Global rank (assigned by the job scheduler)
+    local_rank = int(os.environ.get('LOCAL_RANK', 0))  # Local rank (GPU index on the current node)
+    
+    # Set the device based on local rank (this will assign each process to a specific GPU)
+    device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+    torch.backends.cudnn.benchmark = True   # optimization for consistent input sizes
+    
+    # Initialize DDP with rank and world_size
+    print("Setting up DDP")
+    setup_ddp(rank, world_size)    
+
+else:
+    # Single GPU or CPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
+    torch.backends.cudnn.benchmark = True   # optimization for consistent input sizes
 
 # loading experiment configuration file:
 config = load_config(
     os.path.join("docs", "grid_exp_config.yml")
 )  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
-
-# running all tests before running the experiment:
-run_all_tests()
 
 # storing starting time of the experiment in string format:
 start_time = datetime.datetime.now()
@@ -95,15 +115,25 @@ for graph_size in config["graph_size_values"]:
         # printing model name
         print(model_specs["model_name"])
 
-        # loading model
-        model = load_model(
-            model_specs,
-            graph_size,
-            device,
-        )
+        # loading model:
+        if world_size > 1:    
+            # multi-GPU setup:
+            model = load_model(
+                model_specs,
+                graph_size,
+                device,
+                local_rank
+            )
+        else:
+            # single GPU or CPU setup
+            model = load_model(
+                model_specs,
+                graph_size,
+                device,
+            )
 
         # put model in training mode
-        model.train()
+        model.train()   
 
         # training model and visualizing training progression on Tensorboard
         train_model(
@@ -115,6 +145,9 @@ for graph_size in config["graph_size_values"]:
             model_specs["model_name"],
             model_results_dir,
         )
+        
+        # Making sure all saving is done before starting testing:
+        torch.distributed.barrier()
 
         # load the best model from the training process
         # - defining file name and path:
@@ -122,10 +155,10 @@ for graph_size in config["graph_size_values"]:
             model_results_dir,
             f"{model_specs['model_name']}_N{graph_size}_trained.pth",
         )
+        # - configuring map location:
+        map_location = {f'cuda:{i}': f'cuda:{i}' for i in range(world_size)}
         # - loading the model:
-        model.load_state_dict(torch.load(file_path))
-        # - sending the model to the device:
-        model.to(device)
+        model.load_state_dict(torch.load(file_path), map_location=map_location, weights_only=True)
         # - putting the model in evaluation mode:
         model.eval()
 
@@ -201,3 +234,7 @@ save_exp_config(
     start_time,
     end_time,
 )
+
+# DDP setup: cleanup after all processes have completed
+if torch.cuda.is_available() and world_size > 1:
+    cleanup_ddp()

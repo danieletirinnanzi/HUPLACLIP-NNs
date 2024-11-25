@@ -3,12 +3,17 @@ import torch
 import os
 import numpy as np
 import scipy.special as special
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from src.utils import load_model
 from src.utils import load_config
 import src.graphs_generation as gen_graphs
 from src.variance_test import Variance_algo
+from src.distributed_data_parallel import setup_ddp, cleanup_ddp
 
+# TO RUN TESTS FROM HOME FOLDER (DDP initialization?)
+# python -m unittest discover -s test -p "test_*.py"
 
 # Load experiment configuration file
 configfile_path = os.path.join(
@@ -103,66 +108,45 @@ class ModelMemoryTest(unittest.TestCase):
         self,
         model,
         model_name,
+        rank,
+        world_size,
         batch_size=configfile["training_parameters"]["num_train"],
     ):
-        """Helper function to test forward and backward pass on a given model for memory issues."""
-        print(f"Testing trainability for model: {model_name}")
+        """Test forward and backward pass on a given model for memory issues with DDP."""
+        print(f"Testing trainability for model: {model_name} on rank: {rank}")
         clique_size = int(
             graph_size
             * (configfile["training_parameters"]["max_clique_size_proportion"])
         )
         # Defining if magnification is needed for current model
         input_magnification = True if "CNN" in model_name else False
-        # Run forward and backward pass
-        model.train()
-        # Reading optimizer and learning rate
-        if configfile["training_parameters"]["optimizer"] == "Adam":
-            optimizer = torch.optim.Adam(
-                model.parameters(),
-                lr=configfile["training_parameters"]["learning_rate"],
-            )
-        elif configfile["training_parameters"]["optimizer"] == "AdamW":
-            optimizer = torch.optim.AdamW(
-                model.parameters(),
-                lr=configfile["training_parameters"]["learning_rate"],
-            )
-        elif configfile["training_parameters"]["optimizer"] == "SGD":
-            optimizer = torch.optim.SGD(
-                model.parameters(),
-                lr=configfile["training_parameters"]["learning_rate"],
-                momentum=0.9,  # default value is zero
-            )
-        else:
-            raise ValueError("Optimizer not found")
-        # Reading loss function
-        if configfile["training_parameters"]["loss_function"] == "BCELoss":
-            criterion = torch.nn.BCELoss()
-        elif configfile["training_parameters"]["loss_function"] == "CrossEntropyLoss":
-            criterion = torch.nn.CrossEntropyLoss()
-        elif configfile["training_parameters"]["loss_function"] == "MSELoss":
-            criterion = torch.nn.MSELoss()
-        else:
-            raise ValueError("Loss function not found")
-        # Generate graphs:
+        
+        # Adjust batch size for DDP
+        local_batch_size = batch_size // world_size
+        
+        # Optimizer and criterion setup
+        optimizer = self.get_optimizer(model)
+        criterion = self.get_loss_function()
+
+        # Generate graphs for each local GPU
         train = gen_graphs.generate_batch(
-            batch_size,
+            local_batch_size,
             graph_size,
-            [clique_size] * batch_size,
+            [clique_size] * local_batch_size,
             configfile["p_correction_type"],
             input_magnification,
         )
+        
         # Run forward and backward pass
         try:
-            train_pred = model(train[0].to(device))
+            model.train()
+            train_pred = model(train[0].to(rank))
             train_pred = train_pred.squeeze()  # remove extra dimension
-            loss = criterion(
-                train_pred.squeeze(), torch.ones(batch_size, device=device)
-            )
             train_loss = criterion(
-                train_pred.type(torch.float).to(device),
+                train_pred.type(torch.float).to(rank),
                 torch.Tensor(train[1])
                 .type(torch.float)
-                .to(device),  # labels should be float for BCELoss
+                .to(rank),  # labels should be float for BCELoss
             )
             # Backward pass
             train_loss.backward()
@@ -173,7 +157,7 @@ class ModelMemoryTest(unittest.TestCase):
 
         except RuntimeError as e:
             if "out of memory" in str(e):
-                self.fail(f"CUDA out of memory encountered for model {model_name}")
+                self.fail(f"CUDA out of memory encountered for model {model_name} on rank: {rank}")
             else:
                 raise e
 
@@ -181,17 +165,67 @@ class ModelMemoryTest(unittest.TestCase):
         del train
         torch.cuda.empty_cache()
 
+        # If DDP is being used, clean up the DDP process group
+        if world_size > 1:
+            torch.distributed.destroy_process_group()
+
+    def get_optimizer(self, model):
+        """Returns the optimizer based on the configuration"""
+        optimizer_type = configfile["training_parameters"]["optimizer"]
+        lr = configfile["training_parameters"]["learning_rate"]
+        if optimizer_type == "Adam":
+            return torch.optim.Adam(model.parameters(), lr=lr)
+        elif optimizer_type == "AdamW":
+            return torch.optim.AdamW(model.parameters(), lr=lr)
+        elif optimizer_type == "SGD":
+            return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+        else:
+            raise ValueError("Optimizer not found")
+
+    def get_loss_function(self):
+        """Returns the loss function based on the configuration"""
+        loss_function_type = configfile["training_parameters"]["loss_function"]
+        if loss_function_type == "BCELoss":
+            return torch.nn.BCELoss()
+        elif loss_function_type == "CrossEntropyLoss":
+            return torch.nn.CrossEntropyLoss()
+        elif loss_function_type == "MSELoss":
+            return torch.nn.MSELoss()
+        else:
+            raise ValueError("Loss function not found")
+
+# DDP setup: get environment variables
+world_size = torch.cuda.device_count()  # Total number of GPUs available
 
 # Dynamically add tests for each model in `configfile["models"]`
 for idx, model_specs in enumerate(configfile["models"]):
-
     def generate_test(model_index, model_specifications):
         def test_func(self):
-            model = load_model(model_specifications, graph_size, device)
-            self.check_trainability(model, model_specifications["model_name"])
-            # Clear memory
+            # Get rank and world size
+            rank = int(os.environ["LOCAL_RANK"])
+            world_size = torch.cuda.device_count()
+
+            # DDP setup
+            if world_size > 1:
+                rank = int(os.environ['RANK'])  # Global rank
+                local_rank = int(os.environ['LOCAL_RANK'])  # Local rank
+                device = torch.device(f"cuda:{local_rank}")
+                setup_ddp(rank, world_size)
+            else:
+                device = torch.device("cuda")
+
+            # Load the model
+            model = load_model(model_specifications, graph_size, device, rank)
+
+            # Run trainability test
+            self.check_trainability(model, model_specifications["model_name"], rank, world_size)
+
+            # Clear memory and DDP cleanup
             del model
             torch.cuda.empty_cache()
+
+            if world_size > 1:
+                torch.distributed.destroy_process_group()
 
         return test_func
 
@@ -199,6 +233,7 @@ for idx, model_specs in enumerate(configfile["models"]):
     test_name = f"test_{model_specs['model_name']}_trainability"
     # Attach the dynamically created test to `ModelMemoryTest`
     setattr(ModelMemoryTest, test_name, generate_test(idx, model_specs))
+
 
 
 class VarianceAlgoTest(unittest.TestCase):

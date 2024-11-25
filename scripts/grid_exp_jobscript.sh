@@ -2,8 +2,8 @@
 
 #SBATCH --nodes=1
 #SBATCH --time=23:55:00
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --ntasks=4
+#SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:4
 #SBATCH --mem=128G
 #SBATCH --account=Sis24_piasini       # account name

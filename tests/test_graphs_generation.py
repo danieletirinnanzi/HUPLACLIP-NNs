@@ -390,3 +390,7 @@ class TestGraphsGeneration(unittest.TestCase):
                 counts_dict[9],
             ),
         )
+        
+if __name__ == "__main__":
+    import unittest
+    unittest.main()        

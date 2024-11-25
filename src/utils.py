@@ -4,6 +4,7 @@ import csv
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 # custom imports
 from .models import (
@@ -28,11 +29,22 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_specs, graph_size, device):
+def load_model(model_specs, graph_size, device, local_rank=None):
+    """
+    Load and initialize a model based on the provided specifications.
 
+    Args:
+        model_specs (dict): Model specifications (e.g., name, architecture).
+        graph_size (int): Size of the graph input to the model.
+        device (torch.device): Device to load the model onto.
+        local_rank (int, optional): GPU index for DDP. Required for multi-GPU setups.
+
+    Returns:
+        torch.nn.Module: The initialized model.
+    """    
     model_name = model_specs["model_name"]
 
-    # - building requested model
+    # Build the requested model
     match model_name:
         case "MLP":
             model = MLP(graph_size, model_specs["architecture"])
@@ -42,23 +54,20 @@ def load_model(model_specs, graph_size, device):
             model = ViT_scratch(graph_size)
         case "ViTpretrained":
             model = ViT_pretrained(graph_size)
-
-        # ADD MODELS HERE
-
         case _:
             raise ValueError("Model not found")
 
-    # - defining device to use
-    if torch.cuda.is_available():
-        if torch.cuda.device_count() > 1:
-            # If multiple GPUs are available, use DataParallel to use them all
-            print("Let's use", torch.cuda.device_count(), "GPUs!")
-            model = torch.nn.DataParallel(model)
-        else:
-            print("Let's use", torch.cuda.device_count(), "GPU!")
-    # - moving model to device  (CPU or GPU)
+    # Move model to device
     model.to(device)
-    print(f"- {model_name} Model loaded successfully.")
+    
+    # DDP: wrap the model if using multi-GPU    
+    if local_rank is not None:
+        # Wrap the model in DDP
+        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+        print(f"- {model_name} Model loaded successfully on GPU {local_rank}.")
+    else: 
+        print(f"- {model_name} Model loaded successfully on {device}.")
+        
     return model
 
 

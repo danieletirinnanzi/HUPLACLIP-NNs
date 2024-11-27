@@ -29,46 +29,42 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_specs, graph_size, device, local_rank=None):
+def load_model(model_specs, graph_size, rank):
     """
     Load and initialize a model based on the provided specifications.
 
     Args:
         model_specs (dict): Model specifications (e.g., name, architecture).
         graph_size (int): Size of the graph input to the model.
-        device (torch.device): Device to load the model onto.
-        local_rank (int, optional): GPU index for DDP. Required for multi-GPU setups.
+        rank (int): GPU index for DDP.
 
     Returns:
         torch.nn.Module: The initialized model.
     """    
-    model_name = model_specs["model_name"]
+    model_name = model_specs["model_name"] 
 
-    # Build the requested model
+    # Build the requested model and move it to GPU with id rank
     match model_name:
         case "MLP":
-            model = MLP(graph_size, model_specs["architecture"])
+            model = MLP(graph_size, model_specs["architecture"]).to(rank)
         case "CNN_large":
-            model = CNN(graph_size, model_specs["architecture"])
+            model = CNN(graph_size, model_specs["architecture"]).to(rank)
         case "ViTscratch":
-            model = ViT_scratch(graph_size)
+            model = ViT_scratch(graph_size).to(rank)
         case "ViTpretrained":
-            model = ViT_pretrained(graph_size)
+            model = ViT_pretrained(graph_size).to(rank)
         case _:
             raise ValueError("Model not found")
 
-    # Move model to device
-    model.to(device)
+    print(f"loading {model_name} model on rank: {rank}")
     
-    # DDP: wrap the model if using multi-GPU    
-    if local_rank is not None:
-        # Wrap the model in DDP
-        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
-        print(f"- {model_name} Model loaded successfully on GPU {local_rank}.")
-    else: 
-        print(f"- {model_name} Model loaded successfully on {device}.")
-        
-    return model
+    print(model)
+    
+    ddp_model = DDP(model, device_ids=[rank])
+    
+    print(f"successfully loaded {model_name} model on rank: {rank}")
+    
+    return ddp_model
 
 
 # save time needed for training the completed graph size in a .yml file:

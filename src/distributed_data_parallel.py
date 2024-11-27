@@ -1,15 +1,24 @@
 import os
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
+import torch
 
-def setup_ddp(rank, world_size):
-    """Sets up distributed process group for multi-GPU training, using a SINGLE NODE."""
-    os.environ['MASTER_ADDR'] = 'localhost'  # or specify a machine if multi-node
-    os.environ['MASTER_PORT'] = '12355'     # any open port
+def setup_DDP(rank, world_size):
+    # environment variables are SET AUTOMATICALLY when running exp with 'torchrun'
+    print(os.environ['MASTER_ADDR'])
+    print(os.environ['MASTER_PORT'])
+    os.environ['NCCL_DEBUG'] = 'INFO'   # for debugging
     
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
-    print(f"DDP setup completed. Rank = {rank}; world size = {world_size}")
+    backends = ["nccl", "gloo", "mpi"]
+    print("Checking backend availability:")
+    for backend in backends:
+        available = torch.distributed.is_backend_available(backend)
+        print(f"  {backend}: {'Available' if available else 'Not Available'}")    
+    
+    # initialize the process group
+    torch.distributed.init_process_group("gloo", rank=rank, world_size=world_size)
 
-def cleanup_ddp():
-    """Cleans up distributed process group."""
-    dist.destroy_process_group()
+    # setting cuda device
+    torch.cuda.set_device(rank)   
+    
+    
+def cleanup_DDP():
+    torch.distributed.destroy_process_group()

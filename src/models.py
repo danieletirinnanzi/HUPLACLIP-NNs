@@ -44,15 +44,6 @@ class MLP(nn.Module):
         )
 
     def forward(self, x):
-
-        # TO REMOVE:
-        # Printing outside dimension input and output shapes for debugging
-        print(
-            "\tIn Model: input size",
-            x.size(),
-            "output size",
-            self.model(x).size(),
-        )
         return self.model(x)
 
 

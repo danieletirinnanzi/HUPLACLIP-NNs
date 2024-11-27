@@ -1,5 +1,86 @@
 STANDARD JOB (adjust time):
 salloc --nodes=1 --gres=gpu:4 --mem=128G --ntasks=4 --cpus-per-task=2 -A Sis24_piasini -p boost_usr_prod --time=01:00:00
 
-DBG job (2GPUs, less resources, higher priority):
-salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=2 --cpus-per-task=1 -A Sis24_piasini -p boost_usr_prod --qos=boost_qos_dbg
+DBG (2GPUs, less resources, higher priority):
+salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=1 --cpus-per-task=1 -A Sis24_piasini -p boost_usr_prod --qos=boost_qos_dbg
+
+To run the DBG code locally:
+CUDA_LAUNCH_BLOCKING=1 torchrun --nproc_per_node=1 main.py
+torchrun --standalone --nproc_per_node=1 DDP_test.py
+torchrun --standalone --nproc_per_node=1 main.py
+
+
+# OUTPUT:
+
+GPUs available: 2
+MASTER_ADDR: 127.0.0.1
+MASTER_PORT: 29500
+WORLD_SIZE: 2
+RANK: 1
+LOCAL_RANK: 1
+cuda:1
+Setting up DDP
+DDP setup completed. Rank = 1; world size = 2
+cuda:1
+Configuration file loaded successfully.
+-----------------------------------
+ GRAPH SIZE: 100
+GPUs available: 2
+MASTER_ADDR: 127.0.0.1
+MASTER_PORT: 29500
+WORLD_SIZE: 2
+RANK: 0
+LOCAL_RANK: 0
+cuda:0
+Setting up DDP
+DDP setup completed. Rank = 0; world size = 2
+cuda:0
+Configuration file loaded successfully.
+-----------------------------------
+ GRAPH SIZE: 100
+MLP
+loading model
+MLP
+loading model
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/main.py", line 144, in <module>
+[rank0]:     model = load_model(
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/src/utils.py", line 63, in load_model
+[rank0]:     model.to(device)
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1340, in to
+[rank0]:     return self._apply(convert)
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 900, in _apply
+[rank0]:     module._apply(fn)
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 900, in _apply
+[rank0]:     module._apply(fn)
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 927, in _apply
+[rank0]:     param_applied = fn(param)
+[rank0]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1326, in convert
+[rank0]:     return t.to(
+[rank0]: RuntimeError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
+[rank0]: Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/main.py", line 144, in <module>
+[rank1]:     model = load_model(
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/src/utils.py", line 63, in load_model
+[rank1]:     model.to(device)
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1340, in to
+[rank1]:     return self._apply(convert)
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 900, in _apply
+[rank1]:     module._apply(fn)
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 900, in _apply
+[rank1]:     module._apply(fn)
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 927, in _apply
+[rank1]:     param_applied = fn(param)
+[rank1]:   File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1326, in convert
+[rank1]:     return t.to(
+[rank1]: RuntimeError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
+[rank1]: Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+[rank0]:[W1125 12:59:59.372019638 ProcessGroupNCCL.cpp:1250] Warning: WARNING: process group has NOT been destroyed before we destruct ProcessGroupNCCL. On normal program exit, the application should call destroy_process_group to ensure that any pending NCCL operations have finished in this process. In rare cases this process can exit before this point and block the progress of another member of the process group. This constraint has always been present,  but this warning has only been added since PyTorch 2.4 (function operator())
+W1125 12:59:59.754000 621820 torch/distributed/elastic/multiprocessing/api.py:897] Sending process 621824 closing signal SIGTERM
+E1125 13:00:00.019000 621820 torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: 1) local_rank: 0 (pid: 621823) of binary: /leonardo/home/userexternal/dtirinna/virtualenvs/dl/bin/python3.10
+Traceback (most recent call last):
+  File "/leonardo/home/userexternal/dtirinna/virtualenvs/dl/bin/torchrun", line 8, in <module>
+    sys.exit(main())

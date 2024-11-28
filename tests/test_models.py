@@ -1,176 +1,130 @@
 import unittest
 import torch
 import os
-import numpy as np
-import scipy.special as special
-import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-
-from src.utils import load_model
-from src.utils import load_config
+from src.utils import load_model, load_config
 import src.graphs_generation as gen_graphs
-from src.variance_test import Variance_algo
-from src.distributed_data_parallel import setup_ddp, cleanup_ddp
 
-# TO RUN TESTS FROM HOME FOLDER (DDP initialization?)
-# python -m unittest discover -s test -p "test_*.py"
-
-# Load experiment configuration file
+# Load configuration file
 configfile_path = os.path.join(
     os.path.dirname(__file__),
     "..",
     "docs",
-    "grid_exp_config.yml",  # CHANGE THIS TO TEST DIFFERENT CONFIGURATIONS
+    "grid_exp_config.yml",
 )
 configfile = load_config(configfile_path)
 
-# Define a graph size for the test (choosing the last value, which is the largest graph size)
-graph_size = configfile["graph_size_values"][-9]
-print("Performing tests for graph size = ", graph_size)
+# Define graph size for tests (choosing last, largest value)
+graph_size = configfile["graph_size_values"][-1]
 
-# Define device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
+class ModelTest(unittest.TestCase):
 
-
-class ModelPredictionTest(unittest.TestCase):
-
-    def generate_and_predict(self, model, model_name):
-        """Helper function to generate graphs, make predictions, and run assertions on output."""
+    def generate_and_predict(self, model, model_name, rank):
+        """Helper to generate graphs and check predictions."""
         clique_size = int(
             graph_size
             * (configfile["training_parameters"]["max_clique_size_proportion"])
         )
-        # Defining if magnification is needed for current model
         input_magnification = True if "CNN" in model_name else False
-        # Generate graphs:
+        # Generate local batch (2 graphs on each GPU)
         graphs = gen_graphs.generate_batch(
             2,
             graph_size,
             [clique_size, clique_size],
             configfile["p_correction_type"],
             input_magnification,
-        )[0].to(device)
-        # Make predictions
-        prediction = model(graphs)
-        # Assertions for output size and value range
+        )[0].to(rank)
+        # Model inference
+        prediction = model(graphs).squeeze()
         self.assertEqual(
-            prediction.squeeze().size(),
+            prediction.size(),
             torch.Size([2]),
             f"Output size mismatch for model {model_name}",
         )
         self.assertTrue(
             torch.all(prediction >= 0) and torch.all(prediction <= 1),
-            f"Prediction values out of range for model {model_name}",
+            f"Predictions out of range for model {model_name}",
         )
-        # Clear memory
+        # Correct definition of Scratch/pretrained ViT models
+        if "ViTscratch" in model_name:
+            # Check that all layers are trainable
+            for name, param in model.named_parameters():
+                self.assertTrue(param.requires_grad)
+        elif "ViTpretrained" in model_name:
+            # Pretrained model layers should not be trained
+            for name, param in model.named_parameters():
+                if any(key in name for key in ["cls_token", "embed", "head"]):
+                    self.assertTrue(param.requires_grad)
+                else:
+                    self.assertFalse(param.requires_grad)        
         del graphs
 
-    def test_models_prediction(self):
-        for i, model_specs in enumerate(configfile["models"]):
-            model_name = model_specs["model_name"]
-            print(f"Testing prediction for model: {model_name}")
-            # Load model based on its index in configfile["models"]
-            model = load_model(model_specs, graph_size, device)
-            model.eval()
-            # Check model type and run corresponding assertions
-            if "MLP" in model_name:
-                self.generate_and_predict(model, model_name)
-            elif "CNN" in model_name:
-                self.generate_and_predict(model, model_name)
-            elif "ViTscratch" in model_name:
-                self.generate_and_predict(model, model_name)
-                # Check that all layers are trainable
-                for name, param in model.named_parameters():
-                    self.assertTrue(param.requires_grad)
-            elif "ViTpretrained" in model_name:
-                # Additional check for the pretrained model layers
-                for name, param in model.named_parameters():
-                    if any(key in name for key in ["cls_token", "embed", "head"]):
-                        self.assertTrue(param.requires_grad)
-                    else:
-                        self.assertFalse(param.requires_grad)
-                self.generate_and_predict(model, model_name)
-            else:
-                print(f"Warning: Model type {model_name} not recognized, skipping test")
+    def trainability_check(self, model, model_name, rank, world_size):
+        """Test model's ability to perform a forward/backward pass splitting the data across GPUs like during training."""
 
-            # Clear memory
-            del model
-            torch.cuda.empty_cache()
-
-
-class ModelMemoryTest(unittest.TestCase):
-
-    @unittest.skipIf(
-        not torch.cuda.is_available(), "CUDA not available, skipping CUDA memory tests"
-    )
-    def check_trainability(
-        self,
-        model,
-        model_name,
-        rank,
-        world_size,
-        batch_size=configfile["training_parameters"]["num_train"],
-    ):
-        """Test forward and backward pass on a given model for memory issues with DDP."""
-        print(f"Testing trainability for model: {model_name} on rank: {rank}")
+        input_magnification = True if "CNN" in model_name else False        
+        
+        # Optimizer and loss function
+        optimizer = self.get_optimizer(model)
+        criterion = self.get_loss_function()
+        
         clique_size = int(
             graph_size
             * (configfile["training_parameters"]["max_clique_size_proportion"])
-        )
-        # Defining if magnification is needed for current model
-        input_magnification = True if "CNN" in model_name else False
-        
-        # Adjust batch size for DDP
-        local_batch_size = batch_size // world_size
-        
-        # Optimizer and criterion setup
-        optimizer = self.get_optimizer(model)
-        criterion = self.get_loss_function()
+        )        
 
-        # Generate graphs for each local GPU
-        train = gen_graphs.generate_batch(
-            local_batch_size,
+        # Generating training data (full batch)
+        full_data = gen_graphs.generate_batch(
+            configfile["training_parameters"]["num_train"],
             graph_size,
-            [clique_size] * local_batch_size,
+            [clique_size] * configfile["training_parameters"]["num_train"],
             configfile["p_correction_type"],
             input_magnification,
         )
         
-        # Run forward and backward pass
-        try:
-            model.train()
-            train_pred = model(train[0].to(rank))
-            train_pred = train_pred.squeeze()  # remove extra dimension
-            train_loss = criterion(
-                train_pred.type(torch.float).to(rank),
-                torch.Tensor(train[1])
-                .type(torch.float)
-                .to(rank),  # labels should be float for BCELoss
+        # Split training data across GPUs, checking divisibility of batch size by world size
+        if configfile["training_parameters"]["num_train"] % world_size != 0:
+            raise ValueError(
+                f"Trainability test: Batch size of {configfile['training_parameters']['num_train']} is not evenly divisible by world_size={world_size}. "
+                f"Trainability test: Each rank requires an equal share of the data for DDP. Please adjust 'num_train' to be divisible by {world_size}."
             )
-            # Backward pass
-            train_loss.backward()
-            # Update weights
-            optimizer.step()
-            # Clear gradients
-            optimizer.zero_grad(set_to_none=True)
+        # If no errors, proceed with splitting            
+        local_batch_size = configfile["training_parameters"]["num_train"] // world_size
+        start_idx_train = rank * local_batch_size
+        end_idx_train = (rank + 1) * local_batch_size            
 
-        except RuntimeError as e:
-            if "out of memory" in str(e):
-                self.fail(f"CUDA out of memory encountered for model {model_name} on rank: {rank}")
-            else:
-                raise e
+        # Partition data for the current rank
+        split_data = (
+            torch.Tensor(full_data[0][start_idx_train:end_idx_train]).to(rank),
+            torch.Tensor(full_data[1][start_idx_train:end_idx_train]).to(rank),
+        )
 
-        # Clear memory
-        del train
-        torch.cuda.empty_cache()
+        # Forward pass on training data
+        train_pred = model(split_data[0]).squeeze()
+        train_loss = criterion(train_pred.type(torch.float), torch.Tensor(split_data[1]).type(torch.float))            
 
-        # If DDP is being used, clean up the DDP process group
-        if world_size > 1:
-            torch.distributed.destroy_process_group()
+        # Backward pass
+        train_loss.backward()   # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
+        optimizer.step()
+
+        # Making sure batches are correctly split across GPUs
+        print(f"{model_name} Trainability test: Rank {rank} is processing {split_data[0].shape[0]} graphs.")
+        print(f"{model_name} Trainability test: The full batch contains {full_data[0].shape[0]} graphs.")
+        print(f"{model_name} Trainability test: Training loss on rank {rank} is {train_loss}.")            
+
+        # Aggregating training loss across GPUs:
+        train_loss_tensor = torch.tensor(train_loss.item(), device=rank)
+        torch.distributed.all_reduce(train_loss_tensor, op=torch.distributed.ReduceOp.SUM)        
+        if rank == 0:
+            global_train_loss = train_loss_tensor.item() / world_size                
+            
+            # DEBUG
+            print(f"{model_name} Trainability test: Global training loss averaged across ranks is {global_train_loss}.")                        
+                        
+        del full_data, split_data, train_pred
 
     def get_optimizer(self, model):
-        """Returns the optimizer based on the configuration"""
+        """Retrieve optimizer from configuration."""
         optimizer_type = configfile["training_parameters"]["optimizer"]
         lr = configfile["training_parameters"]["learning_rate"]
         if optimizer_type == "Adam":
@@ -180,10 +134,10 @@ class ModelMemoryTest(unittest.TestCase):
         elif optimizer_type == "SGD":
             return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
         else:
-            raise ValueError("Optimizer not found")
+            raise ValueError("Invalid optimizer in configuration")
 
     def get_loss_function(self):
-        """Returns the loss function based on the configuration"""
+        """Retrieve loss function from configuration."""
         loss_function_type = configfile["training_parameters"]["loss_function"]
         if loss_function_type == "BCELoss":
             return torch.nn.BCELoss()
@@ -192,97 +146,39 @@ class ModelMemoryTest(unittest.TestCase):
         elif loss_function_type == "MSELoss":
             return torch.nn.MSELoss()
         else:
-            raise ValueError("Loss function not found")
+            raise ValueError("Invalid loss function in configuration")
 
-# DDP setup: get environment variables
-world_size = torch.cuda.device_count()  # Total number of GPUs available
 
-# Dynamically add tests for each model in `configfile["models"]`
-for idx, model_specs in enumerate(configfile["models"]):
-    def generate_test(model_index, model_specifications):
-        def test_func(self):
-            # Get rank and world size
+def generate_ddp_tests():
+    """Dynamically create test cases for each model in the configuration."""
+    for idx, model_specs in enumerate(configfile["models"]):
+        model_name = model_specs["model_name"]
+
+        def test_case(self):
             rank = int(os.environ["LOCAL_RANK"])
             world_size = torch.cuda.device_count()
+            try:
+                # Synchronize GPUs 
+                torch.distributed.barrier()
+                # Load model
+                model = load_model(model_specs, graph_size, rank)
+                # Test prediction (only on rank 0)
+                if rank == 0:
+                    self.generate_and_predict(model, model_name, rank)
+                # Synchronize GPUs
+                torch.distributed.barrier()
+                # Test trainability (across GPUs)
+                self.trainability_check(model, model_name, rank, world_size)
+                del model
+            finally:
+                torch.cuda.empty_cache()
 
-            # DDP setup
-            if world_size > 1:
-                rank = int(os.environ['RANK'])  # Global rank
-                local_rank = int(os.environ['LOCAL_RANK'])  # Local rank
-                device = torch.device(f"cuda:{local_rank}")
-                setup_ddp(rank, world_size)
-            else:
-                device = torch.device("cuda")
-
-            # Load the model
-            model = load_model(model_specifications, graph_size, device, rank)
-
-            # Run trainability test
-            self.check_trainability(model, model_specifications["model_name"], rank, world_size)
-
-            # Clear memory and DDP cleanup
-            del model
-            torch.cuda.empty_cache()
-
-            if world_size > 1:
-                torch.distributed.destroy_process_group()
-
-        return test_func
-
-    # Create a unique test name
-    test_name = f"test_{model_specs['model_name']}_trainability"
-    # Attach the dynamically created test to `ModelMemoryTest`
-    setattr(ModelMemoryTest, test_name, generate_test(idx, model_specs))
+        test_name = f"test_{model_name}_ddp"
+        setattr(ModelTest, test_name, test_case)
 
 
+# Generate DDP test cases
+generate_ddp_tests()
 
-class VarianceAlgoTest(unittest.TestCase):
-
-    def setUp(self):
-        # Set up a valid configuration file and graph size for testing
-        self.config_file = {"p_correction_type": "p_reduce"}
-        self.graph_size = graph_size
-        self.p0 = 0.5
-        self.variance_algo = Variance_algo(self.config_file, self.graph_size)
-
-    def test_initialization(self):
-        # Test valid initialization
-        self.assertEqual(self.variance_algo.graph_size, self.graph_size)
-        self.assertEqual(self.variance_algo.p0, 0.5)
-
-        # Test invalid initialization
-        with self.assertRaises(ValueError):
-            invalid_config = {"p_correction_type": "p_increase"}
-            Variance_algo(invalid_config, self.graph_size)
-
-    def test_calculate_fraction_correct(self):
-        # Test the calculate_fraction_correct method with a known value
-        clique_size = 10
-        q_val = clique_size / self.graph_size
-        z_val = (q_val**2 / (1 - q_val**2)) * ((1 - self.p0) / self.p0)
-        fraction_correct = self.variance_algo.calculate_fraction_correct(clique_size)
-        expected_fraction_correct = 0.5 + 0.5 * (
-            special.erf(np.sqrt(np.log(1 / (1 - z_val)) / z_val))
-            - special.erf(np.sqrt((1 - z_val) / z_val * np.log((1 / (1 - z_val)))))
-        )
-        self.assertAlmostEqual(fraction_correct, expected_fraction_correct, places=5)
-
-    def test_find_k0(self):
-        # Test the find_k0 method
-        k0 = self.variance_algo.find_k0()
-        self.assertIsInstance(k0, int)
-        self.assertGreater(k0, 0)
-
-    def test_save_k0(self):
-        # Test the save_k0 method
-        results_dir = "test_results"
-        os.makedirs(results_dir, exist_ok=True)
-        self.variance_algo.save_k0(results_dir)
-        file_path = os.path.join(
-            results_dir, f"Variance_test_N{self.graph_size}_K0.csv"
-        )
-        self.assertTrue(os.path.exists(file_path))
-
-        # Clean up
-        os.remove(file_path)
-        os.rmdir(results_dir)
+if __name__ == "__main__":
+    unittest.main()

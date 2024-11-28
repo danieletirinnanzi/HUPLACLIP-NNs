@@ -2,8 +2,8 @@
 
 #SBATCH --nodes=1
 #SBATCH --time=23:55:00
-#SBATCH --ntasks=4
-#SBATCH --cpus-per-task=2
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
 #SBATCH --gres=gpu:4
 #SBATCH --mem=128G
 #SBATCH --account=Sis24_piasini       # account name
@@ -19,4 +19,4 @@ source $HOME/virtualenvs/dl/bin/activate
 cd $HOME/HUPLACLIP-NNs/
 # cd $SLURM_SUBMIT_DIR
 
-srun --unbuffered time python main.py
+torchrun --unbuffered time --standalone --nproc_per_node=1 main.py

@@ -1,5 +1,7 @@
 import datetime
 import os
+import unittest
+import sys
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import torch.multiprocessing as mp
@@ -30,19 +32,46 @@ from src.tensorboard_save import tensorboard_save_images
 from src.variance_test import Variance_algo
 
 
-def full_exp(rank, world_size):
-    # running all tests before running the experiment:
-    # TODO: adapt tests to multi-GPU setup
-    # run_all_tests()
+# loading experiment configuration file:
+config = load_config(
+    os.path.join("docs", "grid_exp_config.yml")
+)  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
+
+# Defining tests:
+def tests(rank, world_size):
+
+    print(f"Running tests on rank {rank}.")
+    setup_DDP(rank, world_size)    
+
+    # Define the directory where test files are located
+    test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tests")
+
+    # Discover and run all tests in the `tests` directory
+    test_loader = unittest.TestLoader()
+    test_suite = test_loader.discover(start_dir=test_dir, pattern="test_*.py")
+    test_runner = unittest.TextTestRunner(verbosity=2)
+
+    # Run the tests and capture the result
+    result = test_runner.run(test_suite)
+
+    # Waiting for all processes to terminate
+    torch.distributed.barrier()    
+
+    # Stop the main script if tests fail
+    if not result.wasSuccessful():
+        print("Some tests failed. Aborting experiment.")
+        sys.exit(1)  # Exit with error code if tests failed
+    else:
+        print("All tests passed. Proceeding with the experiment.")
     
+    # DDP setup: cleanup after all tests have completed
+    cleanup_DDP()
+
+# Defining full experiment:
+def full_exp(rank, world_size):
     
     print(f"Running full experiment on rank {rank}.")
-    setup_DDP(rank, world_size)
-    
-    # loading experiment configuration file:
-    config = load_config(
-        os.path.join("docs", "grid_exp_config.yml")
-    )  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
+    setup_DDP(rank, world_size)    
 
     # storing starting time of the experiment in string format:
     start_time = datetime.datetime.now()
@@ -147,8 +176,14 @@ def full_exp(rank, world_size):
             torch.distributed.barrier()
             # - configuring map location:
             map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
+
             # - loading the model:
-            model.load_state_dict(torch.load(file_path), map_location=map_location, weights_only=True)
+            state_dict = torch.load(file_path, map_location=map_location)
+            model.load_state_dict(state_dict)            
+            
+            # PREVIOUS CODE:
+            # model.load_state_dict(torch.load(file_path), map_location=map_location, weights_only=True)
+            
             # - putting the model in evaluation mode before starting training:
             model.eval()
 
@@ -163,7 +198,9 @@ def full_exp(rank, world_size):
                 world_size,
                 rank,                
             )
-
+            # - making sure processes are synchronized on all devices
+            torch.distributed.barrier()
+            
             # saving test results as csv file
             if rank == 0:
                 save_test_results(
@@ -175,23 +212,6 @@ def full_exp(rank, world_size):
                 )
 
             # TODO: implement GradCAM for CNN model + Attention Visualization for ViT model (otherwise performed on saved model after training is completed)
-            # # when possible, saving the features extracted by the model:
-            # if model_specs["model_name"] in [
-            #     "CNN_small_1",
-            #     "CNN_small_2",
-            #     "CNN_medium_1",
-            #     "CNN_medium_2",
-            #     "CNN_large_1",
-            #     "CNN_large_2",
-            # ]:
-            #     save_features(
-            #         model,
-            #         model_specs["model_name"],
-            #         graph_size,
-            #         config["p_correction_type"],
-            #         model_results_dir,
-            #         device,
-            #     )
 
             # deleting model from device to free up memory:
             del model
@@ -237,9 +257,9 @@ def full_exp(rank, world_size):
     # DDP setup: cleanup after all processes have completed
     cleanup_DDP()
 
-
-def run_full_exp(exp_fun, world_size):
-    mp.spawn(exp_fun,
+# Run function
+def run_section(section_fun, world_size):
+    mp.spawn(section_fun,
              args=(world_size,),
              nprocs=world_size,
              join=True)
@@ -250,4 +270,10 @@ if __name__=="__main__":
     n_gpus = torch.cuda.device_count()
     assert n_gpus >= 2, f"Requires at least 2 GPUs to run, but got {n_gpus}"
     world_size = n_gpus
-    run_full_exp(full_exp, world_size)
+    
+    # Running tests:
+    run_section(tests, world_size)
+    
+    # Runnning full experiment:
+    run_section(full_exp, world_size)
+    

@@ -290,10 +290,10 @@ def train_model(
             # Backward pass
             train_loss.backward()   # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
             optim.step()
-            optim.zero_grad(set_to_none=True)
+            optim.zero_grad(set_to_none=True)        
 
             # Free up memory for training data
-            del train_data
+            # del train_data
             torch.cuda.empty_cache()
             
             # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:            
@@ -307,12 +307,13 @@ def train_model(
 
                     # Increasing saved_steps counter: this will be the x axis of the tensorboard plots
                     saved_steps += 1
-                    
+                            
                     # Aggregating training loss across GPUs:
                     train_loss_tensor = torch.tensor(train_loss.item(), device=rank)
                     torch.distributed.all_reduce(train_loss_tensor, op=torch.distributed.ReduceOp.SUM)
                     if rank == 0:
-                        global_train_loss = train_loss_tensor.item() / training_parameters["num_train"]                 
+                        global_train_loss = train_loss_tensor.item() / world_size                 
+                        
                         # CREATING TENSORBOARD DICTIONARIES:
                         # - creating dictionary to store training, standard validation and mean validation losses
                         train_val_dict = {
@@ -617,9 +618,9 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         # - aggregate fraction correct across GPUs
         torch.distributed.all_reduce(total_fraction_correct, op=torch.distributed.ReduceOp.SUM)
         total_fraction_correct /= world_size
-           
+        
         # Store aggregated results (only rank 0 updates dictionary)
-        if rank == 0:
+        if rank == 0:        
             fraction_correct_results[current_clique_size] = round(total_fraction_correct.item(), 2)
             print(
                 f"||| Completed testing for clique = {current_clique_size}. "

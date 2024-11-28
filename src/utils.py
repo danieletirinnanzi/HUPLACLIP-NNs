@@ -55,14 +55,10 @@ def load_model(model_specs, graph_size, rank):
             model = ViT_pretrained(graph_size).to(rank)
         case _:
             raise ValueError("Model not found")
-
-    print(f"loading {model_name} model on rank: {rank}")
-    
-    print(model)
-    
+        
     ddp_model = DDP(model, device_ids=[rank])
     
-    print(f"successfully loaded {model_name} model on rank: {rank}")
+    print(f"Successfully loaded {model_name} model on rank: {rank}")
     
     return ddp_model
 

@@ -1,13 +1,16 @@
 STANDARD JOB (adjust time):
-salloc --nodes=1 --gres=gpu:4 --mem=128G --ntasks=4 --cpus-per-task=2 -A Sis24_piasini -p boost_usr_prod --time=01:00:00
+salloc --nodes=1 --gres=gpu:4 --mem=128G --ntasks=4 --cpus-per-task=32 -A Sis24_piasini -p boost_usr_prod --time=01:00:00
+torchrun --standalone --nproc_per_node=4 main.py
 
-DBG (2GPUs, less resources, higher priority):
-salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=1 --cpus-per-task=1 -A Sis24_piasini -p boost_usr_prod --qos=boost_qos_dbg
+1 HOUR (2GPUs, 1hour):
+salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=2 --cpus-per-task=16 -A Sis24_piasini -p boost_usr_prod --time=01:00:00
+torchrun --standalone --nproc_per_node=2 DDP_test.py
+torchrun --standalone --nproc_per_node=2 main.py
 
-To run the DBG code locally:
-CUDA_LAUNCH_BLOCKING=1 torchrun --nproc_per_node=1 main.py
-torchrun --standalone --nproc_per_node=1 DDP_test.py
-torchrun --standalone --nproc_per_node=1 main.py
+DBG (2GPUs, 30mins):
+salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=2 --cpus-per-task=16 -A Sis24_piasini -p boost_usr_prod --qos=boost_qos_dbg
+torchrun --standalone --nproc_per_node=2 DDP_test.py
+torchrun --standalone --nproc_per_node=2 main.py
 
-To run job:
+To run SLURM job:
 sbatch grid_exp_jobscript.sh

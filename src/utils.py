@@ -29,36 +29,36 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_specs, graph_size, rank):
+def load_model(model_specs, graph_size, device_id):
     """
     Load and initialize a model based on the provided specifications.
 
     Args:
         model_specs (dict): Model specifications (e.g., name, architecture).
         graph_size (int): Size of the graph input to the model.
-        rank (int): GPU index for DDP.
+        device_id (int): GPU index for DDP.
 
     Returns:
         torch.nn.Module: The initialized model.
     """    
     model_name = model_specs["model_name"] 
 
-    # Build the requested model and move it to GPU with id rank
+    # Build the requested model and move it to GPU with id device_id
     match model_name:
         case "MLP":
-            model = MLP(graph_size, model_specs["architecture"]).to(rank)
+            model = MLP(graph_size, model_specs["architecture"]).to(device_id)
         case "CNN_large":
-            model = CNN(graph_size, model_specs["architecture"]).to(rank)
+            model = CNN(graph_size, model_specs["architecture"]).to(device_id)
         case "ViTscratch":
-            model = ViT_scratch(graph_size).to(rank)
+            model = ViT_scratch(graph_size).to(device_id)
         case "ViTpretrained":
-            model = ViT_pretrained(graph_size).to(rank)
+            model = ViT_pretrained(graph_size).to(device_id)
         case _:
             raise ValueError("Model not found")
         
-    ddp_model = DDP(model, device_ids=[rank])
+    ddp_model = DDP(model, device_ids=[device_id])
     
-    print(f"Successfully loaded {model_name} model on rank: {rank}")
+    print(f"Successfully loaded {model_name} model on device_id: {device_id}")
     
     return ddp_model
 

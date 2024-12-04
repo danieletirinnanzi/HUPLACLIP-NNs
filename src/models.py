@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torchvision.models as models
+from torch.nn import SyncBatchNorm
 
 # custom import:
 from src.input_transforms import find_patch_size
@@ -14,28 +14,27 @@ class MLP(nn.Module):
         super().__init__()
         self.graph_size = graph_size
         self.architecture_specs = architecture_specs
-
         # Define the model architecture
         self.model = nn.Sequential(
             # Flatten layer
             nn.Flatten(),
             # First linear layer
             nn.Linear(graph_size * graph_size, architecture_specs["l1"]),
-            nn.BatchNorm1d(architecture_specs["l1"]),
+            SyncBatchNorm(architecture_specs["l1"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Second linear layer
             nn.Linear(architecture_specs["l1"], architecture_specs["l2"]),
-            nn.BatchNorm1d(architecture_specs["l2"]),
+            SyncBatchNorm(architecture_specs["l2"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Third linear layer
             nn.Linear(architecture_specs["l2"], architecture_specs["l3"]),
-            nn.BatchNorm1d(architecture_specs["l3"]),
+            SyncBatchNorm(architecture_specs["l3"]),
             nn.ReLU(),
             # Fourth linear layer
             nn.Linear(architecture_specs["l3"], architecture_specs["l4"]),
-            nn.BatchNorm1d(architecture_specs["l4"]),
+            SyncBatchNorm(architecture_specs["l4"]),
             nn.ReLU(),
             nn.Dropout(architecture_specs["dropout_prob"]),
             # Output layer

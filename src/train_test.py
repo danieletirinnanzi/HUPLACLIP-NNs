@@ -110,7 +110,8 @@ def train_model(
     model_name,
     results_dir,
     world_size,
-    rank
+    rank,
+    device_id
 ):
     """
     Trains a model using the specified hyperparameters, saving it as training progresses.
@@ -139,8 +140,9 @@ def train_model(
         writer: The Tensorboard writer.
         model_name (str): The name of the model.
         results_dir (str): The directory where the best model will be saved.
-        world_size (int): Integer indicating the number of GPUs used for training.
-        rank: (int): The rank of the GPU that is currently being used
+        world_size (int): Integer indicating the number of processes.
+        rank: (int): The rank of the process.
+        device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).
         
     Raises:
         ValueError: If the model is not provided, training_parameters is not a dictionary,
@@ -279,8 +281,8 @@ def train_model(
 
             # Partition data for the current rank
             train_data = (
-                torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(rank),
-                torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(rank),
+                torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(device_id),
+                torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(device_id),
             )
 
             # Forward pass on training data
@@ -309,7 +311,7 @@ def train_model(
                     saved_steps += 1
                             
                     # Aggregating training loss across GPUs:
-                    train_loss_tensor = torch.tensor(train_loss.item(), device=rank)
+                    train_loss_tensor = torch.tensor(train_loss.item(), device=device_id)
                     torch.distributed.all_reduce(train_loss_tensor, op=torch.distributed.ReduceOp.SUM)
                     if rank == 0:
                         global_train_loss = train_loss_tensor.item() / world_size                 
@@ -344,8 +346,8 @@ def train_model(
          
                     # Partition data for the current rank
                     stdval_data = (
-                        torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(rank),
-                        torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(rank),
+                        torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(device_id),
+                        torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(device_id),
                     )        
 
                     # Compute loss on standard validation set:
@@ -353,7 +355,7 @@ def train_model(
                     stdval_loss = criterion(stdval_pred.type(torch.float),torch.Tensor(stdval_data[1]).type(torch.float))
 
                     # Aggregate validation loss across GPUs:
-                    stdval_loss_tensor = torch.tensor(stdval_loss.item(), device=rank)
+                    stdval_loss_tensor = torch.tensor(stdval_loss.item(), device=device_id)
                     torch.distributed.all_reduce(stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM) 
                     global_stdval_loss = stdval_loss_tensor.item() / world_size
                     # Check early stopping condition:
@@ -386,8 +388,8 @@ def train_model(
                         )
                         # Partition data for the current rank                        
                         val_data = (
-                            torch.Tensor(full_val_data[0][start_idx_val:end_idx_val]).to(rank),
-                            torch.Tensor(full_val_data[1][start_idx_val:end_idx_val]).to(rank),
+                            torch.Tensor(full_val_data[0][start_idx_val:end_idx_val]).to(device_id),
+                            torch.Tensor(full_val_data[1][start_idx_val:end_idx_val]).to(device_id),
                         )                        
                         # Compute loss on validation set:
                         val_pred = model(val_data[0]).squeeze()
@@ -398,7 +400,7 @@ def train_model(
                         )
                         
                         # Aggregate the validation loss across GPUs 
-                        val_loss_tensor = torch.tensor(val_loss.item(), device=rank)
+                        val_loss_tensor = torch.tensor(val_loss.item(), device=device_id)
                         torch.distributed.all_reduce(val_loss_tensor, op=torch.distributed.ReduceOp.SUM)                        
 
                         # updating dictionary with validation losses for all task versions:
@@ -501,7 +503,7 @@ def train_model(
 
 
 # TESTING FUNCTION:
-def test_model(model, testing_parameters, graph_size, p_correction_type, model_name, world_size, rank):
+def test_model(model, testing_parameters, graph_size, p_correction_type, model_name, world_size, rank, device_id):
     """
     Test the given model.
 
@@ -511,8 +513,9 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         graph_size (int): The size of the graph.
         p_correction_type (str): The type of p-correction.
         model_name (str): The name of the model.
-        world_size (int): Integer indicating the number of GPUs used for training.
-        rank: (int): The rank of the GPU that is currently being used        
+        world_size (int): Integer indicating the number of processes.
+        rank: (int): The rank of the process.
+        device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).    
 
     Returns:
         tuple: A tuple containing two dictionaries:
@@ -581,8 +584,8 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
 
             # Partition data for the current rank
             test_data = (
-                torch.Tensor(full_test_data[0][start_idx_test:end_idx_test]).to(rank),
-                torch.Tensor(full_test_data[1][start_idx_test:end_idx_test]).to(rank),
+                torch.Tensor(full_test_data[0][start_idx_test:end_idx_test]).to(device_id),
+                torch.Tensor(full_test_data[1][start_idx_test:end_idx_test]).to(device_id),
             )
             
             # Perform prediction on test data
@@ -613,7 +616,7 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         # - calculate total fraction correct for each rank
         total_fraction_correct = torch.tensor(
             sum(fraction_correct_list) / len(fraction_correct_list),
-            device=rank,
+            device=device_id,
         )     
         # - aggregate fraction correct across GPUs
         torch.distributed.all_reduce(total_fraction_correct, op=torch.distributed.ReduceOp.SUM)
@@ -629,10 +632,10 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
             print("|||===========================================================")
 
     # - retrieve TP, FP, TN and FN from each GPU
-    TP = torch.tensor(TP, device=rank)
-    FP = torch.tensor(FP, device=rank)
-    TN = torch.tensor(TN, device=rank)
-    FN = torch.tensor(FN, device=rank)
+    TP = torch.tensor(TP, device=device_id)
+    FP = torch.tensor(FP, device=device_id)
+    TN = torch.tensor(TN, device=device_id)
+    FN = torch.tensor(FN, device=device_id)
     # - aggregate across GPUs
     torch.distributed.all_reduce(TP, op=torch.distributed.ReduceOp.SUM)
     torch.distributed.all_reduce(FP, op=torch.distributed.ReduceOp.SUM)

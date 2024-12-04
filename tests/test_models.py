@@ -10,7 +10,7 @@ configfile_path = os.path.join(
     os.path.dirname(__file__),
     "..",
     "docs",
-    "grid_exp_config.yml",
+    "cnn_exp_config.yml",
 )
 configfile = load_config(configfile_path)
 
@@ -19,7 +19,7 @@ graph_size = configfile["graph_size_values"][-1]
 
 class ModelTest(unittest.TestCase):
 
-    def generate_and_predict(self, model, model_name, rank):
+    def generate_and_predict(self, model, model_name, device_id):
         """Helper to generate graphs and check predictions."""
         clique_size = int(
             graph_size
@@ -33,7 +33,7 @@ class ModelTest(unittest.TestCase):
             [clique_size, clique_size],
             configfile["p_correction_type"],
             input_magnification,
-        )[0].to(rank)
+        )[0].to(device_id)
         # Model inference
         prediction = model(graphs).squeeze()
         self.assertEqual(
@@ -59,7 +59,7 @@ class ModelTest(unittest.TestCase):
                     self.assertFalse(param.requires_grad)        
         del graphs
 
-    def trainability_check(self, model, model_name, rank, world_size):
+    def trainability_check(self, model, model_name, world_size, rank, device_id):
         """Test model's ability to perform a forward/backward pass splitting the data across GPUs like during training."""
 
         input_magnification = True if "CNN" in model_name else False        
@@ -95,8 +95,8 @@ class ModelTest(unittest.TestCase):
 
         # Partition data for the current rank
         split_data = (
-            torch.Tensor(full_data[0][start_idx_train:end_idx_train]).to(rank),
-            torch.Tensor(full_data[1][start_idx_train:end_idx_train]).to(rank),
+            torch.Tensor(full_data[0][start_idx_train:end_idx_train]).to(device_id),
+            torch.Tensor(full_data[1][start_idx_train:end_idx_train]).to(device_id),
         )
 
         # Forward pass on training data
@@ -108,9 +108,9 @@ class ModelTest(unittest.TestCase):
         optimizer.step()
 
         # Making sure batches are correctly split across GPUs
-        print(f"{model_name} Trainability test: Rank {rank} is processing {split_data[0].shape[0]} graphs.")
+        print(f"{model_name} Trainability test: GPU {device_id} is processing {split_data[0].shape[0]} graphs.")
         print(f"{model_name} Trainability test: The full batch contains {full_data[0].shape[0]} graphs.")
-        print(f"{model_name} Trainability test: Training loss on rank {rank} is {train_loss}.")            
+        print(f"{model_name} Trainability test: Training loss on GPU {device_id} is {train_loss}.")            
 
         # Aggregating training loss across GPUs:
         train_loss_tensor = torch.tensor(train_loss.item(), device=rank)
@@ -119,7 +119,7 @@ class ModelTest(unittest.TestCase):
             global_train_loss = train_loss_tensor.item() / world_size                
             
             # DEBUG
-            print(f"{model_name} Trainability test: Global training loss averaged across ranks is {global_train_loss}.")                        
+            print(f"{model_name} Trainability test: Global training loss averaged across GPUs is {global_train_loss}.")                        
                         
         del full_data, split_data, train_pred
 
@@ -155,20 +155,25 @@ def generate_ddp_tests():
         model_name = model_specs["model_name"]
 
         def test_case(self):
-            rank = int(os.environ["LOCAL_RANK"])
-            world_size = torch.cuda.device_count()
+            
+            # DDP:
+            rank = torch.distributed.get_rank() # identifies processes (in this context, one process per GPU)
+            device_id = rank % torch.cuda.device_count()
+            print(f"Running tests on device id: {device_id}.")    
+            world_size = torch.cuda.device_count() 
+            
             try:
                 # Synchronize GPUs 
                 torch.distributed.barrier()
                 # Load model
-                model = load_model(model_specs, graph_size, rank)
+                model = load_model(model_specs, graph_size, device_id)
                 # Test prediction (only on rank 0)
                 if rank == 0:
-                    self.generate_and_predict(model, model_name, rank)
+                    self.generate_and_predict(model, model_name, device_id)
                 # Synchronize GPUs
                 torch.distributed.barrier()
                 # Test trainability (across GPUs)
-                self.trainability_check(model, model_name, rank, world_size)
+                self.trainability_check(model, model_name, world_size, rank, device_id)
                 # - making sure processes are synchronized on all devices
                 torch.distributed.barrier()
                 

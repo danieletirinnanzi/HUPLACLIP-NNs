@@ -8,40 +8,28 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 # custom imports
-from src.models import (
-    MLP,
-    CNN,
-    ViT_scratch,
-    ViT_pretrained,
-)
 from src.utils import (
     load_config,
     load_model,
     save_exp_config,
     save_partial_time,
     save_test_results,
-    save_features,
 )
 from src.train_test import (
     train_model,
     test_model,
 )
-from src.distributed_data_parallel import setup_DDP, cleanup_DDP
-from tests.run_tests import run_all_tests
 from src.tensorboard_save import tensorboard_save_images
 from src.variance_test import Variance_algo
 
 
 # loading experiment configuration file:
 config = load_config(
-    os.path.join("docs", "grid_exp_config.yml")
+    os.path.join("docs", "cnn_exp_config.yml")
 )  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
 
 # Defining tests:
-def tests(rank, world_size):
-
-    print(f"Running tests on rank {rank}.")
-    setup_DDP(rank, world_size)    
+def tests():
 
     # Define the directory where test files are located
     test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tests")
@@ -67,18 +55,16 @@ def tests(rank, world_size):
     # - making sure processes are synchronized on all devices
     torch.distributed.barrier()
     
-    # DDP setup: cleanup after all tests have completed  
-    cleanup_DDP()
 
 # Defining full experiment:
-def full_exp(rank, world_size):
+def full_exp():
     
-    print(f"Running full experiment on rank {rank}.")
-    setup_DDP(rank, world_size)    
-
-    # - making sure processes are synchronized on all devices
-    torch.distributed.barrier()
-
+    # DDP:
+    rank = torch.distributed.get_rank() # identifies processes (in this context, one process per GPU)
+    device_id = rank % torch.cuda.device_count()
+    print(f"Running full experiment on device id: {device_id}.")
+    world_size = torch.cuda.device_count()
+    
     # storing starting time of the experiment in string format:
     start_time = datetime.datetime.now()
     start_time_string = start_time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -144,15 +130,14 @@ def full_exp(rank, world_size):
             )
             if rank == 0:        
                 os.makedirs(model_results_dir)
-
-            # printing model name
-            print(model_specs["model_name"])
-
+                # printing model name
+                print(model_specs["model_name"])
+            
             # loading model:
             model = load_model(
                 model_specs,
                 graph_size,
-                rank,
+                device_id,
             )
 
             # put model in training mode
@@ -170,6 +155,7 @@ def full_exp(rank, world_size):
                 #DDP:
                 world_size,
                 rank,
+                device_id,
             )
 
             # load the best model from the training process on all ranks
@@ -181,7 +167,7 @@ def full_exp(rank, world_size):
             # - making sure processes are synchronized on all devices
             torch.distributed.barrier()
             # - configuring map location:
-            map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
+            map_location = {'cuda:%d' % 0: 'cuda:%d' % device_id}
 
             # - loading the model:
             state_dict = torch.load(file_path, map_location=map_location)
@@ -202,7 +188,8 @@ def full_exp(rank, world_size):
                 model_specs["model_name"],
                 # DDP:
                 world_size,
-                rank,                
+                rank,
+                device_id,                
             )
             # - making sure processes are synchronized on all devices
             torch.distributed.barrier()
@@ -260,26 +247,25 @@ def full_exp(rank, world_size):
             end_time,
         )
 
-    # DDP setup: cleanup after all processes have completed
-    cleanup_DDP()
-
-# Run function
-def run_section(section_fun, world_size):
-    mp.spawn(section_fun,
-             args=(world_size,),
-             nprocs=world_size,
-             join=True)
+    # DDP:
+    torch.distributed.destroy_process_group()
 
 
 # CALLING FUNCTION TO RUN EXPERIMENT:
 if __name__=="__main__":
     n_gpus = torch.cuda.device_count()
     assert n_gpus >= 2, f"Requires at least 2 GPUs to run, but got {n_gpus}"
-    world_size = n_gpus
     
-    # Running tests:
-    run_section(tests, world_size)
+    # DDP (here, using one process per GPU):
+    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+    torch.distributed.init_process_group("nccl")    # process group initialization
+        
+    # running tests:
+    tests()
     
-    # Runnning full experiment:
-    run_section(full_exp, world_size)
+    # running exp:
+    full_exp()
+    
+    # DDP:
+    torch.distributed.destroy_process_group()
     

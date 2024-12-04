@@ -355,7 +355,7 @@ def train_model(
                     # Aggregate validation loss across GPUs:
                     stdval_loss_tensor = torch.tensor(stdval_loss.item(), device=rank)
                     torch.distributed.all_reduce(stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM) 
-                    global_stdval_loss = stdval_loss_tensor.item() / training_parameters["num_val"]
+                    global_stdval_loss = stdval_loss_tensor.item() / world_size
                     # Check early stopping condition:
                     early_stop = early_stopper.should_stop(global_stdval_loss)
                     
@@ -403,7 +403,7 @@ def train_model(
 
                         # updating dictionary with validation losses for all task versions:
                         if rank == 0:
-                            global_val_loss = val_loss_tensor.item() / training_parameters["num_val"]
+                            global_val_loss = val_loss_tensor.item() / world_size
                             complete_val_dict[f"val-loss-{current_clique_size_val}"] = (
                                 global_val_loss
                             )

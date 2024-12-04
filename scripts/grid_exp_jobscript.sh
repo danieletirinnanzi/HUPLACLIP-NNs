@@ -19,4 +19,4 @@ source $HOME/virtualenvs/dl/bin/activate
 cd $HOME/HUPLACLIP-NNs/
 # cd $SLURM_SUBMIT_DIR
 
-torchrun --unbuffered time --standalone --nproc_per_node=1 main.py
+torchrun --standalone --nproc_per_node=1 main.py

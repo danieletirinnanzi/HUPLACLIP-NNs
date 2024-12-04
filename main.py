@@ -64,7 +64,10 @@ def tests(rank, world_size):
     else:
         print("All tests passed. Proceeding with the experiment.")
     
-    # DDP setup: cleanup after all tests have completed
+    # - making sure processes are synchronized on all devices
+    torch.distributed.barrier()
+    
+    # DDP setup: cleanup after all tests have completed  
     cleanup_DDP()
 
 # Defining full experiment:
@@ -72,6 +75,9 @@ def full_exp(rank, world_size):
     
     print(f"Running full experiment on rank {rank}.")
     setup_DDP(rank, world_size)    
+
+    # - making sure processes are synchronized on all devices
+    torch.distributed.barrier()
 
     # storing starting time of the experiment in string format:
     start_time = datetime.datetime.now()

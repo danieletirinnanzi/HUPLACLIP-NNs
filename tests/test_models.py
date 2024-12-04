@@ -169,6 +169,9 @@ def generate_ddp_tests():
                 torch.distributed.barrier()
                 # Test trainability (across GPUs)
                 self.trainability_check(model, model_name, rank, world_size)
+                # - making sure processes are synchronized on all devices
+                torch.distributed.barrier()
+                
                 del model
             finally:
                 torch.cuda.empty_cache()

@@ -13,4 +13,5 @@ torchrun --standalone --nproc_per_node=2 DDP_test.py
 torchrun --standalone --nproc_per_node=2 main.py
 
 To run SLURM job:
-sbatch grid_exp_jobscript.sh
+sbatch cnn_exp_jobscript.sh
+sbatch mlp-vit_exp_jobscript.sh

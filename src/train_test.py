@@ -540,13 +540,12 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         testing_parameters["max_clique_size_proportion_test"] * graph_size
     )
 
-    # Calculate array of clique sizes for all test curriculum:
-    if max_clique_size < testing_parameters["clique_testing_levels"]:
-        # If max clique size is less than the the number of test levels, use max clique size as the number of test levels
-        clique_sizes = (
-            np.linspace(max_clique_size, 1, num=min(max_clique_size, testing_parameters["clique_testing_levels"]))
-            .astype(int)
-        )
+    # Calculate array of clique sizes for all test curriculum
+    # NOTE: if max clique size is smaller than the the number of test levels, use max clique size as the number of test levels
+    clique_sizes = (
+        np.linspace(max_clique_size, 1, num=min(max_clique_size, testing_parameters["clique_testing_levels"]))
+        .astype(int)
+    )
 
     # Metrics initialization (local to each GPU)
     TP, FP, TN, FN = 0, 0, 0, 0

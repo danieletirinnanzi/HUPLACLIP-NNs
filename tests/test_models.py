@@ -1,6 +1,8 @@
 import unittest
 import torch
 import os
+import datetime
+
 from torch.nn.parallel import DistributedDataParallel as DDP
 from src.utils import load_model, load_config
 import src.graphs_generation as gen_graphs
@@ -26,7 +28,7 @@ class ModelTest(unittest.TestCase):
             * (configfile["training_parameters"]["max_clique_size_proportion"])
         )
         input_magnification = True if "CNN" in model_name else False
-        # Generate local batch (2 graphs on each GPU)
+        # Generate local batch (2 graphs)
         graphs = gen_graphs.generate_batch(
             2,
             graph_size,
@@ -71,16 +73,7 @@ class ModelTest(unittest.TestCase):
         clique_size = int(
             graph_size
             * (configfile["training_parameters"]["max_clique_size_proportion"])
-        )        
-
-        # Generating training data (full batch)
-        full_data = gen_graphs.generate_batch(
-            configfile["training_parameters"]["num_train"],
-            graph_size,
-            [clique_size] * configfile["training_parameters"]["num_train"],
-            configfile["p_correction_type"],
-            input_magnification,
-        )
+        )       
         
         # Split training data across GPUs, checking divisibility of batch size by world size
         if configfile["training_parameters"]["num_train"] % world_size != 0:
@@ -91,34 +84,55 @@ class ModelTest(unittest.TestCase):
         # If no errors, proceed with splitting            
         local_batch_size = configfile["training_parameters"]["num_train"] // world_size
         start_idx_train = rank * local_batch_size
-        end_idx_train = (rank + 1) * local_batch_size            
+        end_idx_train = (rank + 1) * local_batch_size          
+
+        # Generating training data on CPU (full batch)
+        full_data = gen_graphs.generate_batch(
+            configfile["training_parameters"]["num_train"],
+            graph_size,
+            [clique_size] * configfile["training_parameters"]["num_train"],
+            configfile["p_correction_type"],
+            input_magnification,
+        )           
 
         # Partition data for the current rank
         split_data = (
             torch.Tensor(full_data[0][start_idx_train:end_idx_train]).to(device_id),
             torch.Tensor(full_data[1][start_idx_train:end_idx_train]).to(device_id),
         )
+        
+        # Barrier to ensure all processes reach this point
+        torch.distributed.barrier()
+        print(f"Trainability test, rank {rank}: Data partitioned and moved to device {device_id} at {datetime.datetime.now()}")        
 
         # Forward pass on training data
         train_pred = model(split_data[0]).squeeze()
         train_loss = criterion(train_pred.type(torch.float), torch.Tensor(split_data[1]).type(torch.float))            
 
+        # Synchronize before backward pass
+        torch.distributed.barrier()
+        print(f"Trainability test, rank {rank}: Forward pass completed on {device_id} at {datetime.datetime.now()}")
+
         # Backward pass
         train_loss.backward()   # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
         optimizer.step()
+        
+        # Synchronize after backward pass
+        torch.distributed.barrier()
+        print(f"Trainability test, rank {rank}: Backward pass and optimizer step completed on {device_id} at {datetime.datetime.now()}")        
 
         # Making sure batches are correctly split across GPUs
-        print(f"{model_name} Trainability test: GPU {device_id} is processing {split_data[0].shape[0]} graphs.")
-        print(f"{model_name} Trainability test: The full batch contains {full_data[0].shape[0]} graphs.")
-        print(f"{model_name} Trainability test: Training loss on GPU {device_id} is {train_loss}.")            
+        print(f"{model_name} Trainability test, rank {rank}: GPU {device_id} is processing {split_data[0].shape[0]} graphs.")
+        print(f"{model_name} Trainability test, rank {rank}: The full batch contains {full_data[0].shape[0]} graphs.")
+        # Making sure global loss is computed correctly:
+        print(f"{model_name} Trainability test, rank {rank}: Training loss on GPU {device_id} is {train_loss}.")            
 
-        # Aggregating training loss across GPUs:
-        train_loss_tensor = torch.tensor(train_loss.item(), device=rank)
+        # Aggregating training loss across GPUs to make sure it is computed correctly:
+        train_loss_tensor = torch.tensor(train_loss.item(), device=device_id)
         torch.distributed.all_reduce(train_loss_tensor, op=torch.distributed.ReduceOp.SUM)        
         if rank == 0:
             global_train_loss = train_loss_tensor.item() / world_size                
             
-            # DEBUG
             print(f"{model_name} Trainability test: Global training loss averaged across GPUs is {global_train_loss}.")                        
                         
         del full_data, split_data, train_pred
@@ -163,21 +177,31 @@ def generate_ddp_tests():
             world_size = torch.cuda.device_count() 
             
             try:
-                # Synchronize GPUs 
-                torch.distributed.barrier()
                 # Load model
                 model = load_model(model_specs, graph_size, device_id)
+                # Synchronize after model loading
+                print(f"Rank {rank}: Before model load barrier")
+                torch.distributed.barrier()
+                print(f"Rank {rank}: After model load barrier")
+
                 # Test prediction (only on rank 0)
                 if rank == 0:
                     self.generate_and_predict(model, model_name, device_id)
-                # Synchronize GPUs
+                    print(f"Tested simple prediction (2 graphs) on rank {rank} at {datetime.datetime.now()}.")
+                # Synchronize GPUs after prediction testing
+                print(f"Rank {rank}: Before prediction test barrier")
                 torch.distributed.barrier()
+                print(f"Rank {rank}: After prediction test barrier")
+
                 # Test trainability (across GPUs)
                 self.trainability_check(model, model_name, world_size, rank, device_id)
-                # - making sure processes are synchronized on all devices
+                # Synchronize GPUs after trainability testing
+                print(f"Rank {rank}: Before trainability test barrier")
                 torch.distributed.barrier()
-                
+                print(f"Rank {rank}: After trainability test barrier")
+
                 del model
+
             finally:
                 torch.cuda.empty_cache()
 

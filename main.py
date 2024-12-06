@@ -22,6 +22,11 @@ from src.train_test import (
 from src.tensorboard_save import tensorboard_save_images
 from src.variance_test import Variance_algo
 
+# NCCL settings (changed for better handling of synchronization errors)
+os.environ["NCCL_DEBUG"] = "INFO"   # general information
+os.environ["NCCL_ASYNC_ERROR_HANDLING"] = "1"   # enable asynchronous error handling
+os.environ["NCCL_BLOCKING_WAIT"] = "1"  # enable blocking behavior
+os.environ["NCCL_TIMEOUT"] = "900"  # time in seconds (15 minutes)
 
 # loading experiment configuration file:
 config = load_config(
@@ -40,10 +45,7 @@ def tests():
     test_runner = unittest.TextTestRunner(verbosity=2)
 
     # Run the tests and capture the result
-    result = test_runner.run(test_suite)
-
-    # Waiting for all processes to terminate
-    torch.distributed.barrier()    
+    result = test_runner.run(test_suite)   
 
     # Stop the main script if tests fail
     if not result.wasSuccessful():
@@ -52,7 +54,7 @@ def tests():
     else:
         print("All tests passed. Proceeding with the experiment.")
     
-    # - making sure processes are synchronized on all devices
+    # - making sure processes are synchronized on all devices before moving on
     torch.distributed.barrier()
     
 
@@ -259,7 +261,7 @@ if __name__=="__main__":
     # DDP (here, using one process per GPU):
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
     torch.distributed.init_process_group("nccl")    # process group initialization
-        
+    
     # running tests:
     tests()
     

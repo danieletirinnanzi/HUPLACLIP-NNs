@@ -175,9 +175,6 @@ def full_exp():
             state_dict = torch.load(file_path, map_location=map_location)
             model.load_state_dict(state_dict)            
             
-            # PREVIOUS CODE:
-            # model.load_state_dict(torch.load(file_path), map_location=map_location, weights_only=True)
-            
             # - putting the model in evaluation mode before starting training:
             model.eval()
 
@@ -212,18 +209,18 @@ def full_exp():
             del model
             torch.cuda.empty_cache()
 
-        # At the end of each graph size value, test algorithm based on the variance of the average connectivity. Only performing on rank 0, since no heavy computation is performed:
+        # # At the end of each graph size value, test algorithm based on the variance of the average connectivity. Only performing on rank 0, since no heavy computation is performed:
         if rank == 0:
-            # - creating model subfolder in current graph size folder:
-            variance_algo_results_dir = os.path.join(
-                graph_size_results_dir,
-                "Variance_test",
-            )
-            os.makedirs(variance_algo_results_dir)
+        #     # - creating model subfolder in current graph size folder:
+        #     variance_algo_results_dir = os.path.join(
+        #         graph_size_results_dir,
+        #         "Variance_test",
+        #     )
+        #     os.makedirs(variance_algo_results_dir)
 
-            # - adding variance algorithm to set of models tested:
-            variance_algo = Variance_algo(config, graph_size)
-            variance_algo.save_k0(variance_algo_results_dir)
+        #     # - adding variance algorithm to set of models tested:
+        #     variance_algo = Variance_algo(config, graph_size)
+        #     variance_algo.save_k0(variance_algo_results_dir)
 
             # Saving .yml file with time elapsed from the start of the experiment (to calculate the time needed for each graph size value):
             current_time = datetime.datetime.now()
@@ -248,9 +245,6 @@ def full_exp():
             start_time,
             end_time,
         )
-
-    # DDP:
-    torch.distributed.destroy_process_group()
 
 
 # CALLING FUNCTION TO RUN EXPERIMENT:

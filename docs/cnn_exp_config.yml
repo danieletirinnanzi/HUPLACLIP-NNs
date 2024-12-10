@@ -1,7 +1,7 @@
 exp_name: cnn_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  - 100
+  # - 100
   - 150
   - 200
   - 300

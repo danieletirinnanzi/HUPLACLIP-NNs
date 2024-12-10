@@ -184,10 +184,9 @@ def generate_ddp_tests():
                 torch.distributed.barrier()
                 print(f"Rank {rank}: After model load barrier")
 
-                # Test prediction (only on rank 0)
-                if rank == 0:
-                    self.generate_and_predict(model, model_name, device_id)
-                    print(f"Tested simple prediction (2 graphs) on rank {rank} at {datetime.datetime.now()}.")
+                # Test prediction
+                self.generate_and_predict(model, model_name, device_id)
+                print(f"Tested simple prediction (2 graphs) on rank {rank} at {datetime.datetime.now()}.")
                 # Synchronize GPUs after prediction testing
                 print(f"Rank {rank}: Before prediction test barrier")
                 torch.distributed.barrier()

@@ -23,8 +23,8 @@ from src.tensorboard_save import tensorboard_save_images
 from src.variance_test import Variance_algo
 
 # NCCL settings (changed for better handling of synchronization errors)
-os.environ["NCCL_DEBUG"] = "INFO"   # general information
-os.environ["NCCL_ASYNC_ERROR_HANDLING"] = "1"   # enable asynchronous error handling
+os.environ["NCCL_DEBUG"] = "INFO"  # general information
+os.environ["NCCL_ASYNC_ERROR_HANDLING"] = "1"  # enable asynchronous error handling
 os.environ["NCCL_BLOCKING_WAIT"] = "1"  # enable blocking behavior
 os.environ["NCCL_TIMEOUT"] = "900"  # time in seconds (15 minutes)
 
@@ -32,6 +32,7 @@ os.environ["NCCL_TIMEOUT"] = "900"  # time in seconds (15 minutes)
 config = load_config(
     os.path.join("docs", "cnn_exp_config.yml")
 )  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
+
 
 # Defining tests:
 def tests():
@@ -45,7 +46,7 @@ def tests():
     test_runner = unittest.TextTestRunner(verbosity=2)
 
     # Run the tests and capture the result
-    result = test_runner.run(test_suite)   
+    result = test_runner.run(test_suite)
 
     # Stop the main script if tests fail
     if not result.wasSuccessful():
@@ -53,20 +54,22 @@ def tests():
         sys.exit(1)  # Exit with error code if tests failed
     else:
         print("All tests passed. Proceeding with the experiment.")
-    
+
     # - making sure processes are synchronized on all devices before moving on
     torch.distributed.barrier()
-    
+
 
 # Defining full experiment:
 def full_exp():
-    
+
     # DDP:
-    rank = torch.distributed.get_rank() # identifies processes (in this context, one process per GPU)
+    rank = (
+        torch.distributed.get_rank()
+    )  # identifies processes (in this context, one process per GPU)
     device_id = rank % torch.cuda.device_count()
     print(f"Running full experiment on device id: {device_id}.")
     world_size = torch.cuda.device_count()
-    
+
     # storing starting time of the experiment in string format:
     start_time = datetime.datetime.now()
     start_time_string = start_time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -83,10 +86,10 @@ def full_exp():
         "results",
         "data",
         exp_name_with_time,
-    ) 
+    )
     if rank == 0:
         os.makedirs(experiment_results_dir)
-        
+
     # creating experiment folder in "runs" folder
     experiment_runs_dir = os.path.join(
         current_dir,
@@ -98,7 +101,7 @@ def full_exp():
     for graph_size in config["graph_size_values"]:
 
         # printing separation line and graph size
-        if rank == 0:   
+        if rank == 0:
             print("-----------------------------------")
             print(f" GRAPH SIZE: {graph_size}")
 
@@ -118,7 +121,7 @@ def full_exp():
 
         # inside experiment results folder, create a new directory for each graph size value:
         graph_size_results_dir = os.path.join(experiment_results_dir, f"N{graph_size}")
-        
+
         if rank == 0:
             os.makedirs(graph_size_results_dir)
 
@@ -130,11 +133,11 @@ def full_exp():
                 graph_size_results_dir,
                 model_specs["model_name"],
             )
-            if rank == 0:        
+            if rank == 0:
                 os.makedirs(model_results_dir)
                 # printing model name
                 print(model_specs["model_name"])
-            
+
             # loading model:
             model = load_model(
                 model_specs,
@@ -143,7 +146,7 @@ def full_exp():
             )
 
             # put model in training mode
-            model.train()   
+            model.train()
 
             # training model and visualizing training progression on Tensorboard
             train_model(
@@ -154,7 +157,7 @@ def full_exp():
                 writer,
                 model_specs["model_name"],
                 model_results_dir,
-                #DDP:
+                # DDP:
                 world_size,
                 rank,
                 device_id,
@@ -169,12 +172,12 @@ def full_exp():
             # - making sure processes are synchronized on all devices
             torch.distributed.barrier()
             # - configuring map location:
-            map_location = {'cuda:%d' % 0: 'cuda:%d' % device_id}
+            map_location = {"cuda:%d" % 0: "cuda:%d" % device_id}
 
             # - loading the model:
             state_dict = torch.load(file_path, map_location=map_location)
-            model.load_state_dict(state_dict)            
-            
+            model.load_state_dict(state_dict)
+
             # - putting the model in evaluation mode before starting training:
             model.eval()
 
@@ -188,11 +191,11 @@ def full_exp():
                 # DDP:
                 world_size,
                 rank,
-                device_id,                
+                device_id,
             )
             # - making sure processes are synchronized on all devices
             torch.distributed.barrier()
-            
+
             # saving test results as csv file
             if rank == 0:
                 save_test_results(
@@ -211,16 +214,16 @@ def full_exp():
 
         # # At the end of each graph size value, test algorithm based on the variance of the average connectivity. Only performing on rank 0, since no heavy computation is performed:
         if rank == 0:
-        #     # - creating model subfolder in current graph size folder:
-        #     variance_algo_results_dir = os.path.join(
-        #         graph_size_results_dir,
-        #         "Variance_test",
-        #     )
-        #     os.makedirs(variance_algo_results_dir)
+            #     # - creating model subfolder in current graph size folder:
+            #     variance_algo_results_dir = os.path.join(
+            #         graph_size_results_dir,
+            #         "Variance_test",
+            #     )
+            #     os.makedirs(variance_algo_results_dir)
 
-        #     # - adding variance algorithm to set of models tested:
-        #     variance_algo = Variance_algo(config, graph_size)
-        #     variance_algo.save_k0(variance_algo_results_dir)
+            #     # - adding variance algorithm to set of models tested:
+            #     variance_algo = Variance_algo(config, graph_size)
+            #     variance_algo.save_k0(variance_algo_results_dir)
 
             # Saving .yml file with time elapsed from the start of the experiment (to calculate the time needed for each graph size value):
             current_time = datetime.datetime.now()
@@ -234,7 +237,7 @@ def full_exp():
 
         # synchronizing all processes before moving on with training:
         torch.distributed.barrier()
-    
+
     # saving copy of the configuration file in the experiment folder, adding the time elapsed from the start of the experiment:
     end_time = datetime.datetime.now()
     if rank == 0:
@@ -248,20 +251,19 @@ def full_exp():
 
 
 # CALLING FUNCTION TO RUN EXPERIMENT:
-if __name__=="__main__":
+if __name__ == "__main__":
     n_gpus = torch.cuda.device_count()
     assert n_gpus >= 2, f"Requires at least 2 GPUs to run, but got {n_gpus}"
-    
+
     # DDP (here, using one process per GPU):
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
-    torch.distributed.init_process_group("nccl")    # process group initialization
-    
+    torch.distributed.init_process_group("nccl")  # process group initialization
+
     # running tests:
     tests()
-    
+
     # running exp:
     full_exp()
-    
+
     # DDP:
     torch.distributed.destroy_process_group()
-    

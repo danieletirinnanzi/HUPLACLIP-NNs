@@ -14,6 +14,7 @@ from src.utils import save_model
 
 # TRAINING FUNCTIONS:
 
+
 # CHECKPOINTING
 class Checkpointer:
     """Checkpointer is a simple class to track the minimum validation loss and determine if the model should be saved or not.
@@ -111,7 +112,7 @@ def train_model(
     results_dir,
     world_size,
     rank,
-    device_id
+    device_id,
 ):
     """
     Trains a model using the specified hyperparameters, saving it as training progresses.
@@ -143,7 +144,7 @@ def train_model(
         world_size (int): Integer indicating the number of processes.
         rank: (int): The rank of the process.
         device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).
-        
+
     Raises:
         ValueError: If the model is not provided, training_parameters is not a dictionary,
             graph_size is not a positive integer, p_correction_type is not a string, or writer is not provided.
@@ -267,55 +268,66 @@ def train_model(
                 p_correction_type,
                 input_magnification,
             )
-            
+
             # Split training data across GPUs, checking divisibility of batch size by world size
             if training_parameters["num_train"] % world_size != 0:
                 raise ValueError(
                     f"Batch size of {training_parameters['num_train']} is not evenly divisible by world_size={world_size}. "
                     f"Each rank requires an equal share of the data for DDP. Please adjust 'num_train' to be divisible by {world_size}."
                 )
-            # If no errors, proceed with splitting            
+            # If no errors, proceed with splitting
             local_batch_size_train = training_parameters["num_train"] // world_size
             start_idx_train = rank * local_batch_size_train
-            end_idx_train = (rank + 1) * local_batch_size_train            
+            end_idx_train = (rank + 1) * local_batch_size_train
 
             # Partition data for the current rank
             train_data = (
-                torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(device_id),
-                torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(device_id),
+                torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(
+                    device_id
+                ),
+                torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(
+                    device_id
+                ),
             )
 
             # Forward pass on training data
             train_pred = model(train_data[0]).squeeze()
-            train_loss = criterion(train_pred.type(torch.float), torch.Tensor(train_data[1]).type(torch.float))            
+            train_loss = criterion(
+                train_pred.type(torch.float),
+                torch.Tensor(train_data[1]).type(torch.float),
+            )
 
             # Backward pass
-            train_loss.backward()   # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
+            train_loss.backward()  # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
             optim.step()
-            optim.zero_grad(set_to_none=True)        
+            optim.zero_grad(set_to_none=True)
 
             # Free up memory for training data
             # del train_data
             torch.cuda.empty_cache()
-            
-            # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:            
+
+            # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
             if training_step % training_parameters["save_step"] == 0:
-                
+
                 # Waiting for all processes to finish previous tasks (double check, synchronization happens automatically at each forward and backward passes, and at each optimizer step)
-                torch.distributed.barrier()   
+                torch.distributed.barrier()
                 # Put model in evaluation mode and disable gradient computation
                 model.eval()
                 with torch.no_grad():
 
                     # Increasing saved_steps counter: this will be the x axis of the tensorboard plots
                     saved_steps += 1
-                            
+
                     # Aggregating training loss across GPUs:
-                    train_loss_tensor = torch.tensor(train_loss.item(), device=device_id)
-                    torch.distributed.all_reduce(train_loss_tensor, op=torch.distributed.ReduceOp.SUM)
+                    train_loss_tensor = torch.tensor(
+                        train_loss.item(), device=device_id
+                    )
+                    torch.distributed.all_reduce(
+                        train_loss_tensor, op=torch.distributed.ReduceOp.SUM
+                    )
                     if rank == 0:
-                        global_train_loss = train_loss_tensor.item() / world_size                 
-                        
+                        global_train_loss = train_loss_tensor.item() / world_size
+
                         # CREATING TENSORBOARD DICTIONARIES:
                         # - creating dictionary to store training, standard validation and mean validation losses
                         train_val_dict = {
@@ -338,32 +350,45 @@ def train_model(
                         p_correction_type,
                         input_magnification,
                     )
-                    
+
                     # Split validation data across GPUs:
                     local_batch_size_val = training_parameters["num_val"] // world_size
                     start_idx_val = rank * local_batch_size_val
-                    end_idx_val = (rank + 1) * local_batch_size_val                     
-         
+                    end_idx_val = (rank + 1) * local_batch_size_val
+
                     # Partition data for the current rank
                     stdval_data = (
-                        torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(device_id),
-                        torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(device_id),
-                    )        
+                        torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(
+                            device_id
+                        ),
+                        torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(
+                            device_id
+                        ),
+                    )
 
                     # Compute loss on standard validation set:
                     stdval_pred = model(stdval_data[0]).squeeze()
-                    stdval_loss = criterion(stdval_pred.type(torch.float),torch.Tensor(stdval_data[1]).type(torch.float))
+                    stdval_loss = criterion(
+                        stdval_pred.type(torch.float),
+                        torch.Tensor(stdval_data[1]).type(torch.float),
+                    )
 
                     # Aggregate validation loss across GPUs:
-                    stdval_loss_tensor = torch.tensor(stdval_loss.item(), device=device_id)
-                    torch.distributed.all_reduce(stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM) 
+                    stdval_loss_tensor = torch.tensor(
+                        stdval_loss.item(), device=device_id
+                    )
+                    torch.distributed.all_reduce(
+                        stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM
+                    )
                     global_stdval_loss = stdval_loss_tensor.item() / world_size
                     # Check early stopping condition:
                     early_stop = early_stopper.should_stop(global_stdval_loss)
-                    
-                    if rank == 0:                        
+
+                    if rank == 0:
                         # storing standard validation loss in the training and validation losses dictionary:
-                        train_val_dict[f"stdval-loss-{current_clique_size}"] = global_stdval_loss
+                        train_val_dict[f"stdval-loss-{current_clique_size}"] = (
+                            global_stdval_loss
+                        )
 
                     # Free up memory for validation data
                     del stdval_pred, stdval_data
@@ -386,22 +411,29 @@ def train_model(
                             p_correction_type,
                             input_magnification,
                         )
-                        # Partition data for the current rank                        
+                        # Partition data for the current rank
                         val_data = (
-                            torch.Tensor(full_val_data[0][start_idx_val:end_idx_val]).to(device_id),
-                            torch.Tensor(full_val_data[1][start_idx_val:end_idx_val]).to(device_id),
-                        )                        
+                            torch.Tensor(
+                                full_val_data[0][start_idx_val:end_idx_val]
+                            ).to(device_id),
+                            torch.Tensor(
+                                full_val_data[1][start_idx_val:end_idx_val]
+                            ).to(device_id),
+                        )
                         # Compute loss on validation set:
                         val_pred = model(val_data[0]).squeeze()
                         val_loss = criterion(
                             val_pred.type(torch.float),
-                            torch.Tensor(val_data[1])
-                            .type(torch.float)
+                            torch.Tensor(val_data[1]).type(torch.float),
                         )
-                        
-                        # Aggregate the validation loss across GPUs 
-                        val_loss_tensor = torch.tensor(val_loss.item(), device=device_id)
-                        torch.distributed.all_reduce(val_loss_tensor, op=torch.distributed.ReduceOp.SUM)                        
+
+                        # Aggregate the validation loss across GPUs
+                        val_loss_tensor = torch.tensor(
+                            val_loss.item(), device=device_id
+                        )
+                        torch.distributed.all_reduce(
+                            val_loss_tensor, op=torch.distributed.ReduceOp.SUM
+                        )
 
                         # updating dictionary with validation losses for all task versions:
                         if rank == 0:
@@ -448,7 +480,7 @@ def train_model(
 
             # Check if early stopping condition is met (early stopper is defined only in rank 0)
             if early_stop:
-                if rank==0:
+                if rank == 0:
                     # Print the reason for early stopping
                     if early_stopper.stop_reason == "min_loss":
                         print(
@@ -472,7 +504,7 @@ def train_model(
         # After clique size has finished training (here we are inside the clique size decreasing loop):
 
         # 1. Tensorboard: printing a vertical bar of 4 points in the plot, to separate the different task versions
-        if rank == 0:        
+        if rank == 0:
             # - spacing values for the vertical lines:
             spacing_values = np.arange(0, 1.1, 0.10)
             # - dictionary with scalar values for the vertical lines:
@@ -480,7 +512,7 @@ def train_model(
                 f"vert-line-{round(value,2)}_{current_clique_size}": value
                 for value in spacing_values
             }
-        # - add the scalars to both writers (only from rank 0 process):
+            # - add the scalars to both writers (only from rank 0 process):
             writer.add_scalars(
                 f"{model_name}_train-stdval-meanval-losses", scalar_values, saved_steps
             )
@@ -488,7 +520,7 @@ def train_model(
                 f"{model_name}_validation-losses", scalar_values, saved_steps
             )
 
-        # 2. Printing a message to indicate the end of training for the current task version:
+            # 2. Printing a message to indicate the end of training for the current task version:
             print("||| Completed training for clique = ", current_clique_size)
             print(
                 "||| ================================================================================="
@@ -503,7 +535,16 @@ def train_model(
 
 
 # TESTING FUNCTION:
-def test_model(model, testing_parameters, graph_size, p_correction_type, model_name, world_size, rank, device_id):
+def test_model(
+    model,
+    testing_parameters,
+    graph_size,
+    p_correction_type,
+    model_name,
+    world_size,
+    rank,
+    device_id,
+):
     """
     Test the given model.
 
@@ -515,7 +556,7 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         model_name (str): The name of the model.
         world_size (int): Integer indicating the number of processes.
         rank: (int): The rank of the process.
-        device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).    
+        device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).
 
     Returns:
         tuple: A tuple containing two dictionaries:
@@ -542,10 +583,11 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
 
     # Calculate array of clique sizes for all test curriculum
     # NOTE: if max clique size is smaller than the the number of test levels, use max clique size as the number of test levels
-    clique_sizes = (
-        np.linspace(max_clique_size, 1, num=min(max_clique_size, testing_parameters["clique_testing_levels"]))
-        .astype(int)
-    )
+    clique_sizes = np.linspace(
+        max_clique_size,
+        1,
+        num=min(max_clique_size, testing_parameters["clique_testing_levels"]),
+    ).astype(int)
 
     # Metrics initialization (local to each GPU)
     TP, FP, TN, FN = 0, 0, 0, 0
@@ -579,14 +621,18 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
             # Split test data across GPUs
             local_batch_size_test = testing_parameters["num_test"] // world_size
             start_idx_test = rank * local_batch_size_test
-            end_idx_test = (rank + 1) * local_batch_size_test            
+            end_idx_test = (rank + 1) * local_batch_size_test
 
             # Partition data for the current rank
             test_data = (
-                torch.Tensor(full_test_data[0][start_idx_test:end_idx_test]).to(device_id),
-                torch.Tensor(full_test_data[1][start_idx_test:end_idx_test]).to(device_id),
+                torch.Tensor(full_test_data[0][start_idx_test:end_idx_test]).to(
+                    device_id
+                ),
+                torch.Tensor(full_test_data[1][start_idx_test:end_idx_test]).to(
+                    device_id
+                ),
             )
-            
+
             # Perform prediction on test data
             soft_output = model(test_data[0]).squeeze()
 
@@ -616,14 +662,18 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         total_fraction_correct = torch.tensor(
             sum(fraction_correct_list) / len(fraction_correct_list),
             device=device_id,
-        )     
+        )
         # - aggregate fraction correct across GPUs
-        torch.distributed.all_reduce(total_fraction_correct, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(
+            total_fraction_correct, op=torch.distributed.ReduceOp.SUM
+        )
         total_fraction_correct /= world_size
-        
+
         # Store aggregated results (only rank 0 updates dictionary)
-        if rank == 0:        
-            fraction_correct_results[current_clique_size] = round(total_fraction_correct.item(), 2)
+        if rank == 0:
+            fraction_correct_results[current_clique_size] = round(
+                total_fraction_correct.item(), 2
+            )
             print(
                 f"||| Completed testing for clique = {current_clique_size}. "
                 f"Average fraction correct = {fraction_correct_results[current_clique_size]}"
@@ -647,6 +697,9 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
         recall = TP.item() / (TP.item() + FN.item() + 1e-10)
         F1 = 2 * (precision * recall) / (precision + recall + 1e-10)
         AUC_ROC = roc_auc_score(y_true, y_scores)
+        num_params = sum(
+            p.numel() for p in model.parameters()
+        )  # storing total number of parameters
 
         metrics_results = {
             "TP": TP.item(),
@@ -657,6 +710,7 @@ def test_model(model, testing_parameters, graph_size, p_correction_type, model_n
             "recall": recall,
             "F1": F1,
             "AUC_ROC": AUC_ROC,
+            "total_params": num_params,
         }
 
         # Print final metrics

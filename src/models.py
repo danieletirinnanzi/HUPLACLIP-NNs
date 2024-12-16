@@ -42,7 +42,7 @@ class MLP(nn.Module):
             nn.Sigmoid(),
         )
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         return self.model(x)
 
 
@@ -87,7 +87,7 @@ class CNN(nn.Module):
         self.linear2 = nn.Linear(architecture_specs["l1"], 1)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         x = self.model(x)
         x = self.flatten(x)
         x = self.linear1(x)
@@ -149,7 +149,7 @@ class ViT_scratch(nn.Module):
         # Modify the head for binary classification
         self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         return self.model(x)
 
 
@@ -186,7 +186,7 @@ class ViT_pretrained(nn.Module):
             ):  # add more layers here if needed
                 param.requires_grad = True
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         return self.model(x)
 
 

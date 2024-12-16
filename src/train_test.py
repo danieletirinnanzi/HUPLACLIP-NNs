@@ -700,6 +700,9 @@ def test_model(
         num_params = sum(
             p.numel() for p in model.parameters()
         )  # storing total number of parameters
+        
+        # DEBUG:
+        print(f"Total number of parameters: {num_params}")
 
         metrics_results = {
             "TP": TP.item(),

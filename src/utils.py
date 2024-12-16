@@ -5,6 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torchinfo import summary
 
 # custom imports
 from .models import (
@@ -29,15 +30,18 @@ def load_config(path):
 
 
 # Loading model based on model name:
-def load_model(model_specs, graph_size, device_id):
+def load_model(model_specs, graph_size, batch_size, world_size, rank, device_id):
     """
-    Load and initialize a model based on the provided specifications.
+    Load and initialize a model based on the provided specifications, printing torchinfo's model summary in the console.
 
     Args:
         model_specs (dict): Model specifications (e.g., name, architecture).
         graph_size (int): Size of the graph input to the model.
-        device_id (int): GPU index for DDP.
-
+        batch_size (int): Number of graphs in each batch.
+        world_size (int): Integer indicating the number of processes.
+        rank: (int): The rank of the process.
+        device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).
+     
     Returns:
         torch.nn.Module: The initialized model.
     """    
@@ -57,6 +61,28 @@ def load_model(model_specs, graph_size, device_id):
             raise ValueError("Model not found")
         
     ddp_model = DDP(model, device_ids=[device_id])
+    
+    # Printing model summary on rank 0:
+    if rank == 0:
+        # - input size depends on model type (2400x2400 for CNNs, graph_sizexgraph_size for others)
+        input_size = (
+            (
+                batch_size // world_size,
+                1,
+                2400,
+                2400,
+            )
+            if "CNN" in model_specs["model_name"]
+            else (
+                batch_size // world_size,
+                1,
+                graph_size,
+                graph_size,
+            )
+        )
+        summary(
+            model, input_size=input_size, device_id=rank
+        )        
     
     print(f"Successfully loaded {model_name} model on device_id: {device_id}")
     

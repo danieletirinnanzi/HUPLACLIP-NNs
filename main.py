@@ -22,12 +22,6 @@ from src.train_test import (
 from src.tensorboard_save import tensorboard_save_images
 from src.variance_test import Variance_algo
 
-# NCCL settings (changed for better handling of synchronization errors)
-os.environ["NCCL_DEBUG"] = "INFO"  # general information
-os.environ["NCCL_ASYNC_ERROR_HANDLING"] = "1"  # enable asynchronous error handling
-os.environ["NCCL_BLOCKING_WAIT"] = "1"  # enable blocking behavior
-os.environ["NCCL_TIMEOUT"] = "900"  # time in seconds (15 minutes)
-
 # loading experiment configuration file:
 config = load_config(
     os.path.join("docs", "cnn_exp_config.yml")
@@ -142,8 +136,14 @@ def full_exp():
             model = load_model(
                 model_specs,
                 graph_size,
+                config["training_parameters"]["num_train"], # used for torchinfo summary
+                # DDP:
+                world_size,
+                rank,
                 device_id,
-            )
+            )  
+            # - making sure processes are synchronized on all devices
+            torch.distributed.barrier()                             
 
             # put model in training mode
             model.train()

@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.optim
 import torch.nn as nn
+import datetime
 from sklearn.metrics import roc_auc_score
 
 # defining random generator (used to define the clique size value of each graph in the batch during training)
@@ -529,7 +530,7 @@ def train_model(
     # After all task versions have been trained:
     # - notify completion of training:
     if rank == 0:
-        print(f"| Finished training {model_name}.")
+        print(f"| Finished training {model_name} at {datetime.datetime.now()}.")
     # - close the writer (opened on all GPUs):
     writer.close()
 
@@ -717,6 +718,6 @@ def test_model(
         }
 
         # Print final metrics
-        print(f"| Finished testing {model_name}. Metrics: {metrics_results}")
+        print(f"| Finished testing {model_name} at {datetime.datetime.now()}. Metrics: {metrics_results}")
 
     return fraction_correct_results, metrics_results if rank == 0 else None

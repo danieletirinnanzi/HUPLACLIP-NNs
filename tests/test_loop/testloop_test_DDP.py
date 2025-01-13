@@ -44,7 +44,7 @@ def run_test_only():
             "..",
             "results",
             "data",
-            "cnn_exp_2025-01-09_16-01-51",
+            "cnn_exp_2025-01-12_00-03-44",
             f"N{config['graph_size_values'][0]}",
             model_name,
             f"{model_name}_N{config['graph_size_values'][0]}_trained.pth"

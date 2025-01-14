@@ -48,17 +48,16 @@ def load_model(model_specs, graph_size, batch_size, world_size, rank, device_id)
     model_name = model_specs["model_name"] 
 
     # Build the requested model and move it to GPU with id device_id
-    match model_name:
-        case "MLP":
-            model = MLP(graph_size, model_specs["architecture"]).to(device_id)
-        case "CNN_large":
-            model = CNN(graph_size, model_specs["architecture"]).to(device_id)
-        case "ViTscratch":
-            model = ViT_scratch(graph_size).to(device_id)
-        case "ViTpretrained":
-            model = ViT_pretrained(graph_size).to(device_id)
-        case _:
-            raise ValueError("Model not found")
+    if "MLP" in model_name:
+        model = MLP(graph_size, model_specs["architecture"]).to(device_id)
+    elif "CNN" in model_name:
+        model = CNN(graph_size, model_specs["architecture"]).to(device_id)
+    elif model_name == "ViTscratch":
+        model = ViT_scratch(graph_size).to(device_id)
+    elif model_name == "ViTpretrained":
+        model = ViT_pretrained(graph_size).to(device_id)
+    else:
+        raise ValueError("Model not found")
         
     ddp_model = DDP(model, device_ids=[device_id])
     

@@ -14,33 +14,27 @@ class MLP(nn.Module):
         super().__init__()
         self.graph_size = graph_size
         self.architecture_specs = architecture_specs
-        # Define the model architecture
-        self.model = nn.Sequential(
-            # Flatten layer
-            nn.Flatten(),
-            # First linear layer
-            nn.Linear(graph_size * graph_size, architecture_specs["l1"]),
-            SyncBatchNorm(architecture_specs["l1"]),
-            nn.ReLU(),
-            nn.Dropout(architecture_specs["dropout_prob"]),
-            # Second linear layer
-            nn.Linear(architecture_specs["l1"], architecture_specs["l2"]),
-            SyncBatchNorm(architecture_specs["l2"]),
-            nn.ReLU(),
-            nn.Dropout(architecture_specs["dropout_prob"]),
-            # Third linear layer
-            nn.Linear(architecture_specs["l2"], architecture_specs["l3"]),
-            SyncBatchNorm(architecture_specs["l3"]),
-            nn.ReLU(),
-            # Fourth linear layer
-            nn.Linear(architecture_specs["l3"], architecture_specs["l4"]),
-            SyncBatchNorm(architecture_specs["l4"]),
-            nn.ReLU(),
-            nn.Dropout(architecture_specs["dropout_prob"]),
-            # Output layer
-            nn.Linear(architecture_specs["l4"], 1),
-            nn.Sigmoid(),
-        )
+        # Define the model architecture dynamically from architecture specs
+        layers = [nn.Flatten()]
+        layer_sizes = architecture_specs["layers"]
+        dropout_prob = architecture_specs["dropout_prob"]
+        # Defining input size
+        input_size = graph_size * graph_size
+        for layer_size in layer_sizes:
+            layers.append(nn.Linear(input_size, layer_size))
+            layers.append(SyncBatchNorm(layer_size))
+            layers.append(nn.ReLU())
+            if dropout_prob > 0:
+                layers.append(nn.Dropout(dropout_prob))
+             # Input size for following layer
+            input_size = layer_size
+        
+        # Output layer (assume single output for binary classification)
+        layers.append(nn.Linear(input_size, 1))
+        layers.append(nn.Sigmoid())
+        
+        # Defining model
+        self.model = nn.Sequential(*layers)        
 
     def forward(self, x, **kwargs):
         return self.model(x)

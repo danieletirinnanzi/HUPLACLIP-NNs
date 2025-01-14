@@ -49,13 +49,14 @@ models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
   
-  - model_name: MLP
-    architecture:
-      l1: 200
-      l2: 100
-      l3: 25
-      l4: 12
-      dropout_prob: 0.2
+  # TO ADAPT TO NEW "models.py" CODE, keeping the best performing model
+  # - model_name: MLP
+  #   architecture:
+  #     l1: 200
+  #     l2: 100
+  #     l3: 25
+  #     l4: 12
+  #     dropout_prob: 0.2
     
   - model_name: ViTscratch
 

@@ -1,15 +1,15 @@
-exp_name: cnn_exp
+exp_name: mlp_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  # - 100 DONE (okay)
-  # - 150 DONE (no learning between clique size = 0.5N and 0.7N)
-  # - 200 DONE (no learning at all, flat training curves)
+  # - 100
+  # - 150
+  # - 200
   # - 300
-  # - 400
+  - 400
   # - 480
   # - 600
   # - 800
-  - 1200 # DONE (did not complete training the last two clique size levels -> tested checkpointed model)
+  # - 1200
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -44,26 +44,22 @@ testing_parameters:
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 16
 
+
 models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
+  
+  # - model_name: MLP_4layers_old
+  #   architecture:
+  #     layers: [200, 100, 25, 12]
+  #     dropout_prob: 0.2
 
-  - model_name: CNN_large
+  - model_name: MLP_7layers
     architecture:
-      num_conv_layers: 6
-      c0: 1
-      c1: 32
-      c2: 64
-      c3: 128
-      c4: 256
-      c5: 512
-      c6: 512
-      l1: 1024
-      kernel_size_conv: [30, 30, 30, 30, 30, 30]
-      stride_conv: [1, 1, 1, 1, 1, 1]
-      padding_conv: [1, 1, 1, 1, 1, 1]
-      kernel_size_pool: 2
-      stride_pool: 2
-      dropout_prob: 0.3 
-      # OUT: (512, 10, 10)
+      layers: [200, 150, 100, 75, 50, 25, 12]
+      dropout_prob: 0.2
 
+  - model_name: MLP_10layers
+    architecture:
+      layers: [200, 175, 150, 125, 100, 80, 60, 40, 20, 10]
+      dropout_prob: 0.2

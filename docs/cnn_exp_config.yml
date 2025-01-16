@@ -8,7 +8,7 @@ graph_size_values:
   # - 400
   # - 480
   # - 600
-   - 800
+   - 800 # DONE (did not complete training the last clique size level  -> tested checkpointed model)
   # - 1200 # DONE (did not complete training the last two clique size levels -> tested checkpointed model)
   
 # type of correction to use (in graphs_generation.py):

@@ -5,11 +5,11 @@ graph_size_values:
   # - 150 DONE (no learning between clique size = 0.5N and 0.7N)
   # - 200 DONE (no learning at all, flat training curves)
   # - 300 DONE (no learning at all, flat training curves)
-  # - 400
-  # - 480
-  # - 600
-   - 800 # DONE (did not complete training the last clique size level  -> tested checkpointed model)
-  # - 1200 # DONE (did not complete training the last two clique size levels -> tested checkpointed model)
+  # - 400 DONE (no learning at all, flat training curves)
+  # - 480 DONE (did not complete training the last clique size level  -> tested checkpointed model)
+   - 600
+  # - 800 DONE (did not complete training the last clique size level  -> tested checkpointed model)
+  # - 1200 DONE (did not complete training the last two clique size levels -> tested checkpointed model)
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs

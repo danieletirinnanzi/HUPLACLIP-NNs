@@ -59,7 +59,12 @@ models:
   #     layers: [200, 150, 100, 75, 50, 25, 12]
   #     dropout_prob: 0.2
 
-  - model_name: MLP_10layers
+  # - model_name: MLP_10layers
+  #   architecture:
+  #     layers: [200, 175, 150, 125, 100, 80, 60, 40, 20, 10]
+  #     dropout_prob: 0.2
+
+  - model_name: MLP_20layers
     architecture:
-      layers: [200, 175, 150, 125, 100, 80, 60, 40, 20, 10]
-      dropout_prob: 0.2
+      layers: [200, 190, 180, 170, 160, 150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 12]
+      dropout_prob: 0.2      

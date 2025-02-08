@@ -23,7 +23,7 @@ training_parameters:
   num_train: 32
   num_val: 32
   # other hyperparameters:
-  learning_rate: 0.0001  # TO ADJUST
+  learning_rate: 0.00001  # TO ADJUST
   # ADDITIONAL PARAMETERS GO HERE AND WILL BE READ IN train_test.py (line 106)
   # training structure:
   max_clique_size_proportion: 0.5 # during training, clique will be at most 50% of the graph size
@@ -34,7 +34,7 @@ training_parameters:
   optimizer: AdamW
   loss_function: BCELoss
   # early stopping:
-  patience: 50  # since this makes the model move to the following training instance, it is more stringent
+  patience: 100  # since this makes the model move to the following training instance, it is more stringent
   min_delta: 0.01
   val_exit_loss: 0.1
 
@@ -49,10 +49,10 @@ models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
   
-  # - model_name: MLP_4layers_old
-  #   architecture:
-  #     layers: [200, 100, 25, 12]
-  #     dropout_prob: 0.2
+  - model_name: MLP_lr1e-5
+    architecture:
+      layers: [200, 100, 25, 12]
+      dropout_prob: 0.2
 
   # - model_name: MLP_7layers
   #   architecture:
@@ -64,7 +64,7 @@ models:
   #     layers: [200, 175, 150, 125, 100, 80, 60, 40, 20, 10]
   #     dropout_prob: 0.2
 
-  - model_name: MLP_20layers
-    architecture:
-      layers: [200, 190, 180, 170, 160, 150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 12]
-      dropout_prob: 0.2      
+  # - model_name: MLP_20layers
+  #   architecture:
+  #     layers: [200, 190, 180, 170, 160, 150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 12]
+  #     dropout_prob: 0.2      

@@ -13,7 +13,7 @@ configfile_path = os.path.join(
     os.path.dirname(__file__),
     "..",
     "docs",
-    "cnn_exp_config.yml",
+    "mlp_exp_config.yml",
 )
 configfile = load_config(configfile_path)
 

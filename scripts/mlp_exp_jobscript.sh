@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:4
 #SBATCH --mem=128G
-#SBATCH --account=Sis24_piasini       # account name
+#SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
 #SBATCH --job-name=mlp_exp
 #SBATCH --mail-type=ALL

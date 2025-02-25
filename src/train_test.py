@@ -120,18 +120,22 @@ def train_model(
     Training is structured as a curriculum learning task, where the model is trained on graphs with decreasing clique sizes.
     Sketch of training structure:
     FOR (decreasing clique size):
-        FOR (training steps):
+        FOR (decreasing learning rate):
             - initialize early stopper
-            - generate training data
-            - forward pass on training data
-            - compute loss on training data
-            - backward pass and update weights
-            - at regular intervals (save_step):
-                - generate validation data
-                - save errors and print to Tensorboard
-            - check if checkpointing condition is met -> if yes, save model
-            - check if early stopping condition is met -> if yes, stop training current clique size
+            FOR (training steps):
+                - generate training data
+                - forward pass on training data
+                - compute loss on training data
+                - backward pass and update weights
+                - at regular intervals (save_step):
+                    - generate validation data
+                    - save errors and print to Tensorboard
+                - check if checkpointing condition is met -> if yes, save model
+                - check if early stopping condition is met -> if yes, stop training with current learning rate (move to lower lr/next clique size)
+            END FOR
+            - print "sparse" vertical bar in the Tensorboard plot to separate learning rates
         END FOR
+        - print "thick" vertical bar in the Tensorboard plot to separate clique sizes
     END FOR
 
     Args:
@@ -180,26 +184,9 @@ def train_model(
     # - INPUT TRANSFORMATION FLAGS:
     input_magnification = True if "CNN" in model_name else False
 
-    # - NUMBER OF TRAINING STEPS, OPTIMIZER and LEARNING RATE:
+    # - NUMBER OF TRAINING STEPS:
     # reading number of training steps
     num_training_steps = int(training_parameters["num_training_steps"])
-    # reading optimizer and learning rate
-    if training_parameters["optimizer"] == "Adam":
-        optim = torch.optim.Adam(
-            model.parameters(), lr=training_parameters["learning_rate"]
-        )
-    elif training_parameters["optimizer"] == "AdamW":
-        optim = torch.optim.AdamW(
-            model.parameters(), lr=training_parameters["learning_rate"]
-        )
-    elif training_parameters["optimizer"] == "SGD":
-        optim = torch.optim.SGD(
-            model.parameters(),
-            lr=training_parameters["learning_rate"],
-            momentum=0.9,  # default value is zero
-        )
-    else:
-        raise ValueError("Optimizer not found")
 
     # - LOSS FUNCTION:
     if training_parameters["loss_function"] == "BCELoss":
@@ -246,268 +233,314 @@ def train_model(
             print("||| Minimum clique size is now: ", current_clique_size)
             print("||| List of available clique sizes is now: ", clique_size_list)
 
-        # initializing early stopper (triggers passage to following training instance)
-        early_stopper = EarlyStopper(
-            patience=training_parameters["patience"],
-            min_delta=training_parameters["min_delta"],
-            val_exit_loss=training_parameters["val_exit_loss"],
-        )
+        # Loop for decreasing learning rate
+        for lr_index in training_parameters["learning_rates"]:
+            
+            if rank == 0:
+                print("||||| Learning rate is now: ", training_parameters["learning_rates"][lr_index])
 
-        # Training steps loop:
-        for training_step in range(training_parameters["num_training_steps"] + 1):
-
-            # Generate clique size value of each graph in the current batch
-            clique_size_array_train = gen_graphs.generate_batch_clique_sizes(
-                clique_size_list, training_parameters["num_train"]
+            # initializing early stopper (triggers passage to following learning rate)
+            early_stopper = EarlyStopper(
+                patience=training_parameters["patience"],
+                min_delta=training_parameters["min_delta"],
+                val_exit_loss=training_parameters["val_exit_loss"],
             )
 
-            # Generating training data (full batch)
-            full_train_data = gen_graphs.generate_batch(
-                training_parameters["num_train"],
-                graph_size,
-                clique_size_array_train,
-                p_correction_type,
-                input_magnification,
-            )
-
-            # Split training data across GPUs, checking divisibility of batch size by world size
-            if training_parameters["num_train"] % world_size != 0:
-                raise ValueError(
-                    f"Batch size of {training_parameters['num_train']} is not evenly divisible by world_size={world_size}. "
-                    f"Each rank requires an equal share of the data for DDP. Please adjust 'num_train' to be divisible by {world_size}."
+            # reading optimizer and learning rate
+            if training_parameters["optimizer"] == "Adam":
+                optim = torch.optim.Adam(
+                    model.parameters(), lr=training_parameters["learning_rates"][lr_index]
                 )
-            # If no errors, proceed with splitting
-            local_batch_size_train = training_parameters["num_train"] // world_size
-            start_idx_train = rank * local_batch_size_train
-            end_idx_train = (rank + 1) * local_batch_size_train
+            elif training_parameters["optimizer"] == "AdamW":
+                optim = torch.optim.AdamW(
+                    model.parameters(), lr=training_parameters["learning_rates"][lr_index]
+                )
+            elif training_parameters["optimizer"] == "SGD":
+                optim = torch.optim.SGD(
+                    model.parameters(),
+                    lr=training_parameters["learning_rates"][lr_index],
+                    momentum=0.9,  # default value is zero
+                )
+            else:
+                raise ValueError("Optimizer not found")            
 
-            # Partition data for the current rank
-            train_data = (
-                torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(
-                    device_id
-                ),
-                torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(
-                    device_id
-                ),
-            )
+            # Training steps loop:
+            for training_step in range(training_parameters["num_training_steps"] + 1):
 
-            # Forward pass on training data
-            train_pred = model(train_data[0]).squeeze()
-            train_loss = criterion(
-                train_pred.type(torch.float),
-                torch.Tensor(train_data[1]).type(torch.float),
-            )
+                # Generate clique size value of each graph in the current batch
+                clique_size_array_train = gen_graphs.generate_batch_clique_sizes(
+                    clique_size_list, training_parameters["num_train"]
+                )
 
-            # Backward pass
-            train_loss.backward()  # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
-            optim.step()
-            optim.zero_grad(set_to_none=True)
+                # Generating training data (full batch)
+                full_train_data = gen_graphs.generate_batch(
+                    training_parameters["num_train"],
+                    graph_size,
+                    clique_size_array_train,
+                    p_correction_type,
+                    input_magnification,
+                )
 
-            # Free up memory for training data
-            # del train_data
-            torch.cuda.empty_cache()
-
-            # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
-            if training_step % training_parameters["save_step"] == 0:
-
-                # Waiting for all processes to finish previous tasks (double check, synchronization happens automatically at each forward and backward passes, and at each optimizer step)
-                torch.distributed.barrier()
-                # Put model in evaluation mode and disable gradient computation
-                model.eval()
-                with torch.no_grad():
-
-                    # Increasing saved_steps counter: this will be the x axis of the tensorboard plots
-                    saved_steps += 1
-
-                    # Aggregating training loss across GPUs:
-                    train_loss_tensor = torch.tensor(
-                        train_loss.item(), device=device_id
+                # Split training data across GPUs, checking divisibility of batch size by world size
+                if training_parameters["num_train"] % world_size != 0:
+                    raise ValueError(
+                        f"Batch size of {training_parameters['num_train']} is not evenly divisible by world_size={world_size}. "
+                        f"Each rank requires an equal share of the data for DDP. Please adjust 'num_train' to be divisible by {world_size}."
                     )
-                    torch.distributed.all_reduce(
-                        train_loss_tensor, op=torch.distributed.ReduceOp.SUM
-                    )
-                    if rank == 0:
-                        global_train_loss = train_loss_tensor.item() / world_size
+                # If no errors, proceed with splitting
+                local_batch_size_train = training_parameters["num_train"] // world_size
+                start_idx_train = rank * local_batch_size_train
+                end_idx_train = (rank + 1) * local_batch_size_train
 
-                        # CREATING TENSORBOARD DICTIONARIES:
-                        # - creating dictionary to store training, standard validation and mean validation losses
-                        train_val_dict = {
-                            f"train-loss-{current_clique_size}": global_train_loss
-                        }
-                        # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
-                        complete_val_dict = {}
+                # Partition data for the current rank
+                train_data = (
+                    torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(
+                        device_id
+                    ),
+                    torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(
+                        device_id
+                    ),
+                )
 
-                    # STANDARD VALIDATION LOSS (mirrors training loss and is used for early stopping):
-                    # - Generate clique size value of each graph in the current batch
-                    clique_size_array_stdval = gen_graphs.generate_batch_clique_sizes(
-                        clique_size_list, training_parameters["num_val"]
-                    )
+                # Forward pass on training data
+                train_pred = model(train_data[0]).squeeze()
+                train_loss = criterion(
+                    train_pred.type(torch.float),
+                    torch.Tensor(train_data[1]).type(torch.float),
+                )
 
-                    # Generating standard validation data
-                    full_stdval_data = gen_graphs.generate_batch(
-                        training_parameters["num_val"],
-                        graph_size,
-                        clique_size_array_stdval,
-                        p_correction_type,
-                        input_magnification,
-                    )
+                # Backward pass
+                train_loss.backward()  # DDP GRADIENT SYNCHRONIZATION HAPPENS HERE
+                optim.step()
+                optim.zero_grad(set_to_none=True)
 
-                    # Split validation data across GPUs:
-                    local_batch_size_val = training_parameters["num_val"] // world_size
-                    start_idx_val = rank * local_batch_size_val
-                    end_idx_val = (rank + 1) * local_batch_size_val
+                # Free up memory for training data
+                # del train_data
+                torch.cuda.empty_cache()
 
-                    # Partition data for the current rank
-                    stdval_data = (
-                        torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(
-                            device_id
-                        ),
-                        torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(
-                            device_id
-                        ),
-                    )
+                # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
+                if training_step % training_parameters["save_step"] == 0:
 
-                    # Compute loss on standard validation set:
-                    stdval_pred = model(stdval_data[0]).squeeze()
-                    stdval_loss = criterion(
-                        stdval_pred.type(torch.float),
-                        torch.Tensor(stdval_data[1]).type(torch.float),
-                    )
+                    # Waiting for all processes to finish previous tasks (double check, synchronization happens automatically at each forward and backward passes, and at each optimizer step)
+                    torch.distributed.barrier()
+                    # Put model in evaluation mode and disable gradient computation
+                    model.eval()
+                    with torch.no_grad():
 
-                    # Aggregate validation loss across GPUs:
-                    stdval_loss_tensor = torch.tensor(
-                        stdval_loss.item(), device=device_id
-                    )
-                    torch.distributed.all_reduce(
-                        stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM
-                    )
-                    global_stdval_loss = stdval_loss_tensor.item() / world_size
-                    # Check early stopping condition:
-                    early_stop = early_stopper.should_stop(global_stdval_loss)
+                        # Increasing saved_steps counter: this will be the x axis of the tensorboard plots
+                        saved_steps += 1
 
-                    if rank == 0:
-                        # storing standard validation loss in the training and validation losses dictionary:
-                        train_val_dict[f"stdval-loss-{current_clique_size}"] = (
-                            global_stdval_loss
+                        # Aggregating training loss across GPUs:
+                        train_loss_tensor = torch.tensor(
+                            train_loss.item(), device=device_id
+                        )
+                        torch.distributed.all_reduce(
+                            train_loss_tensor, op=torch.distributed.ReduceOp.SUM
+                        )
+                        if rank == 0:
+                            global_train_loss = train_loss_tensor.item() / world_size
+
+                            # CREATING TENSORBOARD DICTIONARIES:
+                            # - creating dictionary to store training, standard validation and mean validation losses
+                            train_val_dict = {
+                                f"train-loss-{current_clique_size}": global_train_loss
+                            }
+                            # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
+                            complete_val_dict = {}
+
+                        # STANDARD VALIDATION LOSS (mirrors training loss and is used for early stopping):
+                        # - Generate clique size value of each graph in the current batch
+                        clique_size_array_stdval = gen_graphs.generate_batch_clique_sizes(
+                            clique_size_list, training_parameters["num_val"]
                         )
 
-                    # Free up memory for validation data
-                    del stdval_pred, stdval_data
-                    torch.cuda.empty_cache()
-
-                    # VALIDATING MODEL ON ALL TASK VERSIONS:
-                    for current_clique_size_val in clique_sizes:
-
-                        # Generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
-                        clique_size_array_val = gen_graphs.generate_batch_clique_sizes(
-                            np.array([current_clique_size_val]),
-                            training_parameters["num_val"],
-                        )
-
-                        # Generating validation graphs:
-                        full_val_data = gen_graphs.generate_batch(
+                        # Generating standard validation data
+                        full_stdval_data = gen_graphs.generate_batch(
                             training_parameters["num_val"],
                             graph_size,
-                            clique_size_array_val,
+                            clique_size_array_stdval,
                             p_correction_type,
                             input_magnification,
                         )
+
+                        # Split validation data across GPUs:
+                        local_batch_size_val = training_parameters["num_val"] // world_size
+                        start_idx_val = rank * local_batch_size_val
+                        end_idx_val = (rank + 1) * local_batch_size_val
+
                         # Partition data for the current rank
-                        val_data = (
-                            torch.Tensor(
-                                full_val_data[0][start_idx_val:end_idx_val]
-                            ).to(device_id),
-                            torch.Tensor(
-                                full_val_data[1][start_idx_val:end_idx_val]
-                            ).to(device_id),
-                        )
-                        # Compute loss on validation set:
-                        val_pred = model(val_data[0]).squeeze()
-                        val_loss = criterion(
-                            val_pred.type(torch.float),
-                            torch.Tensor(val_data[1]).type(torch.float),
+                        stdval_data = (
+                            torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(
+                                device_id
+                            ),
+                            torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(
+                                device_id
+                            ),
                         )
 
-                        # Aggregate the validation loss across GPUs
-                        val_loss_tensor = torch.tensor(
-                            val_loss.item(), device=device_id
+                        # Compute loss on standard validation set:
+                        stdval_pred = model(stdval_data[0]).squeeze()
+                        stdval_loss = criterion(
+                            stdval_pred.type(torch.float),
+                            torch.Tensor(stdval_data[1]).type(torch.float),
+                        )
+
+                        # Aggregate validation loss across GPUs:
+                        stdval_loss_tensor = torch.tensor(
+                            stdval_loss.item(), device=device_id
                         )
                         torch.distributed.all_reduce(
-                            val_loss_tensor, op=torch.distributed.ReduceOp.SUM
+                            stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM
                         )
+                        global_stdval_loss = stdval_loss_tensor.item() / world_size
+                        # Check early stopping condition:
+                        early_stop = early_stopper.should_stop(global_stdval_loss)
 
-                        # updating dictionary with validation losses for all task versions:
                         if rank == 0:
-                            global_val_loss = val_loss_tensor.item() / world_size
-                            complete_val_dict[f"val-loss-{current_clique_size_val}"] = (
-                                global_val_loss
+                            # storing standard validation loss in the training and validation losses dictionary:
+                            train_val_dict[f"stdval-loss-{current_clique_size}"] = (
+                                global_stdval_loss
                             )
 
                         # Free up memory for validation data
-                        del val_pred, val_data
+                        del stdval_pred, stdval_data
                         torch.cuda.empty_cache()
 
-                    # End of validation on all task versions:
+                        # VALIDATING MODEL ON ALL TASK VERSIONS:
+                        for current_clique_size_val in clique_sizes:
+
+                            # Generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
+                            clique_size_array_val = gen_graphs.generate_batch_clique_sizes(
+                                np.array([current_clique_size_val]),
+                                training_parameters["num_val"],
+                            )
+
+                            # Generating validation graphs:
+                            full_val_data = gen_graphs.generate_batch(
+                                training_parameters["num_val"],
+                                graph_size,
+                                clique_size_array_val,
+                                p_correction_type,
+                                input_magnification,
+                            )
+                            # Partition data for the current rank
+                            val_data = (
+                                torch.Tensor(
+                                    full_val_data[0][start_idx_val:end_idx_val]
+                                ).to(device_id),
+                                torch.Tensor(
+                                    full_val_data[1][start_idx_val:end_idx_val]
+                                ).to(device_id),
+                            )
+                            # Compute loss on validation set:
+                            val_pred = model(val_data[0]).squeeze()
+                            val_loss = criterion(
+                                val_pred.type(torch.float),
+                                torch.Tensor(val_data[1]).type(torch.float),
+                            )
+
+                            # Aggregate the validation loss across GPUs
+                            val_loss_tensor = torch.tensor(
+                                val_loss.item(), device=device_id
+                            )
+                            torch.distributed.all_reduce(
+                                val_loss_tensor, op=torch.distributed.ReduceOp.SUM
+                            )
+
+                            # updating dictionary with validation losses for all task versions:
+                            if rank == 0:
+                                global_val_loss = val_loss_tensor.item() / world_size
+                                complete_val_dict[f"val-loss-{current_clique_size_val}"] = (
+                                    global_val_loss
+                                )
+
+                            # Free up memory for validation data
+                            del val_pred, val_data
+                            torch.cuda.empty_cache()
+
+                        # End of validation on all task versions:
+                        if rank == 0:
+                            # Calculate mean validation loss:
+                            mean_validation_loss = np.mean(list(complete_val_dict.values()))
+
+                            # Check if checkpointing condition is met:
+                            if checkpointer.should_save(mean_validation_loss):
+                                save_model(model, model_name, graph_size, results_dir)
+
+                            # Storing mean validation loss in the training and validation losses dictionary:
+                            train_val_dict["mean-val-loss"] = mean_validation_loss
+
+                            # Tensorboard logging:
+                            # - plotting training, standard validation and mean validation losses:
+                            writer.add_scalars(
+                                f"{model_name}_train-stdval-meanval-losses",
+                                train_val_dict,
+                                saved_steps,
+                            )
+                            # - plotting validation losses for all task versions:
+                            writer.add_scalars(
+                                f"{model_name}_validation-losses",
+                                complete_val_dict,
+                                saved_steps,
+                            )
+
+                            # Flush the writer to make sure all data is written to disk
+                            writer.flush()
+
+                    # Put model back in training mode after validation is completed
+                    model.train()
+
+                # Check if early stopping condition is met
+                if early_stop:
                     if rank == 0:
-                        # Calculate mean validation loss:
-                        mean_validation_loss = np.mean(list(complete_val_dict.values()))
-
-                        # Check if checkpointing condition is met:
-                        if checkpointer.should_save(mean_validation_loss):
-                            save_model(model, model_name, graph_size, results_dir)
-
-                        # Storing mean validation loss in the training and validation losses dictionary:
-                        train_val_dict["mean-val-loss"] = mean_validation_loss
-
-                        # Tensorboard logging:
-                        # - plotting training, standard validation and mean validation losses:
-                        writer.add_scalars(
-                            f"{model_name}_train-stdval-meanval-losses",
-                            train_val_dict,
-                            saved_steps,
-                        )
-                        # - plotting validation losses for all task versions:
-                        writer.add_scalars(
-                            f"{model_name}_validation-losses",
-                            complete_val_dict,
-                            saved_steps,
-                        )
-
-                        # Flush the writer to make sure all data is written to disk
-                        writer.flush()
-
-                # Put model back in training mode after validation is completed
-                model.train()
-
-            # Check if early stopping condition is met (early stopper is defined only in rank 0)
-            if early_stop:
-                if rank == 0:
-                    # Print the reason for early stopping
-                    if early_stopper.stop_reason == "min_loss":
+                        # Print the reason for early stopping
+                        if early_stopper.stop_reason == "min_loss":
+                            print(
+                                f"||||||| Early stopping triggered: standard validation loss was below the exit value for {early_stopper.patience} consecutive validation steps."
+                            )
+                        elif early_stopper.stop_reason == "no_improvement":
+                            print(
+                                f"||||||| Early stopping triggered: standard validation loss did not improve for {early_stopper.patience} consecutive validation steps."
+                            )
+                        else:
+                            print(
+                                "||||||| Early stopping triggered for unknown reason. Check for mistakes in the code."
+                            )
+                        # Print the training step at which early stopping was triggered
                         print(
-                            f"||||| Early stopping triggered: standard validation loss was below the exit value for {early_stopper.patience} consecutive validation steps."
+                            f"||||||| Breaking out at training step number {int(training_step)} out of {num_training_steps}."
                         )
-                    elif early_stopper.stop_reason == "no_improvement":
-                        print(
-                            f"||||| Early stopping triggered: standard validation loss did not improve for {early_stopper.patience} consecutive validation steps."
-                        )
-                    else:
-                        print(
-                            "||||| Early stopping triggered for unknown reason. Check for mistakes in the code."
-                        )
-                    # Print the training step at which early stopping was triggered
-                    print(
-                        f"||||| Breaking out at training step number {int(training_step)} out of {num_training_steps}."
-                    )
-                # breaking out of clique size loop
-                break
+                    # interrupting training for current learning rate
+                    break
+            
+            # When this runs, training steps loop has finished (either due to early stopping or reaching the maximum number of training steps)
+            if rank == 0:
+                # 1. Tensorboard logging: printing a vertical bar of 4 points in the plot, to separate the learning rates
+                # - defining y values for the vertical lines:
+                spacing_values = np.linspace(0, 1.5, 4)
+                # - dictionary with scalar values for the vertical lines:
+                scalar_values = {
+                    f"vert-line-{round(value,2)}_{current_clique_size}_{training_parameters["learning_rates"][lr_index]}": value
+                    for value in spacing_values
+                }
+                # - add the scalars to both writers (only from rank 0 process):
+                writer.add_scalars(
+                    f"{model_name}_train-stdval-meanval-losses", scalar_values, saved_steps
+                )
+                writer.add_scalars(
+                    f"{model_name}_validation-losses", scalar_values, saved_steps
+                )    
+                # 2. Printing a message to indicate the end of training for the current learning rate:
+                print("||||| Completed training for learning rate = ", training_parameters["learning_rates"][lr_index])
+                print(
+                    "||||| ---------------------------------------------------------------------------------"
+                )
 
-        # After clique size has finished training (here we are inside the clique size decreasing loop):
-
-        # 1. Tensorboard: printing a vertical bar of 4 points in the plot, to separate the different task versions
+        # When this runs, learning rate loop has finished (all learning rates have been used for the current clique size)
         if rank == 0:
-            # - spacing values for the vertical lines:
-            spacing_values = np.arange(0, 1.1, 0.10)
+            # 1. Tensorboard logging: printing a vertical bar of 8 points in the plot, to separate the clique size values
+            # - defining y values for the vertical lines:
+            spacing_values = np.linspace(0, 1.5, 8)
             # - dictionary with scalar values for the vertical lines:
             scalar_values = {
                 f"vert-line-{round(value,2)}_{current_clique_size}": value

@@ -66,16 +66,16 @@ class ModelTest(unittest.TestCase):
         """Test model's ability to perform a forward/backward pass splitting the data across GPUs like during training."""
 
         input_magnification = True if "CNN" in model_name else False        
-        
+
         # Optimizer and loss function
         optimizer = self.get_optimizer(model)
         criterion = self.get_loss_function()
-        
+
         clique_size = int(
             graph_size
             * (configfile["training_parameters"]["max_clique_size_proportion"])
         )       
-        
+
         # Split training data across GPUs, checking divisibility of batch size by world size
         if configfile["training_parameters"]["num_train"] % world_size != 0:
             raise ValueError(
@@ -84,36 +84,48 @@ class ModelTest(unittest.TestCase):
             )
         # If no errors, proceed with splitting            
         local_batch_size = configfile["training_parameters"]["num_train"] // world_size
-        start_idx_train = rank * local_batch_size
-        end_idx_train = (rank + 1) * local_batch_size          
 
-        # Generating training data on CPU (full batch)
+        # Generating training data on CPU (full batch) on rank 0
         if rank == 0:
-            print(f"{model_name} Trainability test, rank {rank}: Data generation start {datetime.datetime.now()}")        
-        full_data = gen_graphs.generate_batch(
-            configfile["training_parameters"]["num_train"],
-            graph_size,
-            [clique_size] * configfile["training_parameters"]["num_train"],
-            configfile["p_correction_type"],
-            input_magnification,
-        )          
-        if rank == 0:
-            print(f"{model_name} Trainability test, rank {rank}: Data generation finish {datetime.datetime.now()}")                 
+            print(f"{model_name} Trainability test, rank {rank}: Data generation start {datetime.datetime.now()}")
+            full_data = gen_graphs.generate_batch(
+                configfile["training_parameters"]["num_train"],
+                graph_size,
+                [clique_size] * configfile["training_parameters"]["num_train"],
+                configfile["p_correction_type"],
+                input_magnification,
+            )   # returns a tuple of graphs (full_data[0]) and labels (full_data[1])
+            print(f"{model_name} Trainability test, rank {rank}: Data generation finish {datetime.datetime.now()}")
+            # Split the full batch into subsets for each process
+            subsets = [
+                (
+                    torch.Tensor(full_data[0][i * local_batch_size:(i + 1) * local_batch_size]),    # subset of graph adjacency matrices
+                    torch.Tensor(full_data[1][i * local_batch_size:(i + 1) * local_batch_size])     # subset of graph labels
+                )
+                for i in range(world_size)
+            ]
+        else:
+            subsets = None
 
-        # Partition data for the current rank
+        # Placeholder for receiving subsets
         split_data = (
-            torch.Tensor(full_data[0][start_idx_train:end_idx_train]).to(device_id),
-            torch.Tensor(full_data[1][start_idx_train:end_idx_train]).to(device_id),
+            torch.zeros(local_batch_size, *full_data[0].shape[1:], device=device_id),   # dimensions: (local_batch_size, graph_size, graph_size) -> adjacency matrices
+            torch.zeros(local_batch_size, *full_data[1].shape[1:], device=device_id)    # dimensions: (local_batch_size, 1) -> labels
         )
+
+        # Scatter the subsets to each process
+        torch.distributed.scatter(split_data[0], scatter_list=[subset[0].to(device_id) for subset in subsets] if rank == 0 else None, src=0)
+        torch.distributed.scatter(split_data[1], scatter_list=[subset[1].to(device_id) for subset in subsets] if rank == 0 else None, src=0)
+
         if rank == 0:
-            print(f"{model_name} Trainability test, rank {rank}: Data partitioned and send to device at {datetime.datetime.now()}")        
-        
+            print(f"{model_name} Trainability test, rank {rank}: Data partitioned and sent to device at {datetime.datetime.now()}")        
+
         # Barrier to ensure all processes reach this point
         torch.distributed.barrier()
-        
+
         # Forward pass on training data
         train_pred = model(split_data[0]).squeeze()
-        train_loss = criterion(train_pred.type(torch.float), torch.Tensor(split_data[1]).type(torch.float))            
+        train_loss = criterion(train_pred.type(torch.float), split_data[1].type(torch.float))            
         if rank == 0:
             print(f"{model_name} Trainability test, rank {rank}: Forward pass completed at {datetime.datetime.now()}")        
 
@@ -125,13 +137,14 @@ class ModelTest(unittest.TestCase):
         optimizer.step()
         if rank == 0:
             print(f"{model_name} Trainability test, rank {rank}: Backward pass and optimizer step completed at {datetime.datetime.now()}")        
-        
+
         # Making sure batches are correctly split across GPUs
         print(f"{model_name} Trainability test (loss calculation), rank {rank}: GPU {device_id} is processing {split_data[0].shape[0]} graphs.")
-        print(f"{model_name} Trainability test (loss calculation), rank {rank}: The full batch contains {full_data[0].shape[0]} graphs.")
+        if rank == 0:
+            print(f"{model_name} Trainability test (loss calculation), rank {rank}: The full batch generated on rank {rank} contains {full_data[0].shape[0]} graphs.")
         # Making sure global loss is computed correctly:
         print(f"{model_name} Trainability test (loss calculation), rank {rank}: Training loss on GPU {device_id} is {train_loss}.")           
-        
+
         # Synchronize after backward pass
         torch.distributed.barrier()         
 

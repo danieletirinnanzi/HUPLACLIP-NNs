@@ -45,61 +45,107 @@ class Checkpointer:
 # EARLY STOPPER ( adapted from: https://stackoverflow.com/a/73704579 )
 class EarlyStopper:
     """
-    EarlyStopper is a simple class to stop the training when the monitored validation loss
-    is not improving or is below a certain value for a certain number of training steps.
+    Leaky integrator early stopper based on the monitored validation loss. At each validation step, the running mean of the validation loss is updated.
+    As long as this running mean loss decreases, training continues.
+    If this running mean loss does not decrease significantly / is below the exit value for "patience" consecutive steps, training is interrupted.
 
     Attributes:
-        patience (int): Number of epochs with no improvement after which training will be stopped.
-        min_delta (float): Minimum change in the loss to qualify as an improvement.
-        val_increase_counter (int): Counter that increments when the validation loss increases.
-        min_val_loss (float): The minimum validation loss seen so far.
-        val_exit_counter (int): Counter that increments when the validation loss is below the exit value.
-        val_exit_loss (float): The validation loss under which the training should stop (exit early).
+        running_mean_val_loss (float): The running mean of the validation loss.
+        alpha (float): The leak rate of the integrator.
+        patience (int): Number of steps with subsequent "validation loss increase" / "validation loss under exit value" before stopping the training.
+
+        # INCREASE LOSS STOPPING:
+        min_delta (float): Minimum deviation in the running mean to qualify as significant.
+        val_increase_counter (int): Counter that increments if the loss increases by a significant amount (this counter is compared to the patience).
+
+        # EXIT LOSS STOPPING:
+        val_exit_loss (float): The validation loss under which training can stop.
+        val_exit_counter (int): Counter that increments if the validation loss is below the exit value (this counter is compared to the patience).
+
         stop_reason (str): The reason for stopping the training.
     """
 
-    def __init__(self, patience=4, min_delta=0.01, val_exit_loss=0.08):
+    def __init__(self, alpha, patience, min_delta, val_exit_loss):
+
+        # Testing input validity:
+        if alpha <= 0 or alpha >= 1:
+            raise ValueError("alpha should be a float between 0 and 1.")
+        if patience <= 0:
+            raise ValueError("patience should be a positive integer.")
+        if min_delta < 0:
+            raise ValueError("min_delta should be a non-negative float.")
+        if val_exit_loss < 0:
+            raise ValueError("val_exit_loss should be a non-negative float.")
+
+        # Initializations:
+        self.alpha = alpha
         self.patience = patience
+        self.running_mean_val_loss = None
+        # - Increase loss stopping:
         self.min_delta = min_delta
-        # increase in validation loss:
         self.val_increase_counter = 0
-        self.min_val_loss = float("inf")
-        # validation loss under exit value:
+        # - Exit loss stopping:
         self.val_exit_counter = 0
         self.val_exit_loss = val_exit_loss
-        # stop reason:
+        # - Stop reason:
         self.stop_reason = None
 
     def should_stop(self, val_loss):
         """
-        Determines whether the training should stop based on the monitored validation loss.
+        Determines whether the training should stop by udpating the running mean of the validation loss and comparing it to the one at the previous step.
 
         Args:
-            val_loss (float): The current mean validation loss (over all task versions).
+            val_loss(float): The validation loss observed at the current step (used to update the running mean).
 
         Returns:
-            bool: True if the training should stop, False otherwise.
+            should_stop (bool): True if the training should stop, False otherwise.
+            stop_reason (str): If should_stop is True, the reason for stopping the training.
         """
-        if val_loss < self.min_val_loss - self.min_delta:
-            self.min_val_loss = val_loss
-            self.val_increase_counter = 0
-        elif val_loss > self.min_val_loss + self.min_delta:
-            self.val_increase_counter += 1
-            if self.val_increase_counter >= self.patience:
-                self.stop_reason = "no_improvement"
-                return True
-        else:
-            self.val_increase_counter = 0
 
-        if val_loss < self.val_exit_loss:
-            self.val_exit_counter += 1
-            if self.val_exit_counter >= self.patience:
-                self.stop_reason = "min_loss"
-                return True
-        else:
-            self.val_exit_counter = 0
+        # Testing input validity:
+        if val_loss < 0:
+            raise ValueError(
+                "validation loss is negative, check for mistakes in the loss calculation."
+            )
 
-        return False
+        # Updating the running mean loss:
+        if self.running_mean_val_loss is None:
+            # if this is the first validation step, set the running mean loss to the current validation loss and skip checks of early stopping conditions
+            self.running_mean_val_loss = val_loss
+        else:
+            # update the running mean loss with the leaky integrator formula
+            previous_running_mean_val_loss = self.running_mean_val_loss
+            self.running_mean_val_loss = (self.alpha * self.running_mean_val_loss) + (
+                (1 - self.alpha) * val_loss
+            )
+            
+            print(f"Updated running mean loss is {self.running_mean_val_loss}")
+
+            # Checking the two stopping conditions:
+            # - Increase loss stopping:
+            if self.running_mean_val_loss >= previous_running_mean_val_loss - self.min_delta:
+                # - if the monitored loss did NOT decrease by a significant amount compared to the previous value, increase counter and check if it is above the patience:
+                self.val_increase_counter += 1
+                if self.val_increase_counter >= self.patience:
+                    self.stop_reason = "no_improvement"
+                    return True       
+            else:
+                # - if the monitored loss decreased by a significant amount, reset counter:
+                self.val_increase_counter = 0
+
+            # - Exit loss stopping:
+            if self.running_mean_val_loss < self.val_exit_loss:
+                # - if the monitored loss is below the exit value, increase counter and check if it is above the patience:
+                self.val_exit_counter += 1
+                if self.val_exit_counter >= self.patience:
+                    self.stop_reason = "min_loss"
+                    return True
+            else:
+                # - if the current loss is above the exit value, reset counter:
+                self.val_exit_counter = 0
+
+            # if none of the stopping conditions are met, return False
+            return False
 
 
 # Training function:
@@ -500,7 +546,7 @@ def train_model(
                             )
                         elif early_stopper.stop_reason == "no_improvement":
                             print(
-                                f"||||||| Early stopping triggered: standard validation loss did not improve for {early_stopper.patience} consecutive validation steps."
+                                f"||||||| Early stopping triggered: standard validation loss did not decrease for {early_stopper.patience} consecutive validation steps."
                             )
                         else:
                             print(
@@ -515,9 +561,9 @@ def train_model(
             
             # When this runs, training steps loop has finished (either due to early stopping or reaching the maximum number of training steps)
             if rank == 0:
-                # 1. Tensorboard logging: printing a vertical bar of 4 points in the plot, to separate the learning rates
+                # 1. Tensorboard logging: printing a vertical bar of 5 points in the plot, to separate the learning rates
                 # - defining y values for the vertical lines:
-                spacing_values = np.linspace(0, 1.5, 4)
+                spacing_values = np.linspace(0, 1.5, 5)
                 # - dictionary with scalar values for the vertical lines:
                 scalar_values = {
                     f"vert-line-{round(value,2)}_{current_clique_size}_{training_parameters["learning_rates"][lr_index]}": value
@@ -538,9 +584,9 @@ def train_model(
 
         # When this runs, learning rate loop has finished (all learning rates have been used for the current clique size)
         if rank == 0:
-            # 1. Tensorboard logging: printing a vertical bar of 8 points in the plot, to separate the clique size values
+            # 1. Tensorboard logging: printing a vertical bar of 10 points in the plot, to separate the clique size values
             # - defining y values for the vertical lines:
-            spacing_values = np.linspace(0, 1.5, 8)
+            spacing_values = np.linspace(0, 1.5, 10)
             # - dictionary with scalar values for the vertical lines:
             scalar_values = {
                 f"vert-line-{round(value,2)}_{current_clique_size}": value

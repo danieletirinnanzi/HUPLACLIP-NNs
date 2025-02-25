@@ -18,13 +18,12 @@ p_correction_type: p_reduce
 
 training_parameters:
   # training steps:
-  num_training_steps: 1000
+  num_training_steps: 5000
   # training and validation set sizes:
   num_train: 32
   num_val: 32
   # other hyperparameters:
-  learning_rate: 0.0001  # TO ADJUST
-  # ADDITIONAL PARAMETERS GO HERE AND WILL BE READ IN train_test.py (line 106)
+  learning_rates: [1e-3, 1e-4, 1e-5]
   # training structure:
   max_clique_size_proportion: 0.5 # during training, clique will be at most 50% of the graph size
   # min_clique_size_proportion: 0.3 NOT USED, min clique size is statistical limit
@@ -33,8 +32,9 @@ training_parameters:
   # optimizer and loss function:
   optimizer: AdamW
   loss_function: BCELoss
-  # early stopping:
-  patience: 50  # since this makes the model move to the following training instance, it is more stringent
+  # early stopping (leaky integrator):
+  alpha: 0.9  # leak rate
+  patience: 10
   min_delta: 0.01
   val_exit_loss: 0.1
 
@@ -49,14 +49,10 @@ models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
   
-  # TO ADAPT TO NEW "models.py" CODE, keeping the best performing model
-  # - model_name: MLP
-  #   architecture:
-  #     l1: 200
-  #     l2: 100
-  #     l3: 25
-  #     l4: 12
-  #     dropout_prob: 0.2
+  - model_name: MLP
+    architecture:
+      layers: [200, 100, 25, 12]
+      dropout_prob: 0.2
     
   - model_name: ViTscratch
 

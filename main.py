@@ -263,7 +263,7 @@ if __name__ == "__main__":
     tests()
 
     # running exp:
-    full_exp()
+    #full_exp()
 
     # DDP:
     torch.distributed.destroy_process_group()

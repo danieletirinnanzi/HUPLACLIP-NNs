@@ -45,7 +45,7 @@ class Checkpointer:
 # EARLY STOPPER ( adapted from: https://stackoverflow.com/a/73704579 )
 class EarlyStopper:
     """
-    Leaky integrator early stopper based on the monitored validation loss. At each validation step, the running mean of the validation loss is updated.
+    Leaky integrator early stopper based on the validation loss of the current clique size. At each validation step, the running mean of the validation loss is updated.
     As long as this running mean loss decreases, training continues.
     If this running mean loss does not decrease significantly / is below the exit value for "patience" consecutive steps, training is interrupted.
 
@@ -280,13 +280,14 @@ def train_model(
             print("||| List of available clique sizes is now: ", clique_size_list)
 
         # Loop for decreasing learning rate
-        for lr_index in training_parameters["learning_rates"]:
+        for learning_rate in training_parameters["learning_rates"]:
             
             if rank == 0:
-                print("||||| Learning rate is now: ", training_parameters["learning_rates"][lr_index])
+                print("||||| Learning rate is now: ", float(learning_rate))
 
             # initializing early stopper (triggers passage to following learning rate)
             early_stopper = EarlyStopper(
+                alpha=training_parameters["alpha"],
                 patience=training_parameters["patience"],
                 min_delta=training_parameters["min_delta"],
                 val_exit_loss=training_parameters["val_exit_loss"],
@@ -295,16 +296,16 @@ def train_model(
             # reading optimizer and learning rate
             if training_parameters["optimizer"] == "Adam":
                 optim = torch.optim.Adam(
-                    model.parameters(), lr=training_parameters["learning_rates"][lr_index]
+                    model.parameters(), lr=float(learning_rate)
                 )
             elif training_parameters["optimizer"] == "AdamW":
                 optim = torch.optim.AdamW(
-                    model.parameters(), lr=training_parameters["learning_rates"][lr_index]
+                    model.parameters(), lr=float(learning_rate)
                 )
             elif training_parameters["optimizer"] == "SGD":
                 optim = torch.optim.SGD(
                     model.parameters(),
-                    lr=training_parameters["learning_rates"][lr_index],
+                    lr=float(learning_rate),
                     momentum=0.9,  # default value is zero
                 )
             else:
@@ -566,18 +567,18 @@ def train_model(
                 spacing_values = np.linspace(0, 1.5, 5)
                 # - dictionary with scalar values for the vertical lines:
                 scalar_values = {
-                    f"vert-line-{round(value,2)}_{current_clique_size}_{training_parameters["learning_rates"][lr_index]}": value
+                    f'vert-line-{round(value,2)}_{current_clique_size}_{float(learning_rate)}': value
                     for value in spacing_values
                 }
                 # - add the scalars to both writers (only from rank 0 process):
                 writer.add_scalars(
-                    f"{model_name}_train-stdval-meanval-losses", scalar_values, saved_steps
+                    f'{model_name}_train-stdval-meanval-losses', scalar_values, saved_steps
                 )
                 writer.add_scalars(
-                    f"{model_name}_validation-losses", scalar_values, saved_steps
+                    f'{model_name}_validation-losses', scalar_values, saved_steps
                 )    
                 # 2. Printing a message to indicate the end of training for the current learning rate:
-                print("||||| Completed training for learning rate = ", training_parameters["learning_rates"][lr_index])
+                print("||||| Completed training for learning rate = ", float(learning_rate))
                 print(
                     "||||| ---------------------------------------------------------------------------------"
                 )

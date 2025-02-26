@@ -1,0 +1,36 @@
+elapsed_time: '2:18:25.743835'
+exp_name: mlp_exp
+graph_size_values:
+- 400
+models:
+- architecture:
+    dropout_prob: 0.2
+    layers:
+    - 200
+    - 100
+    - 25
+    - 12
+  model_name: MLP
+p_correction_type: p_reduce
+testing_parameters:
+  clique_testing_levels: 100
+  max_clique_size_proportion_test: 0.7
+  num_test: 32
+  test_iterations: 16
+training_parameters:
+  alpha: 0.9
+  clique_training_levels: 10
+  learning_rates:
+  - 1e-3
+  - 1e-4
+  - 1e-5
+  loss_function: BCELoss
+  max_clique_size_proportion: 0.5
+  min_delta: 0.01
+  num_train: 32
+  num_training_steps: 5000
+  num_val: 32
+  optimizer: AdamW
+  patience: 20
+  save_step: 10
+  val_exit_loss: 0.1

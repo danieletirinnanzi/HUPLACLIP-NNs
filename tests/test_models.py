@@ -85,6 +85,22 @@ class ModelTest(unittest.TestCase):
         # If no errors, proceed with splitting            
         local_batch_size = configfile["training_parameters"]["num_train"] // world_size
 
+        print("World size: ", world_size, " should be 2 for 2 GPUs")
+        print("Local batch size: ", local_batch_size, " should be 16 for 2 GPUs")
+
+        # Placeholder to receive subset on each GPU
+        # - Placeholder for graphs
+        if input_magnification:
+            local_tensor_graphs = torch.zeros((local_batch_size, 1, 2400, 2400), device=device_id)
+        else:
+            local_tensor_graphs = torch.zeros((local_batch_size, 1, graph_size, graph_size), device=device_id)
+        # - Placeholder for labels
+        local_tensor_labels = torch.zeros((local_batch_size), device=device_id)
+        
+        print("Placeholder shapes:")
+        print(local_tensor_graphs.shape, "should be 16, 1, 400, 400 for MLP")
+        print(local_tensor_labels.shape, "should be 16 for MLP")
+        
         # Generating training data on CPU (full batch) on rank 0
         if rank == 0:
             print(f"{model_name} Trainability test, rank {rank}: Data generation start {datetime.datetime.now()}")
@@ -96,27 +112,29 @@ class ModelTest(unittest.TestCase):
                 input_magnification,
             )   # returns a tuple of graphs (full_data[0]) and labels (full_data[1])
             print(f"{model_name} Trainability test, rank {rank}: Data generation finish {datetime.datetime.now()}")
-            # Split the full batch into subsets for each process
-            subsets = [
-                (
-                    torch.Tensor(full_data[0][i * local_batch_size:(i + 1) * local_batch_size]),    # subset of graph adjacency matrices
-                    torch.Tensor(full_data[1][i * local_batch_size:(i + 1) * local_batch_size])     # subset of graph labels
-                )
-                for i in range(world_size)
-            ]
+            # Create separate scatter lists for graphs and labels:
+            scatter_list_graphs = [torch.Tensor(full_data[0][i * local_batch_size:(i + 1) * local_batch_size]).to(device_id) for i in range(world_size)]
+            scatter_list_labels = [torch.Tensor(full_data[1][i * local_batch_size:(i + 1) * local_batch_size]).to(device_id) for i in range(world_size)]
+
+            print("Scatter list shapes:")
+            print(scatter_list_graphs[0].shape, "should be 16, 1, 400, 400 for MLP")
+            print(scatter_list_labels[0].shape, "should be 16 for MLP")
+            
         else:
-            subsets = None
-
-        # Placeholder for receiving subsets
-        split_data = (
-            torch.zeros(local_batch_size, *full_data[0].shape[1:], device=device_id),   # dimensions: (local_batch_size, graph_size, graph_size) -> adjacency matrices
-            torch.zeros(local_batch_size, *full_data[1].shape[1:], device=device_id)    # dimensions: (local_batch_size, 1) -> labels
-        )
-
-        # Scatter the subsets to each process
-        torch.distributed.scatter(split_data[0], scatter_list=[subset[0].to(device_id) for subset in subsets] if rank == 0 else None, src=0)
-        torch.distributed.scatter(split_data[1], scatter_list=[subset[1].to(device_id) for subset in subsets] if rank == 0 else None, src=0)
-
+            full_data = None
+            scatter_list_graphs = None
+            scatter_list_labels = None
+        
+        # Scatter the lists to each process
+        # - scattering graphs:
+        torch.distributed.scatter(local_tensor_graphs, scatter_list=scatter_list_graphs, src=0) 
+        # - scattering labels:
+        torch.distributed.scatter(local_tensor_labels, scatter_list=scatter_list_labels, src=0)
+        
+        print("Scattered shapes:")
+        print(local_tensor_graphs.shape, "should be 16, 1, 400, 400 for MLP")
+        print(local_tensor_labels.shape, "should be 16 for MLP")
+        
         if rank == 0:
             print(f"{model_name} Trainability test, rank {rank}: Data partitioned and sent to device at {datetime.datetime.now()}")        
 
@@ -124,8 +142,8 @@ class ModelTest(unittest.TestCase):
         torch.distributed.barrier()
 
         # Forward pass on training data
-        train_pred = model(split_data[0]).squeeze()
-        train_loss = criterion(train_pred.type(torch.float), split_data[1].type(torch.float))            
+        train_pred = model(local_tensor_graphs).squeeze()
+        train_loss = criterion(train_pred.type(torch.float), local_tensor_labels.type(torch.float))            
         if rank == 0:
             print(f"{model_name} Trainability test, rank {rank}: Forward pass completed at {datetime.datetime.now()}")        
 
@@ -139,7 +157,7 @@ class ModelTest(unittest.TestCase):
             print(f"{model_name} Trainability test, rank {rank}: Backward pass and optimizer step completed at {datetime.datetime.now()}")        
 
         # Making sure batches are correctly split across GPUs
-        print(f"{model_name} Trainability test (loss calculation), rank {rank}: GPU {device_id} is processing {split_data[0].shape[0]} graphs.")
+        print(f"{model_name} Trainability test (loss calculation), rank {rank}: GPU {device_id} is processing {local_tensor_graphs.shape[0]} graphs.")
         if rank == 0:
             print(f"{model_name} Trainability test (loss calculation), rank {rank}: The full batch generated on rank {rank} contains {full_data[0].shape[0]} graphs.")
         # Making sure global loss is computed correctly:
@@ -156,18 +174,19 @@ class ModelTest(unittest.TestCase):
             
             print(f"{model_name} Trainability test (loss calculation): Global training loss averaged across GPUs is {global_train_loss}.")                        
                         
-        del full_data, split_data, train_pred
+        del full_data, local_tensor_graphs, local_tensor_labels, scatter_list_graphs, scatter_list_labels, train_pred, train_loss, train_loss_tensor
 
     def get_optimizer(self, model):
         """Retrieve optimizer from configuration."""
         optimizer_type = configfile["training_parameters"]["optimizer"]
-        lr = configfile["training_parameters"]["learning_rate"]
+        lr = configfile["training_parameters"]["learning_rates"][0] # choosing the first learning rate value for tests
+        
         if optimizer_type == "Adam":
-            return torch.optim.Adam(model.parameters(), lr=lr)
+            return torch.optim.Adam(model.parameters(), lr=float(lr))
         elif optimizer_type == "AdamW":
-            return torch.optim.AdamW(model.parameters(), lr=lr)
+            return torch.optim.AdamW(model.parameters(), lr=float(lr))
         elif optimizer_type == "SGD":
-            return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+            return torch.optim.SGD(model.parameters(), lr=float(lr), momentum=0.9)
         else:
             raise ValueError("Invalid optimizer in configuration")
 

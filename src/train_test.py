@@ -119,7 +119,7 @@ class EarlyStopper:
                 (1 - self.alpha) * val_loss
             )
             
-            print(f"Updated running mean loss is {self.running_mean_val_loss}")
+            print(f"Updated running mean of the current validation loss is {self.running_mean_val_loss}")
 
             # Checking the two stopping conditions:
             # - Increase loss stopping:
@@ -255,6 +255,21 @@ def train_model(
     )
     # - min clique size is the statistical limit associated with the graph size
     min_clique_size = int(2 * np.log2(graph_size))
+    # - calculating local batch sizes for training and validation data:
+    # Checking divisibility of training batch size by world size
+    if training_parameters["num_train"] % world_size != 0:
+        raise ValueError(
+            f"Training batch size of {training_parameters['num_train']} is not evenly divisible by world_size={world_size}. "
+            f"Each rank requires an equal share of the data for DDP. Please adjust 'num_train' to be divisible by {world_size}."
+        )    
+    local_batch_size_train = training_parameters["num_train"] // world_size
+    # Checking divisibility of validation batch size by world size
+    if training_parameters["num_val"] % world_size != 0:
+        raise ValueError(
+            f"Validation batch size of {training_parameters['num_val']} is not evenly divisible by world_size={world_size}. "
+            f"Each rank requires an equal share of the data for DDP. Please adjust 'num_val' to be divisible by {world_size}."
+        )
+    local_batch_size_val = training_parameters["num_val"] // world_size # batch size for validation data (both standard validation and validation on all task versions)    
 
     # Calculating array of clique sizes for all training curriculum:
     clique_sizes = np.linspace(
@@ -313,47 +328,54 @@ def train_model(
 
             # Training steps loop:
             for training_step in range(training_parameters["num_training_steps"] + 1):
-
-                # Generate clique size value of each graph in the current batch
-                clique_size_array_train = gen_graphs.generate_batch_clique_sizes(
-                    clique_size_list, training_parameters["num_train"]
-                )
-
-                # Generating training data (full batch)
-                full_train_data = gen_graphs.generate_batch(
-                    training_parameters["num_train"],
-                    graph_size,
-                    clique_size_array_train,
-                    p_correction_type,
-                    input_magnification,
-                )
-
-                # Split training data across GPUs, checking divisibility of batch size by world size
-                if training_parameters["num_train"] % world_size != 0:
-                    raise ValueError(
-                        f"Batch size of {training_parameters['num_train']} is not evenly divisible by world_size={world_size}. "
-                        f"Each rank requires an equal share of the data for DDP. Please adjust 'num_train' to be divisible by {world_size}."
+                
+                # Creating placeholders to receive subset of training data
+                # - Placeholder for graphs
+                if input_magnification:
+                    local_tensor_graphs_train = torch.zeros((local_batch_size_train, 1, 2400, 2400), device=device_id)
+                else:
+                    local_tensor_graphs_train = torch.zeros((local_batch_size_train, 1, graph_size, graph_size), device=device_id)
+                # - Placeholder for labels
+                local_tensor_labels_train = torch.zeros((local_batch_size_train), device=device_id)
+                    
+                # Generating training data on CPU (full batch) on rank 0 and scattering relevant data to separate GPUs
+                if rank == 0:                
+                    # Generate clique size value of each graph in the current batch
+                    clique_size_array_train = gen_graphs.generate_batch_clique_sizes(
+                        clique_size_list, training_parameters["num_train"]
                     )
-                # If no errors, proceed with splitting
-                local_batch_size_train = training_parameters["num_train"] // world_size
-                start_idx_train = rank * local_batch_size_train
-                end_idx_train = (rank + 1) * local_batch_size_train
 
-                # Partition data for the current rank
-                train_data = (
-                    torch.Tensor(full_train_data[0][start_idx_train:end_idx_train]).to(
-                        device_id
-                    ),
-                    torch.Tensor(full_train_data[1][start_idx_train:end_idx_train]).to(
-                        device_id
-                    ),
-                )
+                    # Generating training data (full batch)
+                    full_train_data = gen_graphs.generate_batch(
+                        training_parameters["num_train"],
+                        graph_size,
+                        clique_size_array_train,
+                        p_correction_type,
+                        input_magnification,
+                    )
+                    
+                    # Create separate scatter lists for graphs and labels:
+                    scatter_list_graphs_train = [torch.Tensor(full_train_data[0][i * local_batch_size_train:(i + 1) * local_batch_size_train]).to(device_id) for i in range(world_size)]
+                    scatter_list_labels_train = [torch.Tensor(full_train_data[1][i * local_batch_size_train:(i + 1) * local_batch_size_train]).to(device_id) for i in range(world_size)]                    
+                else:
+                    full_train_data = None
+                    scatter_list_graphs_train = None
+                    scatter_list_labels_train = None
 
-                # Forward pass on training data
-                train_pred = model(train_data[0]).squeeze()
+                # Scatter the lists to each process
+                # - scattering graphs:
+                torch.distributed.scatter(local_tensor_graphs_train, scatter_list=scatter_list_graphs_train, src=0) 
+                # - scattering labels:
+                torch.distributed.scatter(local_tensor_labels_train, scatter_list=scatter_list_labels_train, src=0)
+                
+                # Barrier to ensure all processes reach this point
+                torch.distributed.barrier()                
+
+                # Forward pass on training data (after this, train_loss is the loss for the local batch)
+                train_pred = model(local_tensor_graphs_train).squeeze()
                 train_loss = criterion(
                     train_pred.type(torch.float),
-                    torch.Tensor(train_data[1]).type(torch.float),
+                    torch.Tensor(local_tensor_labels_train).type(torch.float),
                 )
 
                 # Backward pass
@@ -361,8 +383,8 @@ def train_model(
                 optim.step()
                 optim.zero_grad(set_to_none=True)
 
-                # Free up memory for training data
-                # del train_data
+                # Free up memory from training data
+                del full_train_data, local_tensor_graphs_train, local_tensor_labels_train, scatter_list_graphs_train, scatter_list_labels_train
                 torch.cuda.empty_cache()
 
                 # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
@@ -384,6 +406,7 @@ def train_model(
                         torch.distributed.all_reduce(
                             train_loss_tensor, op=torch.distributed.ReduceOp.SUM
                         )
+                        # Storing global training loss (only rank 0 updates the dictionary)
                         if rank == 0:
                             global_train_loss = train_loss_tensor.item() / world_size
 
@@ -395,41 +418,56 @@ def train_model(
                             # - creating dictionary to store validation losses for all task versions (will be logged to Tensorboard):
                             complete_val_dict = {}
 
+
                         # STANDARD VALIDATION LOSS (mirrors training loss and is used for early stopping):
-                        # - Generate clique size value of each graph in the current batch
-                        clique_size_array_stdval = gen_graphs.generate_batch_clique_sizes(
-                            clique_size_list, training_parameters["num_val"]
-                        )
-
-                        # Generating standard validation data
-                        full_stdval_data = gen_graphs.generate_batch(
-                            training_parameters["num_val"],
-                            graph_size,
-                            clique_size_array_stdval,
-                            p_correction_type,
-                            input_magnification,
-                        )
-
                         # Split validation data across GPUs:
-                        local_batch_size_val = training_parameters["num_val"] // world_size
-                        start_idx_val = rank * local_batch_size_val
-                        end_idx_val = (rank + 1) * local_batch_size_val
+                        # Creating placeholders to receive subset of stdval data
+                        # - Placeholder for graphs
+                        if input_magnification:
+                            local_tensor_graphs_stdval = torch.zeros((local_batch_size_val, 1, 2400, 2400), device=device_id)
+                        else:
+                            local_tensor_graphs_stdval = torch.zeros((local_batch_size_val, 1, graph_size, graph_size), device=device_id)
+                        # - Placeholder for labels
+                        local_tensor_labels_stdval = torch.zeros((local_batch_size_val), device=device_id)
+                                                
+                        # Generating standard validation data on CPU (full batch) on rank 0 and scattering relevant data to separate GPUs
+                        if rank == 0:
+                            # - Generate clique size value of each graph in the current batch
+                            clique_size_array_stdval = gen_graphs.generate_batch_clique_sizes(
+                                clique_size_list, training_parameters["num_val"]
+                            )
+                                                      
+                            # Generating standard validation data
+                            full_stdval_data = gen_graphs.generate_batch(
+                                training_parameters["num_val"],
+                                graph_size,
+                                clique_size_array_stdval,
+                                p_correction_type,
+                                input_magnification,
+                            )
+                            
+                            # Create separate scatter lists for graphs and labels:
+                            scatter_list_graphs_stdval = [torch.Tensor(full_stdval_data[0][i * local_batch_size_val:(i + 1) * local_batch_size_val]).to(device_id) for i in range(world_size)]
+                            scatter_list_labels_stdval = [torch.Tensor(full_stdval_data[1][i * local_batch_size_val:(i + 1) * local_batch_size_val]).to(device_id) for i in range(world_size)]                    
+                        else:
+                            full_stdval_data = None
+                            scatter_list_graphs_stdval = None
+                            scatter_list_labels_stdval = None                            
 
-                        # Partition data for the current rank
-                        stdval_data = (
-                            torch.Tensor(full_stdval_data[0][start_idx_val:end_idx_val]).to(
-                                device_id
-                            ),
-                            torch.Tensor(full_stdval_data[1][start_idx_val:end_idx_val]).to(
-                                device_id
-                            ),
-                        )
+                        # Scatter the lists to each process
+                        # - scattering graphs:
+                        torch.distributed.scatter(local_tensor_graphs_stdval, scatter_list=scatter_list_graphs_stdval, src=0) 
+                        # - scattering labels:
+                        torch.distributed.scatter(local_tensor_labels_stdval, scatter_list=scatter_list_labels_stdval, src=0)
+                        
+                        # Barrier to ensure all processes reach this point
+                        torch.distributed.barrier()   
 
                         # Compute loss on standard validation set:
-                        stdval_pred = model(stdval_data[0]).squeeze()
+                        stdval_pred = model(local_tensor_graphs_stdval).squeeze()
                         stdval_loss = criterion(
                             stdval_pred.type(torch.float),
-                            torch.Tensor(stdval_data[1]).type(torch.float),
+                            torch.Tensor(local_tensor_labels_stdval).type(torch.float),
                         )
 
                         # Aggregate validation loss across GPUs:
@@ -440,7 +478,8 @@ def train_model(
                             stdval_loss_tensor, op=torch.distributed.ReduceOp.SUM
                         )
                         global_stdval_loss = stdval_loss_tensor.item() / world_size
-                        # Check early stopping condition:
+                        
+                        # Check early stopping condition (it is based on the validation loss for the currently trained clique size):
                         early_stop = early_stopper.should_stop(global_stdval_loss)
 
                         if rank == 0:
@@ -450,40 +489,61 @@ def train_model(
                             )
 
                         # Free up memory for validation data
-                        del stdval_pred, stdval_data
+                        del full_stdval_data, local_tensor_graphs_stdval, local_tensor_labels_stdval, scatter_list_graphs_stdval, scatter_list_labels_stdval
                         torch.cuda.empty_cache()
 
                         # VALIDATING MODEL ON ALL TASK VERSIONS:
                         for current_clique_size_val in clique_sizes:
 
-                            # Generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
-                            clique_size_array_val = gen_graphs.generate_batch_clique_sizes(
-                                np.array([current_clique_size_val]),
-                                training_parameters["num_val"],
-                            )
+                            # Creating placeholders to receive subset of training data
+                            # - Placeholder for graphs
+                            if input_magnification:
+                                local_tensor_graphs_val = torch.zeros((local_batch_size_val, 1, 2400, 2400), device=device_id)
+                            else:
+                                local_tensor_graphs_val = torch.zeros((local_batch_size_val, 1, graph_size, graph_size), device=device_id)
+                            # - Placeholder for labels
+                            local_tensor_labels_val = torch.zeros((local_batch_size_val), device=device_id)
 
-                            # Generating validation graphs:
-                            full_val_data = gen_graphs.generate_batch(
-                                training_parameters["num_val"],
-                                graph_size,
-                                clique_size_array_val,
-                                p_correction_type,
-                                input_magnification,
-                            )
-                            # Partition data for the current rank
-                            val_data = (
-                                torch.Tensor(
-                                    full_val_data[0][start_idx_val:end_idx_val]
-                                ).to(device_id),
-                                torch.Tensor(
-                                    full_val_data[1][start_idx_val:end_idx_val]
-                                ).to(device_id),
-                            )
+                            # Split validation data across GPUs:
+                            if rank == 0:
+                                
+                                # Generate clique size value of each graph in the current batch (in this case, we only need one value -> all graphs have the same clique size)
+                                clique_size_array_val = gen_graphs.generate_batch_clique_sizes(
+                                    np.array([current_clique_size_val]),
+                                    training_parameters["num_val"],
+                                )
+
+                                # Generating validation graphs:
+                                full_val_data = gen_graphs.generate_batch(
+                                    training_parameters["num_val"],
+                                    graph_size,
+                                    clique_size_array_val,
+                                    p_correction_type,
+                                    input_magnification,
+                                )
+
+                                # Create separate scatter lists for graphs and labels:
+                                scatter_list_graphs_val = [torch.Tensor(full_val_data[0][i * local_batch_size_val:(i + 1) * local_batch_size_val]).to(device_id) for i in range(world_size)]
+                                scatter_list_labels_val = [torch.Tensor(full_val_data[1][i * local_batch_size_val:(i + 1) * local_batch_size_val]).to(device_id) for i in range(world_size)]                    
+                            else:
+                                full_val_data = None
+                                scatter_list_graphs_val = None
+                                scatter_list_labels_val = None
+                                
+                            # Scatter the lists to each process
+                            # - scattering graphs:
+                            torch.distributed.scatter(local_tensor_graphs_val, scatter_list=scatter_list_graphs_val, src=0) 
+                            # - scattering labels:
+                            torch.distributed.scatter(local_tensor_labels_val, scatter_list=scatter_list_labels_val, src=0)
+                            
+                            # Barrier to ensure all processes reach this point
+                            torch.distributed.barrier()                                   
+                                
                             # Compute loss on validation set:
-                            val_pred = model(val_data[0]).squeeze()
+                            val_pred = model(local_tensor_graphs_val).squeeze()
                             val_loss = criterion(
                                 val_pred.type(torch.float),
-                                torch.Tensor(val_data[1]).type(torch.float),
+                                torch.Tensor(local_tensor_labels_val).type(torch.float),
                             )
 
                             # Aggregate the validation loss across GPUs
@@ -502,7 +562,7 @@ def train_model(
                                 )
 
                             # Free up memory for validation data
-                            del val_pred, val_data
+                            del full_val_data, local_tensor_graphs_val, local_tensor_labels_val, scatter_list_graphs_val, scatter_list_labels_val
                             torch.cuda.empty_cache()
 
                         # End of validation on all task versions:
@@ -562,9 +622,9 @@ def train_model(
             
             # When this runs, training steps loop has finished (either due to early stopping or reaching the maximum number of training steps)
             if rank == 0:
-                # 1. Tensorboard logging: printing a vertical bar of 5 points in the plot, to separate the learning rates
+                # 1. Tensorboard logging: printing a vertical bar of 4 points in the plot, to separate the learning rates
                 # - defining y values for the vertical lines:
-                spacing_values = np.linspace(0, 1.5, 5)
+                spacing_values = np.linspace(0, 1.5, 4)
                 # - dictionary with scalar values for the vertical lines:
                 scalar_values = {
                     f'vert-line-{round(value,2)}_{current_clique_size}_{float(learning_rate)}': value
@@ -585,9 +645,9 @@ def train_model(
 
         # When this runs, learning rate loop has finished (all learning rates have been used for the current clique size)
         if rank == 0:
-            # 1. Tensorboard logging: printing a vertical bar of 10 points in the plot, to separate the clique size values
+            # 1. Tensorboard logging: printing a vertical bar of 8 points in the plot, to separate the clique size values
             # - defining y values for the vertical lines:
-            spacing_values = np.linspace(0, 1.5, 10)
+            spacing_values = np.linspace(0, 1.5, 8)
             # - dictionary with scalar values for the vertical lines:
             scalar_values = {
                 f"vert-line-{round(value,2)}_{current_clique_size}": value
@@ -661,6 +721,14 @@ def test_model(
     max_clique_size = int(
         testing_parameters["max_clique_size_proportion_test"] * graph_size
     )
+    
+    # Checking divisibility of test batch size by world size
+    if testing_parameters["num_test"] % world_size != 0:
+        raise ValueError(
+            f"Batch size of {testing_parameters['num_test']} is not evenly divisible by world_size={world_size}. "
+            f"Each rank requires an equal share of the data for DDP. Please adjust 'num_test' to be divisible by {world_size}."
+        )
+    local_batch_size_test = testing_parameters["num_test"] // world_size
 
     # Calculate array of clique sizes for all test curriculum
     # NOTE: if max clique size is smaller than the the number of test levels, use max clique size as the number of test levels
@@ -684,58 +752,70 @@ def test_model(
         # Loop for testing iterations:
         for test_iter in range(testing_parameters["test_iterations"]):
 
-            # Generate clique size value of each graph in the current batch
-            clique_size_array_test = gen_graphs.generate_batch_clique_sizes(
-                np.array([current_clique_size]),
-                testing_parameters["num_test"],
-            )
+            # Creating placeholders to receive subset of training data
+            # - Placeholder for graphs
+            if input_magnification:
+                local_tensor_graphs_test = torch.zeros((local_batch_size_test, 1, 2400, 2400), device=device_id)
+            else:
+                local_tensor_graphs_test = torch.zeros((local_batch_size_test, 1, graph_size, graph_size), device=device_id)
+            # - Placeholder for labels
+            local_tensor_labels_test = torch.zeros((local_batch_size_test), device=device_id)
 
-            # Generate validation graphs
-            full_test_data = gen_graphs.generate_batch(
-                testing_parameters["num_test"],
-                graph_size,
-                clique_size_array_test,
-                p_correction_type,
-                input_magnification,
-            )
+            if rank == 0:
+                # Generate clique size value of each graph in the current batch
+                clique_size_array_test = gen_graphs.generate_batch_clique_sizes(
+                    np.array([current_clique_size]),
+                    testing_parameters["num_test"],
+                )
 
-            # Split test data across GPUs
-            local_batch_size_test = testing_parameters["num_test"] // world_size
-            start_idx_test = rank * local_batch_size_test
-            end_idx_test = (rank + 1) * local_batch_size_test
-
-            # Partition data for the current rank
-            test_data = (
-                torch.Tensor(full_test_data[0][start_idx_test:end_idx_test]).to(
-                    device_id
-                ),
-                torch.Tensor(full_test_data[1][start_idx_test:end_idx_test]).to(
-                    device_id
-                ),
-            )
+                # Generate validation graphs
+                full_test_data = gen_graphs.generate_batch(
+                    testing_parameters["num_test"],
+                    graph_size,
+                    clique_size_array_test,
+                    p_correction_type,
+                    input_magnification,
+                )
+                
+                # Create separate scatter lists for graphs and labels:
+                scatter_list_graphs_test = [torch.Tensor(full_test_data[0][i * local_batch_size_test:(i + 1) * local_batch_size_test]).to(device_id) for i in range(world_size)]
+                scatter_list_labels_test = [torch.Tensor(full_test_data[1][i * local_batch_size_test:(i + 1) * local_batch_size_test]).to(device_id) for i in range(world_size)]                    
+            else:
+                full_test_data = None
+                scatter_list_graphs_test = None
+                scatter_list_labels_test = None
+            
+            # Scatter the lists to each process
+            # - scattering graphs:
+            torch.distributed.scatter(local_tensor_graphs_test, scatter_list=scatter_list_graphs_test, src=0) 
+            # - scattering labels:
+            torch.distributed.scatter(local_tensor_labels_test, scatter_list=scatter_list_labels_test, src=0)
+            
+            # Barrier to ensure all processes reach this point
+            torch.distributed.barrier()  
 
             # Perform prediction on test data
-            soft_output = model(test_data[0]).squeeze()
+            soft_output = model(local_tensor_graphs_test).squeeze()
 
             # Update global metrics for AUC-ROC
             y_scores.extend(soft_output.cpu().tolist())
-            y_true.extend(test_data[1].cpu().tolist())
+            y_true.extend(local_tensor_labels_test.cpu().tolist())
 
             # Convert soft predictions to hard predictions
             hard_output = (soft_output > 0.5).float()
 
             # Compute metrics
-            TP += ((hard_output == 1) & (test_data[1] == 1)).sum().item()
-            FP += ((hard_output == 1) & (test_data[1] == 0)).sum().item()
-            TN += ((hard_output == 0) & (test_data[1] == 0)).sum().item()
-            FN += ((hard_output == 0) & (test_data[1] == 1)).sum().item()
+            TP += ((hard_output == 1) & (local_tensor_labels_test == 1)).sum().item()
+            FP += ((hard_output == 1) & (local_tensor_labels_test == 0)).sum().item()
+            TN += ((hard_output == 0) & (local_tensor_labels_test == 0)).sum().item()
+            FN += ((hard_output == 0) & (local_tensor_labels_test == 1)).sum().item()
 
             # Calculate fraction correct for current test iteration
-            fraction_correct = (hard_output == test_data[1]).float().mean().item()
+            fraction_correct = (hard_output == local_tensor_labels_test).float().mean().item()
             fraction_correct_list.append(fraction_correct)
 
             # Free memory after this iteration
-            del soft_output, hard_output, test_data
+            del full_test_data, local_tensor_graphs_test, local_tensor_labels_test, scatter_list_graphs_test, scatter_list_labels_test
             torch.cuda.empty_cache()
 
         # After all test iterations for the current clique size:

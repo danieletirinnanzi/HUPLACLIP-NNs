@@ -119,8 +119,6 @@ class EarlyStopper:
                 (1 - self.alpha) * val_loss
             )
             
-            print(f"Updated running mean of the current validation loss is {self.running_mean_val_loss}")
-
             # Checking the two stopping conditions:
             # - Increase loss stopping:
             if self.running_mean_val_loss >= previous_running_mean_val_loss - self.min_delta:
@@ -622,9 +620,9 @@ def train_model(
             
             # When this runs, training steps loop has finished (either due to early stopping or reaching the maximum number of training steps)
             if rank == 0:
-                # 1. Tensorboard logging: printing a vertical bar of 4 points in the plot, to separate the learning rates
+                # 1. Tensorboard logging: printing a vertical bar of 10 points in the plot, to separate the learning rates
                 # - defining y values for the vertical lines:
-                spacing_values = np.linspace(0, 1.5, 4)
+                spacing_values = np.linspace(0, 1.5, 10)
                 # - dictionary with scalar values for the vertical lines:
                 scalar_values = {
                     f'vert-line-{round(value,2)}_{current_clique_size}_{float(learning_rate)}': value
@@ -645,9 +643,9 @@ def train_model(
 
         # When this runs, learning rate loop has finished (all learning rates have been used for the current clique size)
         if rank == 0:
-            # 1. Tensorboard logging: printing a vertical bar of 8 points in the plot, to separate the clique size values
+            # 1. Tensorboard logging: printing a vertical bar of 20 points in the plot, to separate the clique size values
             # - defining y values for the vertical lines:
-            spacing_values = np.linspace(0, 1.5, 8)
+            spacing_values = np.linspace(0, 1.5, 20)
             # - dictionary with scalar values for the vertical lines:
             scalar_values = {
                 f"vert-line-{round(value,2)}_{current_clique_size}": value

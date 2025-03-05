@@ -7,8 +7,8 @@ graph_size_values:
   # - 300
   # - 400
   # - 480
-  # - 600
-  - 800
+  - 600
+  # - 800
   - 1200
   
 # type of correction to use (in graphs_generation.py):

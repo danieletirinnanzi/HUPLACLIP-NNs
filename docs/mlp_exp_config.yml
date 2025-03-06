@@ -7,7 +7,7 @@ graph_size_values:
   # - 300
   # - 400
   # - 480
-  - 600
+  # - 600
   # - 800
   - 1200
   
@@ -49,7 +49,7 @@ models:
 # NOTE: to perform single experiments, simply comment the models that are not needed.
 # Each instance of "models" will be trained and tested
   
-  - model_name: MLP_li-earlystop-scatter-pt40
+  - model_name: MLP-new-pipeline
     architecture:
       layers: [200, 100, 25, 12]
       dropout_prob: 0.2

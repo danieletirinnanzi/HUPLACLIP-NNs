@@ -13,8 +13,8 @@ from src.train_test import test_model
 
 def run_test_only():    
     # reading configuration and model name:
-    config = load_config(os.path.join("docs", "cnn_exp_config.yml"))  # CHANGE THIS
-    model_name = "CNN_large"  # CHANGE THIS
+    config = load_config(os.path.join("docs", "mlp_exp_config.yml"))  # CHANGE THIS
+    model_name = "MLP_li-earlystop-scatter-pt40"  # CHANGE THIS
 
     # DDP:
     rank = (
@@ -25,68 +25,64 @@ def run_test_only():
     world_size = torch.cuda.device_count()
     print("world size is: ", world_size)
 
-    if "CNN" in model_name:
-        
-        # TODO: generalize so that it can handle also MLP and ViT cases
-        
-        # reading model configuration:
-        model_config = [
-            model for model in config["models"] if model["model_name"] == model_name
-        ][0]
-        # creating the model:
-        model = load_model(model_config, config["graph_size_values"][0],config["testing_parameters"]["num_test"], world_size, rank, device_id)
-    
-        # load the best model from the training process on all ranks
-        # - defining file name and path:
-        file_path = os.path.join(
-            current_dir,
-            "..",
-            "..",
-            "results",
-            "data",
-            "cnn_exp_2025-01-12_00-03-44",
-            f"N{config['graph_size_values'][0]}",
+    # reading model configuration:
+    model_config = [
+        model for model in config["models"] if model["model_name"] == model_name
+    ][0]
+    # creating the model:
+    model = load_model(model_config, config["graph_size_values"][0],config["testing_parameters"]["num_test"], world_size, rank, device_id)
+
+    # load the best model from the training process on all ranks
+    # - defining file name and path:
+    file_path = os.path.join(
+        current_dir,
+        "..",
+        "..",
+        "results",
+        "data",
+        "mlp_exp_2025-03-06_18-30-37",  # CHANGE THIS
+        f"N{config['graph_size_values'][0]}",
+        model_name,
+        f"{model_name}_N{config['graph_size_values'][0]}_trained.pth"
+    )
+    # - making sure processes are synchronized on all devices
+    torch.distributed.barrier()        
+    # - configuring map location:
+    map_location = {"cuda:%d" % 0: "cuda:%d" % device_id}
+    print(map_location)
+
+    # - loading the model:
+    state_dict = torch.load(file_path, map_location=map_location)
+    model.load_state_dict(state_dict)
+
+    # - putting the model in evaluation mode before starting training:
+    model.eval()
+
+    # testing best model
+    fraction_correct_results, metrics_results = test_model(
+        model,
+        config["testing_parameters"],
+        config["graph_size_values"][0],
+        config["p_correction_type"],
+        model_name,
+        # DDP:
+        world_size,
+        rank,
+        device_id,
+    )
+    # - making sure processes are synchronized on all devices
+    torch.distributed.barrier()
+
+    # saving test results as csv file
+    if rank == 0:
+        save_test_results(
+            fraction_correct_results,
+            metrics_results,
             model_name,
-            f"{model_name}_N{config['graph_size_values'][0]}_trained.pth"
-        )
-        # - making sure processes are synchronized on all devices
-        torch.distributed.barrier()        
-        # - configuring map location:
-        map_location = {"cuda:%d" % 0: "cuda:%d" % device_id}
-        print(map_location)
-
-        # - loading the model:
-        state_dict = torch.load(file_path, map_location=map_location)
-        model.load_state_dict(state_dict)
-
-        # - putting the model in evaluation mode before starting training:
-        model.eval()
-
-        # testing best model
-        fraction_correct_results, metrics_results = test_model(
-            model,
-            config["testing_parameters"],
             config["graph_size_values"][0],
-            config["p_correction_type"],
-            model_name,
-            # DDP:
-            world_size,
-            rank,
-            device_id,
+            current_dir,
         )
-        # - making sure processes are synchronized on all devices
-        torch.distributed.barrier()
-
-        # saving test results as csv file
-        if rank == 0:
-            save_test_results(
-                fraction_correct_results,
-                metrics_results,
-                model_name,
-                config["graph_size_values"][0],
-                current_dir,
-            )
-            
+        
             
 if __name__ == "__main__":   
     # DDP (here, using one process per GPU):

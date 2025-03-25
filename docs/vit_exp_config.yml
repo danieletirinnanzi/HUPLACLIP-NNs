@@ -2,14 +2,14 @@ exp_name: vit_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
   - 100
-  # - 150
-  # - 200
-  # - 300
-  # - 400
-  # - 480
-  # - 600
-  # - 800
-  # - 1200
+  - 150
+  - 200
+  - 300
+  - 400
+  - 480
+  - 600
+  - 800
+  - 1200
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -18,7 +18,7 @@ p_correction_type: p_reduce
 
 training_parameters:
   # training steps:
-  num_training_steps: 5000
+  num_training_steps: 3000
   # training and validation set sizes:
   num_train: 32
   num_val: 32
@@ -34,7 +34,7 @@ training_parameters:
   loss_function: BCELoss
   # early stopping (leaky integrator):
   alpha: 0.9  # leak rate
-  patience: 20
+  patience: 40
   min_delta: 0.01
   val_exit_loss: 0.1
 

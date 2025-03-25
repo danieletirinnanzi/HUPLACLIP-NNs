@@ -24,7 +24,7 @@ from src.variance_test import Variance_algo
 
 # loading experiment configuration file:
 config = load_config(
-    os.path.join("docs", "mlp_exp_config.yml")
+    os.path.join("docs", "vit_exp_config.yml")
 )  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
 
 

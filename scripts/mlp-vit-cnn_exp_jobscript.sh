@@ -8,7 +8,7 @@
 #SBATCH --mem=128G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
-#SBATCH --job-name=mlp-vit_exp
+#SBATCH --job-name=mlp-vit-cnn_exp
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=dtirinna@sissa.it
 #SBATCH --output=/leonardo/home/userexternal/dtirinna/HUPLACLIP-NNs/out/%x.%j.out

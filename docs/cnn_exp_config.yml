@@ -18,7 +18,7 @@ p_correction_type: p_reduce
 
 training_parameters:
   # training steps:
-  num_training_steps: 5000
+  num_training_steps: 3000
   # training and validation set sizes:
   num_train: 32
   num_val: 32
@@ -34,7 +34,7 @@ training_parameters:
   loss_function: BCELoss
   # early stopping (leaky integrator):
   alpha: 0.9  # leak rate
-  patience: 20
+  patience: 40
   min_delta: 0.01
   val_exit_loss: 0.1
 

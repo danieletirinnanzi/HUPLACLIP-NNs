@@ -1,9 +1,9 @@
 exp_name: vit_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  # - 100
-  # - 150
-  # - 200
+  - 100
+  - 150
+  - 200
   - 300
   - 400
   - 480
@@ -23,7 +23,7 @@ training_parameters:
   num_train: 32
   num_val: 32
   # other hyperparameters:
-  learning_rates: [1e-3, 1e-4, 1e-5]
+  learning_rates: [1e-4, 1e-5, 1e-6]
   # training structure:
   max_clique_size_proportion: 0.5 # during training, clique will be at most 50% of the graph size
   # min_clique_size_proportion: 0.3 NOT USED, min clique size is statistical limit

@@ -1,15 +1,15 @@
 exp_name: cnn_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  # - 100 DONE (okay)
-  # - 150 DONE (no learning between clique size = 0.5N and 0.7N)
-  # - 200 DONE (no learning at all, flat training curves)
-  # - 300 DONE (no learning at all, flat training curves)
-  # - 400 DONE (no learning at all, flat training curves)
-  # - 480 DONE (did not complete training the last clique size level  -> tested checkpointed model)
-   - 600
-  # - 800 DONE (did not complete training the last clique size level  -> tested checkpointed model)
-  # - 1200 DONE (did not complete training the last two clique size levels -> tested checkpointed model)
+  - 100 
+  - 150 
+  - 200
+  - 300
+  - 400
+  - 480 
+  - 600
+  - 800 
+  - 1200 
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -23,7 +23,7 @@ training_parameters:
   num_train: 32
   num_val: 32
   # other hyperparameters:
-  learning_rates: [1e-3, 1e-4, 1e-5]
+  learning_rates: [1e-4, 1e-5, 1e-6]
   # training structure:
   max_clique_size_proportion: 0.5 # during training, clique will be at most 50% of the graph size
   # min_clique_size_proportion: 0.3 NOT USED, min clique size is statistical limit

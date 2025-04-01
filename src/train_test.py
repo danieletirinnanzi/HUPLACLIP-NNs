@@ -481,10 +481,13 @@ def train_model(
                         early_stop = early_stopper.should_stop(global_stdval_loss)
 
                         if rank == 0:
-                            # storing standard validation loss in the training and validation losses dictionary:
+                            # storing losses in the training and validation losses dictionary:
+                            # - "standard validation" loss
                             train_val_dict[f"stdval-loss-{current_clique_size}"] = (
                                 global_stdval_loss
                             )
+                            # - "running mean validation" loss (used for early stopping)
+                            train_val_dict["runningmean-stdval-loss"] = (early_stopper.running_mean_val_loss)
 
                         # Free up memory for validation data
                         del full_stdval_data, local_tensor_graphs_stdval, local_tensor_labels_stdval, scatter_list_graphs_stdval, scatter_list_labels_stdval

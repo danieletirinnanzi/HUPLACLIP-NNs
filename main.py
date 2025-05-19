@@ -4,8 +4,6 @@ import unittest
 import sys
 import torch
 from torch.utils.tensorboard import SummaryWriter
-import torch.multiprocessing as mp
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 # custom imports
 from src.utils import (
@@ -20,7 +18,6 @@ from src.train_test import (
     test_model,
 )
 from src.tensorboard_save import tensorboard_save_images
-from src.variance_test import Variance_algo
 
 # loading experiment configuration file:
 config = load_config(
@@ -212,18 +209,7 @@ def full_exp():
             del model
             torch.cuda.empty_cache()
 
-        # # At the end of each graph size value, test algorithm based on the variance of the average connectivity. Only performing on rank 0, since no heavy computation is performed:
         if rank == 0:
-            #     # - creating model subfolder in current graph size folder:
-            #     variance_algo_results_dir = os.path.join(
-            #         graph_size_results_dir,
-            #         "Variance_test",
-            #     )
-            #     os.makedirs(variance_algo_results_dir)
-
-            #     # - adding variance algorithm to set of models tested:
-            #     variance_algo = Variance_algo(config, graph_size)
-            #     variance_algo.save_k0(variance_algo_results_dir)
 
             # Saving .yml file with time elapsed from the start of the experiment (to calculate the time needed for each graph size value):
             current_time = datetime.datetime.now()

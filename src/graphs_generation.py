@@ -80,7 +80,7 @@ def generate_graph(
         # generating upper triangular matrix
         upper_triangular = torch.triu(adjacency_matrix)
         adjacency_matrix = upper_triangular + torch.transpose(upper_triangular, 0, 1)
-        adjacency_matrix.fill_diagonal_(1)
+        adjacency_matrix.fill_diagonal_(0)
         # if input to CNN models, magnify the matrix
         if input_magnification:
             adjacency_matrix = magnify_input(adjacency_matrix)
@@ -123,7 +123,7 @@ def generate_graph(
         # generating upper triangular matrix
         upper_triangular = torch.triu(adjacency_matrix)
         adjacency_matrix = upper_triangular + torch.transpose(upper_triangular, 0, 1)
-        adjacency_matrix.fill_diagonal_(1)
+        adjacency_matrix.fill_diagonal_(0)
         # if input to CNN models, magnify the matrix
         if input_magnification:
             adjacency_matrix = magnify_input(adjacency_matrix)

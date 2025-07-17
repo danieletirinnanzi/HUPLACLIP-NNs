@@ -175,7 +175,7 @@ def full_exp():
             state_dict = torch.load(file_path, map_location=map_location)
             model.load_state_dict(state_dict)
 
-            # - putting the model in evaluation mode before starting training:
+            # - putting the model in evaluation mode before starting testing:
             model.eval()
 
             # testing best model

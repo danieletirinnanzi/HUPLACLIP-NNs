@@ -4,6 +4,7 @@ import unittest
 import sys
 import torch
 from torch.utils.tensorboard import SummaryWriter
+# to visualize training progression in Tensorboard: tensorboard --logdir=runs/exp_name/N...
 
 # custom imports
 from src.utils import (
@@ -21,7 +22,7 @@ from src.tensorboard_save import tensorboard_save_images
 
 # loading experiment configuration file:
 config = load_config(
-    os.path.join("docs", "vit_exp_config.yml")
+    os.path.join("docs", "cnn_exp_config.yml")
 )  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
 
 

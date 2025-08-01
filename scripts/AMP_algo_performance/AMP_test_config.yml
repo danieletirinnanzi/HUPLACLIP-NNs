@@ -1,0 +1,23 @@
+exp_name: AMP_algo_test
+graph_size_values: 
+# NOTE: to perform single experiments, simply comment the graph size values that are not needed
+  - 100 
+  - 150 
+  - 200
+  - 300
+  - 400
+  - 480 
+  - 600
+  - 800 
+  - 1200 
+  
+# type of correction to use (in graphs_generation.py):
+# - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
+# - p_reduce (new correction): reducing the p value of the graph where the clique will be added
+p_correction_type: p_reduce
+
+testing_parameters:
+  max_clique_size_proportion_test: 0.3 # during testing, clique will be at most 70% of the graph size
+  num_test: 32  # number of graphs in each test iteration
+  clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
+  test_iterations: 16

@@ -1,9 +1,9 @@
-exp_name: AMP_algo_test
+exp_name: Ideal-observer_test
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  # - 100 
-  # - 150 
-  # - 200
+  - 100 
+  - 150 
+  - 200
   - 300
   - 400
   - 480 
@@ -20,4 +20,9 @@ testing_parameters:
   max_clique_size_proportion_test: 0.70 # during testing, clique will be at most 70% of the graph size
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-  test_iterations: 16
+  test_iterations: 5
+
+# DIFFERENTIATING MODELS AND USING UNIQUE TEST LOOP (TO IMPLEMENT)
+# model: ideal_observer_k_known
+
+# model: ideal_observer_k_not_known

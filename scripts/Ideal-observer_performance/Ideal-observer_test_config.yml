@@ -17,7 +17,7 @@ graph_size_values:
 p_correction_type: p_reduce
 
 testing_parameters:
-  max_clique_size_proportion_test: 0.3 #0.12 # during testing, clique will be at most 70% of the graph size
+  max_clique_size_proportion_test: 0.3  # set to 0.12 for N=1200
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 5

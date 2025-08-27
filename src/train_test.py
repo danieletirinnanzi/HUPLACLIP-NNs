@@ -5,16 +5,20 @@ import torch.optim
 import torch.nn as nn
 import datetime
 from sklearn.metrics import roc_auc_score
+import torch
+import pickle
+import time
+import os
+import sys
 
 # defining random generator (used to define the clique size value of each graph in the batch during training)
 random_generator = np.random.default_rng()
 
 # custom import
 import src.graphs_generation as gen_graphs
-from src.utils import save_model
+from src.utils import save_model, save_resume_progress, load_resume_progress, save_temp_checkpoint, load_temp_checkpoint, get_slurm_time_limit_seconds, get_slurm_elapsed_seconds
 
 # TRAINING FUNCTIONS:
-
 
 # CHECKPOINTING
 class Checkpointer:
@@ -158,6 +162,8 @@ def train_model(
     world_size,
     rank,
     device_id,
+    resume=False,
+    exp_name_with_time=None,
 ):
     """
     Trains a model using the specified hyperparameters, saving it as training progresses.
@@ -193,6 +199,8 @@ def train_model(
         world_size (int): Integer indicating the number of processes.
         rank: (int): The rank of the process.
         device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).
+        resume (bool): whether training is resumed or not.
+        exp_name_with_time (str): if resume is True, this should be the name of the experiment folder (including date and time) from which training is resumed.
 
     Raises:
         ValueError: If the model is not provided, training_parameters is not a dictionary,
@@ -223,7 +231,31 @@ def train_model(
 
     ## END OF TESTS
 
-    # START OF TRAINING CONFIGURATION:
+    # Timer setup from SLURM
+    training_loop_start_time = time.time()
+    MAX_SECONDS = get_slurm_time_limit_seconds() - 300  # 5 min buffer
+    
+    # Resume logic: load progress and temp checkpoint model if resume
+    progress = None
+    temp_ckpt = None
+    if resume and rank == 0:
+        progress = load_resume_progress(results_dir, model_name, graph_size)
+        temp_ckpt = load_temp_checkpoint(results_dir, model_name, graph_size, map_location={f"cuda:%d" % 0: f"cuda:%d" % device_id})
+    # Broadcast progress and temp_ckpt info to all ranks
+    progress_bytes = pickle.dumps(progress) if progress is not None else b''    # serialization of 'progress' object to bytes
+    progress_size = torch.tensor([len(progress_bytes)], device=device_id)   # defining size of tensor to receive 'progress'
+    torch.distributed.broadcast(progress_size, src=0)   # broadcasting receiving tensor on all devices
+    if progress_size.item() > 0:
+        # if progress data is present ("resume" case), fill tensor with serialized bytes
+        progress_bytes_tensor = torch.zeros(progress_size.item(), dtype=torch.uint8, device=device_id)
+        if rank == 0:
+            progress_bytes_tensor[:] = torch.tensor(list(progress_bytes), dtype=torch.uint8, device=device_id)
+        torch.distributed.broadcast(progress_bytes_tensor, src=0)
+        if rank != 0:
+            progress = pickle.loads(bytes(progress_bytes_tensor.tolist()))
+    else:
+        progress = None
+    # (temp_ckpt is only needed on rank 0 for loading model/optimizer)
 
     # - INPUT TRANSFORMATION FLAGS:
     input_magnification = True if "CNN" in model_name else False
@@ -276,6 +308,15 @@ def train_model(
         num=training_parameters["clique_training_levels"],
     ).astype(int)
 
+    # Resume: determine which clique sizes/lrs/steps to skip
+    resume_clique_idx = 0
+    resume_lr_idx = 0
+    resume_step = 0
+    if resume and progress is not None:
+        resume_clique_idx = progress.get('clique_idx', 0)
+        resume_lr_idx = progress.get('lr_idx', 0)
+        resume_step = progress.get('step', 0)
+
     # initializing checkpointer (triggers model saving when mean validation loss is lower than the minimum seen so far):
     checkpointer = Checkpointer()
 
@@ -285,6 +326,8 @@ def train_model(
 
     # Loop for decreasing clique sizes
     for i, current_clique_size in enumerate(clique_sizes):
+        if resume and i < resume_clique_idx:
+            continue  # skip completed clique sizes
 
         # Defining clique list for current clique size value:
         clique_size_list = clique_sizes[: i + 1]
@@ -293,8 +336,9 @@ def train_model(
             print("||| List of available clique sizes is now: ", clique_size_list)
 
         # Loop for decreasing learning rate
-        for learning_rate in training_parameters["learning_rates"]:
-            
+        for j, learning_rate in enumerate(training_parameters["learning_rates"]):
+            if resume and i == resume_clique_idx and j < resume_lr_idx:
+                continue  # skip completed lrs
             if rank == 0:
                 print("||||| Learning rate is now: ", float(learning_rate))
 
@@ -322,11 +366,21 @@ def train_model(
                     momentum=0.9,  # default value is zero
                 )
             else:
-                raise ValueError("Optimizer not found")            
+                raise ValueError("Optimizer not found")
+
+            # Resume: load optimizer/model state if needed
+            if resume and i == resume_clique_idx and j == resume_lr_idx and temp_ckpt is not None and rank == 0:
+                model.load_state_dict(temp_ckpt['model_state_dict'])
+                optim.load_state_dict(temp_ckpt['optimizer_state_dict'])
+                saved_steps = temp_ckpt['step_info'].get('saved_steps', 0)
+            elif not (resume and i == resume_clique_idx and j == resume_lr_idx):
+                saved_steps = 0
 
             # Training steps loop:
             for training_step in range(training_parameters["num_training_steps"] + 1):
-                
+                # skip completed steps
+                if resume and i == resume_clique_idx and j == resume_lr_idx and training_step < resume_step:
+                    continue  
                 # Creating placeholders to receive subset of training data
                 # - Placeholder for graphs
                 if input_magnification:
@@ -384,6 +438,22 @@ def train_model(
                 # Free up memory from training data
                 del full_train_data, local_tensor_graphs_train, local_tensor_labels_train, scatter_list_graphs_train, scatter_list_labels_train
                 torch.cuda.empty_cache()
+
+                # Timer: save temp checkpoint and progress if time is almost up
+                elapsed = get_slurm_elapsed_seconds(training_loop_start_time)
+                if (MAX_SECONDS - elapsed) < 300 and rank == 0:  # less than 5 min left
+                    # Save temp checkpoint and progress
+                    step_info = {
+                        'clique_idx': i,
+                        'lr_idx': j,
+                        'step': training_step,
+                        'saved_steps': saved_steps
+                    }
+                    save_temp_checkpoint(model, optim, step_info, results_dir, model_name, graph_size)
+                    save_resume_progress(step_info, results_dir, model_name, graph_size)
+                    print(f"[RANK 0] Saved temp checkpoint and progress at step {training_step} (time left: {MAX_SECONDS - elapsed}s)")
+                    torch.distributed.barrier()
+                    sys.exit(0)  # Exit after saving information necessary for resuming
 
                 # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
                 if training_step % training_parameters["save_step"] == 0:

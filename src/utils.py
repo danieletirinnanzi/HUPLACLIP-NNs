@@ -1,9 +1,11 @@
+import time
 import yaml
 import torch
 import csv
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
+import re
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchinfo import summary
 
@@ -243,7 +245,75 @@ def save_model(model, model_name, graph_size, results_dir):
 
     print(f"- {model_name} Trained Model saved successfully in {file_path}.")
 
+# Timer functions to handle SLURM time limits and elapsed time
+# (NOT SURE IT WORKS LIKE THIS, NEEDS TESTING ON SLURM)
+def get_slurm_time_limit_seconds():
+    SLURM_JOB_ID = os.environ.get('SLURM_JOB_ID', None)
+    if SLURM_JOB_ID:
+        try:
+            import subprocess
+            out = subprocess.check_output(f'scontrol show job {SLURM_JOB_ID}', shell=True).decode()
+            match = re.search(r'TimeLimit=(\S+)', out)
+            if match:
+                t = match.group(1)
+                # Format is "12:00:00" (24h max on Leonardo)
+                h, m, s = map(int, t.split(':'))
+                total_seconds = h * 3600 + m * 60 + s
+                return total_seconds
+        except Exception as e:
+            print(f"Could not get SLURM time limit: {e}, using fallback default of 24 hours.")
+    return 24*3600  # fallback default
 
+def get_slurm_elapsed_seconds(start_time):
+    # (NOT SURE IT WORKS LIKE THIS, NEEDS TESTING ON SLURM)    
+    SLURM_JOB_ID = os.environ.get('SLURM_JOB_ID', None)
+    if SLURM_JOB_ID:
+        try:
+            import subprocess
+            out = subprocess.check_output(f'scontrol show job {SLURM_JOB_ID}', shell=True).decode()
+            match = re.search(r'RunTime=(\S+)', out)
+            if match:
+                t = match.group(1)
+                # Format is "12:00:00" (24h max on Leonardo)
+                h, m, s = map(int, t.split(':'))
+                total_seconds = h * 3600 + m * 60 + s
+                return total_seconds
+        except Exception as e:
+            print(f"Could not get SLURM elapsed time: {e}")
+    return int(time.time() - start_time)  # fallback to wall time
+
+# Save resume progress YAML
+def save_resume_progress(progress_dict, results_dir, model_name, graph_size):
+    file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_resume_progress.yml")
+    with open(file_path, "w") as f:
+        yaml.dump(progress_dict, f)
+
+# Load resume progress YAML
+def load_resume_progress(results_dir, model_name, graph_size):  
+    file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_resume_progress.yml")
+    if not os.path.exists(file_path):
+        return None
+    with open(file_path, "r") as f:
+        return yaml.safe_load(f)
+
+# Save temp checkpoint (model + optimizer + step info)
+def save_temp_checkpoint(model, optimizer, step_info, results_dir, model_name, graph_size):
+    file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_temp_resume.pth")
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'step_info': step_info
+    }, file_path)
+
+# Load temp checkpoint
+def load_temp_checkpoint(results_dir, model_name, graph_size, map_location=None):
+    file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_temp_resume.pth")
+    if not os.path.exists(file_path):
+        return None
+    return torch.load(file_path, map_location=map_location)
+
+# --------------------------------------
+# UNUSED:
 def save_features(model, model_name, graph_size, p_correction, results_dir, device):
     """
     Save the features extracted from a trained model and save the corresponding image in results folder.

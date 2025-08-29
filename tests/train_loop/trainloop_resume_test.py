@@ -28,7 +28,7 @@ def main():
     model_name = "MLP"  # CHANGE IF NEEDED
 
     # Create mock_writer for Tensorboard
-    runs_dir = os.path.join(current_dir, "mock_runs_resume_training", model_name, f"rank{rank}")
+    runs_dir = os.path.join(current_dir, "mock_runs_resume_training", model_name)
     os.makedirs(runs_dir, exist_ok=True)
     mock_writer = SummaryWriter(log_dir=runs_dir)
 

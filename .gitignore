@@ -11,8 +11,7 @@ src.egg-info
 # Ignore files in the /runs, /mock_runs and /mock_results folder
 mock_runs
 runs
-runs_Leonardo
-mock_results
+mock_*  
 
 # Ignore files in the /out folder
 out

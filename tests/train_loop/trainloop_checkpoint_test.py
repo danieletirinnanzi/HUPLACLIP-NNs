@@ -31,7 +31,7 @@ def main():
     model_name = "MLP"  # CHANGE IF NEEDED
 
     # Create mock_writer for Tensorboard
-    runs_dir = os.path.join(current_dir, "mock_runs_resume_training", model_name, f"rank{rank}")
+    runs_dir = os.path.join(current_dir, "mock_runs_resume_training", model_name)
     os.makedirs(runs_dir, exist_ok=True)
     mock_writer = SummaryWriter(log_dir=runs_dir)
 
@@ -59,7 +59,7 @@ def main():
 
     # Testing SLURM functions
     if rank == 0:
-        print("SLURM time limit (seconds): ", get_slurm_time_limit_seconds(), " (should be 108'000s (30 minutes) )")
+        print("SLURM time limit (seconds): ", get_slurm_time_limit_seconds(), " (should be 1800s (30 minutes) )")
     start_time = time.time()
     if rank == 0:
         print("SLURM elapsed seconds:", get_slurm_elapsed_seconds(start_time), " (should be very small)")

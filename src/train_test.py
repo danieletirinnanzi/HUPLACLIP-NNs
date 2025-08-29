@@ -199,12 +199,23 @@ def train_model(
         world_size (int): Integer indicating the number of processes.
         rank: (int): The rank of the process.
         device_id: (int): The id of the device used by the process (in this context, each process uses a single GPU).
-        resume (bool): whether training is resumed or not.
+        resume (bool): whether training is resumed or not (see "Resume training explanation" below for detailed explanation).
         exp_name_with_time (str): if resume is True, this should be the name of the experiment folder (including date and time) from which training is resumed.
 
     Raises:
         ValueError: If the model is not provided, training_parameters is not a dictionary,
             graph_size is not a positive integer, p_correction_type is not a string, or writer is not provided.
+    
+    Resume training explanation
+    The function can be called in two modes (defined by the "resume" flag):
+    - "resume" == False: in this case, training is performed normally. The script contains a timer that triggers saving of a yaml file containing the current position in the training loops
+     (at which clique size, learning rate and training step the script is) as well as a temporary model and optimizer checkpoints;
+     - "resume" == True: in this case, training restarts from the point where it was interrupted. More specifically, the script:
+        1. Reads the yaml file to that indicates where training was interrupted, and loads the checkpointed model; 
+        2. Skips all completed clique sizes and learning rates;
+        3. For the interrupted learning rate, skips completed steps and resumes from the last saved step (the last one to be saved to Tensorboard, so that logging continues normally);
+        4. Model and optimizer states are restored from the checkpoint, continuing training;
+        5. The early-stopper is re-initialized for the resumed learning rate (and for each new learning rate), so it is tracked from the current (resumed) point onwards.
     """
 
     # START OF TESTS
@@ -378,7 +389,8 @@ def train_model(
 
             # Training steps loop:
             for training_step in range(training_parameters["num_training_steps"] + 1):
-                # skip completed steps
+                early_stop = False  # flag for early stopping                
+                # skip completed steps (NOTE: if resuming, early stopping is reset and running mean loss is recomputed from the current step onwards for the current learning rate; for subsequent learning rates, early stopper is always re-initialized)
                 if resume and i == resume_clique_idx and j == resume_lr_idx and training_step < resume_step:
                     continue  
                 # Creating placeholders to receive subset of training data
@@ -441,19 +453,22 @@ def train_model(
 
                 # Timer: save temp checkpoint and progress if time is almost up
                 elapsed = get_slurm_elapsed_seconds(training_loop_start_time)
-                if (MAX_SECONDS - elapsed) < 300 and rank == 0:  # less than 5 min left
-                    # Save temp checkpoint and progress
-                    step_info = {
-                        'clique_idx': i,
-                        'lr_idx': j,
-                        'step': training_step,
-                        'saved_steps': saved_steps
-                    }
-                    save_temp_checkpoint(model, optim, step_info, results_dir, model_name, graph_size)
-                    save_resume_progress(step_info, results_dir, model_name, graph_size)
-                    print(f"[RANK 0] Saved temp checkpoint and progress at step {training_step} (time left: {MAX_SECONDS - elapsed}s)")
+                if (MAX_SECONDS - elapsed) < 150:   # less than 2.5 min left
+                    if rank == 0:  
+                        # Save temp checkpoint and progress
+                        step_info = {
+                            'clique_idx': i,    # index of current clique size in curriculum
+                            'lr_idx': j,    # index of current learning rate in curriculum
+                            'step': training_step,  # current training step within the current learning rate
+                            'saved_steps': saved_steps  # number of times results have been saved to TensorBoard (used for correct x-axis continuation)
+                        }
+                        save_temp_checkpoint(model, optim, step_info, results_dir, model_name, graph_size)
+                        save_resume_progress(step_info, results_dir, model_name, graph_size)
+                        print(f"[RANK 0] Saved temp checkpoint and progress at step {training_step} (time left: {MAX_SECONDS - elapsed}s)")
+                    # Synchronize all ranks before exit
                     torch.distributed.barrier()
-                    sys.exit(0)  # Exit after saving information necessary for resuming
+                    torch.distributed.destroy_process_group()
+                    sys.exit(0)                    
 
                 # At regular intervals (every "save_step"), saving errors (both training and validation) and printing to Tensorboard:
                 if training_step % training_parameters["save_step"] == 0:

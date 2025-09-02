@@ -292,9 +292,16 @@ def save_resume_progress(progress_dict, results_dir, model_name, graph_size):
 def load_resume_progress(results_dir, model_name, graph_size):  
     file_path = os.path.join(results_dir, f"{model_name}_N{graph_size}_resume_progress.yml")
     if not os.path.exists(file_path):
-        return None
+        raise FileNotFoundError(f"No resume progress file found at {file_path}")
     with open(file_path, "r") as f:
-        return yaml.safe_load(f)
+        progress = yaml.safe_load(f)
+        # Ensure min_avg_val_loss is always a float (if present)
+        if progress is not None and 'min_avg_val_loss' in progress:
+            try:
+                progress['min_avg_val_loss'] = float(progress['min_avg_val_loss'])
+            except Exception:
+                raise ValueError("min_avg_val_loss in resume progress file is not a valid float")
+        return progress
 
 # Save temp checkpoint (model + optimizer + step info)
 def save_temp_checkpoint(model, optimizer, step_info, results_dir, model_name, graph_size):

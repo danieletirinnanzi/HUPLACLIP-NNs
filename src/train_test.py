@@ -28,8 +28,11 @@ class Checkpointer:
         min_avg_val_loss (float): The minimum validation loss (averaged over all task versions) seen so far.
     """
 
-    def __init__(self):
-        self.min_avg_val_loss = float("inf")
+    def __init__(self, min_avg_val_loss=None):
+        if min_avg_val_loss is not None:
+            self.min_avg_val_loss = min_avg_val_loss
+        else:
+            self.min_avg_val_loss = float("inf")
 
     def should_save(self, mean_val_loss):
         """Determines whether the current mean validation loss is lower than the minimum validation loss seen so far.
@@ -213,9 +216,10 @@ def train_model(
      - "resume" == True: in this case, training restarts from the point where it was interrupted. More specifically, the script:
         1. Reads the yaml file to that indicates where training was interrupted, and loads the checkpointed model; 
         2. Skips all completed clique sizes and learning rates;
-        3. For the interrupted learning rate, skips completed steps and resumes from the last saved step (the last one to be saved to Tensorboard, so that logging continues normally);
+        3. For the interrupted learning rate, skips completed training steps and resumes from the last saved step (the last one to be saved to Tensorboard, so that logging also resumes);
         4. Model and optimizer states are restored from the checkpoint, continuing training;
-        5. The early-stopper is re-initialized for the resumed learning rate (and for each new learning rate), so it is tracked from the current (resumed) point onwards.
+        5. The early-stopper is re-initialized for the resumed learning rate (and for each new learning rate), so it is tracked from the current (resumed) step onwards.
+    NOTE: while "training steps" are always reset when a training for a new learning rate starts, the "saved_steps" counter (which defines the x-axis for Tensorboard plots) is global and is NOT reset when resuming training.
     """
 
     # START OF TESTS
@@ -288,6 +292,7 @@ def train_model(
     # INITIALIZATIONS:
     # X axis for Tensorboard plots (will increase every time a step is saved):
     saved_steps = 0
+    printed_resume_message = False  # To ensure resume message prints only once
 
     # Calculating min clique size and max clique size:
     # - max clique size is a proportion of the graph size
@@ -323,13 +328,16 @@ def train_model(
     resume_clique_idx = 0
     resume_lr_idx = 0
     resume_step = 0
+    min_avg_val_loss = None
     if resume and progress is not None:
         resume_clique_idx = progress.get('clique_idx', 0)
         resume_lr_idx = progress.get('lr_idx', 0)
         resume_step = progress.get('step', 0)
+        saved_steps = progress.get('saved_steps', 0)  # Always use saved_steps from progress for global x-axis
+        min_avg_val_loss = progress.get('min_avg_val_loss', None)
 
     # initializing checkpointer (triggers model saving when mean validation loss is lower than the minimum seen so far):
-    checkpointer = Checkpointer()
+    checkpointer = Checkpointer(min_avg_val_loss=min_avg_val_loss)
 
     # Notify start of training (only rank 0 logs)
     if rank == 0:
@@ -383,16 +391,19 @@ def train_model(
             if resume and i == resume_clique_idx and j == resume_lr_idx and temp_ckpt is not None and rank == 0:
                 model.load_state_dict(temp_ckpt['model_state_dict'])
                 optim.load_state_dict(temp_ckpt['optimizer_state_dict'])
-                saved_steps = temp_ckpt['step_info'].get('saved_steps', 0)
-            elif not (resume and i == resume_clique_idx and j == resume_lr_idx):
-                saved_steps = 0
+                # Do NOT reset saved_steps here; it is global and already set from progress
 
             # Training steps loop:
             for training_step in range(training_parameters["num_training_steps"] + 1):
                 early_stop = False  # flag for early stopping                
                 # skip completed steps (NOTE: if resuming, early stopping is reset and running mean loss is recomputed from the current step onwards for the current learning rate; for subsequent learning rates, early stopper is always re-initialized)
                 if resume and i == resume_clique_idx and j == resume_lr_idx and training_step < resume_step:
-                    continue  
+                    continue
+                # Print resume message only once at the first resumed step
+                if resume and not printed_resume_message and rank == 0 and i == resume_clique_idx and j == resume_lr_idx and training_step == resume_step:
+                    print(f"[RANK 0] Resuming training at clique size {current_clique_size}, learning rate {learning_rate}, step {training_step} (saved_steps={saved_steps}, min_avg_val_loss={checkpointer.min_avg_val_loss})")
+                    printed_resume_message = True
+                    
                 # Creating placeholders to receive subset of training data
                 # - Placeholder for graphs
                 if input_magnification:
@@ -460,11 +471,12 @@ def train_model(
                             'clique_idx': i,    # index of current clique size in curriculum
                             'lr_idx': j,    # index of current learning rate in curriculum
                             'step': training_step,  # current training step within the current learning rate
-                            'saved_steps': saved_steps  # number of times results have been saved to TensorBoard (used for correct x-axis continuation)
+                            'saved_steps': saved_steps,  # number of times results have been saved to TensorBoard (used for correct x-axis continuation)
+                            'min_avg_val_loss': float(checkpointer.min_avg_val_loss)  # minimum value of the average validation loss, monitored by checkpointer (stored as native float for YAML)
                         }
                         save_temp_checkpoint(model, optim, step_info, results_dir, model_name, graph_size)
                         save_resume_progress(step_info, results_dir, model_name, graph_size)
-                        print(f"[RANK 0] Saved temp checkpoint and progress at step {training_step} (time left: {MAX_SECONDS - elapsed}s)")
+                        print(f"[RANK 0] Saved temp checkpoint and progress at training step {training_step}, saved step {saved_steps}, min_avg_val_loss={checkpointer.min_avg_val_loss} (time left: {MAX_SECONDS - elapsed}s)")
                     # Synchronize all ranks before exit
                     torch.distributed.barrier()
                     torch.distributed.destroy_process_group()

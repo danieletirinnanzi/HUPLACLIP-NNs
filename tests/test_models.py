@@ -85,8 +85,8 @@ class ModelTest(unittest.TestCase):
         # If no errors, proceed with splitting            
         local_batch_size = configfile["training_parameters"]["num_train"] // world_size
 
-        print("World size: ", world_size, " should be 2 for 2 GPUs")
-        print("Local batch size: ", local_batch_size, " should be 16 for 2 GPUs")
+        print("World size: ", world_size, " should be 2 for 2 GPUs, 4 for 4 GPUs")
+        print("Local batch size: ", local_batch_size, " should be 16 for 2 GPUs, 8 for 4 GPUs if num_train=32")
 
         # Placeholder to receive subset on each GPU
         # - Placeholder for graphs
@@ -98,8 +98,8 @@ class ModelTest(unittest.TestCase):
         local_tensor_labels = torch.zeros((local_batch_size), device=device_id)
         
         print("Placeholder shapes:")
-        print(local_tensor_graphs.shape, "should be 16, 1, 400, 400 for MLP")
-        print(local_tensor_labels.shape, "should be 16 for MLP")
+        print(local_tensor_graphs.shape, "should be (16, 1, graph_size, graph_size) for 2 GPUs, (8, 1, graph_size, graph_size) for 4 GPUs if num_train=32")
+        print(local_tensor_labels.shape, "should be 16 for MLP for 2 GPUs, 8 for 4 GPUs if num_train=32")
         
         # Generating training data on CPU (full batch) on rank 0
         if rank == 0:
@@ -117,8 +117,8 @@ class ModelTest(unittest.TestCase):
             scatter_list_labels = [torch.Tensor(full_data[1][i * local_batch_size:(i + 1) * local_batch_size]).to(device_id) for i in range(world_size)]
 
             print("Scatter list shapes:")
-            print(scatter_list_graphs[0].shape, "should be 16, 1, 400, 400 for MLP")
-            print(scatter_list_labels[0].shape, "should be 16 for MLP")
+            print(scatter_list_graphs[0].shape, "should be (16, 1, graph_size, graph_size) for 2 GPUs, (8, 1, graph_size, graph_size) for 4 GPUs if num_train=32")
+            print(scatter_list_labels[0].shape, "should be 16 for 2 GPUs, 8 for 4 GPUs if num_train=32")
             
         else:
             full_data = None
@@ -132,8 +132,8 @@ class ModelTest(unittest.TestCase):
         torch.distributed.scatter(local_tensor_labels, scatter_list=scatter_list_labels, src=0)
         
         print("Scattered shapes:")
-        print(local_tensor_graphs.shape, "should be 16, 1, 400, 400 for MLP")
-        print(local_tensor_labels.shape, "should be 16 for MLP")
+        print(local_tensor_graphs.shape, "should be (16, 1, graph_size, graph_size) for 2 GPUs, (8, 1, graph_size, graph_size) for 4 GPUs if num_train=32")
+        print(local_tensor_labels.shape, "should be 16 for 2 GPUs, 8 for 4 GPUs if num_train=32")
         
         if rank == 0:
             print(f"{model_name} Trainability test, rank {rank}: Data partitioned and sent to device at {datetime.datetime.now()}")        

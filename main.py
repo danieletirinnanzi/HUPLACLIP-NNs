@@ -23,10 +23,9 @@ from src.tensorboard_save import tensorboard_save_images
 
 # how to call main.py script:
 # STANDARD CASE:
-# python main.py --config docs/cnn_exp_config.yml
-# RESUME TRAINING CASE (only used for cases in which training at one N value takes more than 24 hours (CNN) )
-# python main.py --resume --exp_name [exp name]
-
+# torchrun --standalone --nproc_per_node=4 main.py --config docs/cnn_exp_config.yml
+# RESUME TRAINING CASE (only used for cases in which training at one N value takes more than 24 hours):
+# torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name cnn_exp...
 
 # Argument parsing for resume mode
 def parse_args():

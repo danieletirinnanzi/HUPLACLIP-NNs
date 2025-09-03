@@ -13,8 +13,8 @@ from src.train_test import test_model
 
 def run_test_only():    
     # reading configuration and model name:
-    config = load_config(os.path.join("docs", "mlp_exp_config.yml"))  # CHANGE THIS
-    model_name = "MLP_li-earlystop-scatter-pt40"  # CHANGE THIS
+    config = load_config(os.path.join("docs", "cnn_exp_config.yml"))  # CHANGE THIS
+    model_name = "CNN_large"  # CHANGE THIS
 
     # DDP:
     rank = (
@@ -40,7 +40,7 @@ def run_test_only():
         "..",
         "results",
         "data",
-        "mlp_exp_2025-03-06_18-30-37",  # CHANGE THIS
+        "cnn_exp_2025-09-03_14-42-36",  # CHANGE THIS
         f"N{config['graph_size_values'][0]}",
         model_name,
         f"{model_name}_N{config['graph_size_values'][0]}_trained.pth"

@@ -1,0 +1,5 @@
+clique_idx: 3
+lr_idx: 1
+min_avg_val_loss: 0.4909423768520355
+saved_steps: 64
+step: 32

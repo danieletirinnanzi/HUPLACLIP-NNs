@@ -464,7 +464,7 @@ def train_model(
 
                 # Timer: save temp checkpoint and progress if time is almost up
                 elapsed = get_slurm_elapsed_seconds(training_loop_start_time)
-                if (MAX_SECONDS - elapsed) < 150:   # less than 2.5 min left
+                if (MAX_SECONDS - elapsed) < 150:   # less than 2.5 min left (150s)
                     if rank == 0:  
                         # Save temp checkpoint and progress
                         step_info = {

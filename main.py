@@ -60,7 +60,7 @@ def tests():
     # Define the directory where test files are located
     test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tests")
 
-    # Discover and run all tests in the `tests` directory
+    # Discover and run all tests in the `tests` directory (only files named test_*.py)
     test_loader = unittest.TestLoader()
     test_suite = test_loader.discover(start_dir=test_dir, pattern="test_*.py")
     test_runner = unittest.TextTestRunner(verbosity=2)

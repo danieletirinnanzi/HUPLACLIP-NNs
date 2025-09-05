@@ -17,12 +17,25 @@ graph_size_values:
 p_correction_type: p_reduce
 
 testing_parameters:
-  max_clique_size_proportion_test: 0.12  # set to 0.12 for N=1200
+# 0.4 (100-150-200); 0.3 (300, 400, 480, 600); 0.12 (800, 1200)
+  max_clique_size_proportion_test: 0.12  # adjust based on model's accuracy and N value (for good models, set to 0.12 for N=[800, 1200]; set to 0.3 for other N values)
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 5
 
 # DIFFERENTIATING MODELS AND USING UNIQUE TEST LOOP (TO IMPLEMENT)
-# model: ideal_observer_k_known
+# model: ideal-observer-k-known
 
-# model: ideal_observer_k_not_known
+# model: ideal-observer-k-not-known
+
+# model: ideal-observer-k-not-known_human-grid
+
+# model: ideal-observer-k-not-known_human-grid_noisy{noise_level}
+  capacity_values:
+    - 0.4
+    - 0.6
+    - 0.8
+  max_clique_size_proportion_test:
+    - 0.4 # (100-150-200)
+    - 0.3 # (300, 400, 480, 600)
+    - 0.12 # (800, 1200)

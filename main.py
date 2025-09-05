@@ -3,6 +3,7 @@ import os
 import unittest
 import sys
 import torch
+import argparse
 from torch.utils.tensorboard import SummaryWriter
 # to visualize training progression in Tensorboard: tensorboard --logdir=runs/exp_name/N...
 
@@ -20,10 +21,37 @@ from src.train_test import (
 )
 from src.tensorboard_save import tensorboard_save_images
 
-# loading experiment configuration file:
-config = load_config(
-    os.path.join("docs", "cnn_exp_config.yml")
-)  # CHANGE THIS TO PERFORM DIFFERENT EXPERIMENTS
+# how to call main.py script:
+# STANDARD CASE:
+# torchrun --standalone --nproc_per_node=4 main.py --config docs/cnn_exp_config.yml
+# RESUME TRAINING CASE (only used for cases in which training at one N value takes more than 24 hours):
+# torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name cnn_exp...
+
+# Argument parsing for resume mode
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train or resume experiment.")
+    parser.add_argument('--resume', action='store_true', help='Resume interrupted experiment')
+    parser.add_argument('--exp_name', type=str, default=None, help='Name of experiment to resume (required if --resume)')
+    parser.add_argument('--config', type=str, default=os.path.join("docs", "cnn_exp_config.yml"), help='Config file to use')
+    return parser.parse_args()
+
+args = parse_args()
+
+# Load config and set experiment name
+if args.resume:
+    # Resume training case:
+    if not args.exp_name:
+        print("You must specify --exp_name when using --resume mode.")
+        sys.exit(1)
+    # Loading config file (assumes config file is the same in first and resumed training)
+    config = load_config(args.config)
+    exp_name_with_time = args.exp_name
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    experiment_results_dir = os.path.join(current_dir, "results", "data", exp_name_with_time)
+    config_file_path = os.path.join(experiment_results_dir, f"{exp_name_with_time}_config.yml")
+else:
+    config = load_config(args.config)
+    exp_name_with_time = None  # Will be set in full_exp
 
 
 # Defining tests:
@@ -32,7 +60,7 @@ def tests():
     # Define the directory where test files are located
     test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tests")
 
-    # Discover and run all tests in the `tests` directory
+    # Discover and run all tests in the `tests` directory (only files named test_*.py)
     test_loader = unittest.TestLoader()
     test_suite = test_loader.discover(start_dir=test_dir, pattern="test_*.py")
     test_runner = unittest.TextTestRunner(verbosity=2)
@@ -51,8 +79,8 @@ def tests():
     torch.distributed.barrier()
 
 
-# Defining full experiment:
-def full_exp():
+# Defining full experiment (adding resume and exp_name_with_time as arguments)
+def full_exp(resume=False, exp_name_with_time=None):
 
     # DDP:
     rank = (
@@ -62,32 +90,22 @@ def full_exp():
     print(f"Running full experiment on device id: {device_id}.")
     world_size = torch.cuda.device_count()
 
-    # storing starting time of the experiment in string format:
+    # Set up experiment name and dirs for resume/new
     start_time = datetime.datetime.now()
     start_time_string = start_time.strftime("%Y-%m-%d_%H-%M-%S")
-
-    # storing current directory:
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    # storing the name of the experiment
-    exp_name_with_time = f"{config['exp_name']}_{start_time_string}"
-
-    # creating folder in "results/data" folder to save the results of the whole experiment
-    experiment_results_dir = os.path.join(
-        current_dir,
-        "results",
-        "data",
-        exp_name_with_time,
-    )
-    if rank == 0:
-        os.makedirs(experiment_results_dir)
-
-    # creating experiment folder in "runs" folder
-    experiment_runs_dir = os.path.join(
-        current_dir,
-        "runs",
-        exp_name_with_time,
-    )
+    if resume:
+        # Resume case: use provided exp_name_with_time to access existing folder
+        experiment_results_dir = os.path.join(current_dir, "results", "data", exp_name_with_time)
+        experiment_runs_dir = os.path.join(current_dir, "runs", exp_name_with_time)
+    else:
+        # Standard case: create new folder in \results\data
+        exp_name_with_time = f"{config['exp_name']}_{start_time_string}"
+        experiment_results_dir = os.path.join(current_dir, "results", "data", exp_name_with_time)
+        if rank == 0:
+            os.makedirs(experiment_results_dir)
+        experiment_runs_dir = os.path.join(current_dir, "runs", exp_name_with_time)
 
     # looping over the different graph sizes in the experiment:
     for graph_size in config["graph_size_values"]:
@@ -114,8 +132,10 @@ def full_exp():
         # inside experiment results folder, create a new directory for each graph size value:
         graph_size_results_dir = os.path.join(experiment_results_dir, f"N{graph_size}")
 
-        if rank == 0:
-            os.makedirs(graph_size_results_dir)
+        # creating graph size folder only if starting new experiment
+        if not resume:
+            if rank == 0:
+                os.makedirs(graph_size_results_dir)
 
         # loading, training, and testing models:
         for model_specs in config["models"]:
@@ -125,10 +145,12 @@ def full_exp():
                 graph_size_results_dir,
                 model_specs["model_name"],
             )
-            if rank == 0:
-                os.makedirs(model_results_dir)
-                # printing model name
-                print(model_specs["model_name"])
+            # creating model folder only if starting new experiment            
+            if not resume:
+                if rank == 0:
+                    os.makedirs(model_results_dir)
+                    # printing model name
+                    print(model_specs["model_name"])
 
             # loading model:
             model = load_model(
@@ -155,10 +177,13 @@ def full_exp():
                 writer,
                 model_specs["model_name"],
                 model_results_dir,
-                # DDP:
+                # DDP
                 world_size,
                 rank,
                 device_id,
+                # resume training info
+                resume=resume,
+                exp_name_with_time=exp_name_with_time,
             )
 
             # load the best model from the training process on all ranks
@@ -250,7 +275,7 @@ if __name__ == "__main__":
     tests()
 
     # running exp:
-    full_exp()
+    full_exp(resume=args.resume, exp_name_with_time=exp_name_with_time)  # MODIFIED: TO CHECK
 
     # DDP:
     torch.distributed.destroy_process_group()

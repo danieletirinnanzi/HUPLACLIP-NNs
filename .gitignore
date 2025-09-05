@@ -12,7 +12,7 @@ src.egg-info
 mock_runs
 runs
 runs_Leonardo
-mock_results
+mock_*
 
 # Ignore files in the /out folder
 out

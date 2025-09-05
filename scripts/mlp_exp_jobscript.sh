@@ -19,4 +19,9 @@ source $HOME/virtualenvs/dl/bin/activate
 cd $HOME/HUPLACLIP-NNs/
 # cd $SLURM_SUBMIT_DIR
 
-torchrun --standalone --nproc_per_node=4 main.py
+# --------- HOW TO RUN THIS SCRIPT (uncomment the line corresponding to the experiment to be run) ---------
+# NOTE: in both cases, the configuration file in "test_models.py" (line 16) must match the one used here
+# - STANDARD CASE:
+torchrun --standalone --nproc_per_node=4 main.py --config docs/mlp_exp_config.yml
+# - RESUME CASE (for continuing a previous experiment):
+# torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name mlp_exp_YYYY-MM-DD_HH-MM-SS

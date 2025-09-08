@@ -32,9 +32,12 @@ testing_parameters:
 
 # model: ideal-observer-k-not-known_human-grid_noisy{noise_level}
   capacity_values:
-    - 0.4
-    - 0.6
-    - 0.8
+    - 0.1
+    # - 0.2
+    - 0.3
+    # - 0.4
+    # - 0.6
+    # - 0.8
   max_clique_size_proportion_test:
     - 0.4 # (100-150-200)
     - 0.3 # (300, 400, 480, 600)

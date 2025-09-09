@@ -30,7 +30,7 @@ testing_parameters:
 
 # model: ideal-observer-k-not-known_human-grid
 
-# model: ideal-observer-k-not-known_human-grid_noisy{noise_level}
+# model: ideal-observer-k-not-known_human-grid_limited-capacity{capacity}
   capacity_values:
     - 0.1
     # - 0.2
@@ -38,6 +38,12 @@ testing_parameters:
     # - 0.4
     # - 0.6
     # - 0.8
+
+# model: ideal-observer-k-not-known_human-grid_max-capacity
+  max_capacity_values:
+    - 150
+    - 200
+    - 300
   max_clique_size_proportion_test:
     - 0.4 # (100-150-200)
     - 0.3 # (300, 400, 480, 600)

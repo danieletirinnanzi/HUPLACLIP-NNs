@@ -9,7 +9,8 @@ graph_size_values:
   - 480 
   - 600
   - 800 
-  - 1200 
+  - 1000  # corresponding to human experiments
+  # - 1200  # corresponding to NN experiments
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -17,7 +18,7 @@ graph_size_values:
 p_correction_type: p_reduce
 
 testing_parameters:
-# 0.4 (100-150-200); 0.3 (300, 400, 480, 600); 0.12 (800, 1200)
+# 0.4 (100-150-200); 0.3 (300, 400, 480, 600); 0.12 (800, 1000/1200)
   max_clique_size_proportion_test: 0.12  # adjust based on model's accuracy and N value (for good models, set to 0.12 for N=[800, 1200]; set to 0.3 for other N values)
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
@@ -33,11 +34,11 @@ testing_parameters:
 # model: ideal-observer-k-not-known_human-grid_limited-capacity{capacity}
   capacity_values:
     - 0.1
-    # - 0.2
+    - 0.2
     - 0.3
-    # - 0.4
-    # - 0.6
-    # - 0.8
+    - 0.4
+    - 0.6
+    - 0.8
 
 # model: ideal-observer-k-not-known_human-grid_max-capacity
   max_capacity_values:
@@ -47,4 +48,4 @@ testing_parameters:
   max_clique_size_proportion_test:
     - 0.4 # (100-150-200)
     - 0.3 # (300, 400, 480, 600)
-    - 0.12 # (800, 1200)
+    - 0.12 # (800, 1000/1200)

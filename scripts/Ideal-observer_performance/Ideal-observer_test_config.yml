@@ -1,17 +1,24 @@
 exp_name: Ideal-observer_test
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  - 100 
-  - 150 
-  - 200
-  - 300
-  - 400
-  - 480 
-  - 600
-  - 800 
-  - 1000  # corresponding to human experiments
+  # - 100 
+  # - 150 
+  # - 200
+  # - 300
+  # - 400
+  # - 480 
+  # - 600
+  # - 800 
+  # - 1000  # corresponding to human experiments
   # - 1200  # corresponding to NN experiments
-  
+  # larger N values:
+  - 1500
+  - 2000
+  - 3000
+  - 5000
+  # - 10000
+
+
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
 # - p_reduce (new correction): reducing the p value of the graph where the clique will be added
@@ -49,3 +56,4 @@ testing_parameters:
     - 0.4 # (100-150-200)
     - 0.3 # (300, 400, 480, 600)
     - 0.12 # (800, 1000/1200)
+    - 0.05 # larger N values

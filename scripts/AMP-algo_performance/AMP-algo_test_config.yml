@@ -6,10 +6,15 @@ graph_size_values:
   # - 200
   # - 300
   # - 400
-  - 480 
-  - 600
-  - 800 
-  - 1200 
+  # - 480 
+  # - 600
+  # - 800 
+  - 1000
+  # - 1200 
+  - 1500
+  - 2000
+  - 3000
+  - 5000
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -17,7 +22,11 @@ graph_size_values:
 p_correction_type: p_reduce
 
 testing_parameters:
-  max_clique_size_proportion_test: 0.3 # during testing, clique will be at most 70% of the graph size
+  max_clique_size_proportion_test:
+    - 0.4 # (100-150-200)
+    - 0.3 # (300, 400, 480, 600)
+    - 0.12 # (800, 1000/1200)
+    - 0.05 # larger N values
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
-  test_iterations: 16
+  test_iterations: 5

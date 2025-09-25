@@ -14,8 +14,8 @@ graph_size_values:
   # larger N values:
   - 1500
   - 2000
-  - 3000
-  - 5000
+  # - 3000
+  # - 5000
   # - 10000
 
 
@@ -25,8 +25,12 @@ graph_size_values:
 p_correction_type: p_reduce
 
 testing_parameters:
-# 0.4 (100-150-200); 0.3 (300, 400, 480, 600); 0.12 (800, 1000/1200)
-  max_clique_size_proportion_test: 0.12  # adjust based on model's accuracy and N value (for good models, set to 0.12 for N=[800, 1200]; set to 0.3 for other N values)
+  max_clique_size_proportion_test:
+    - 0.4 # (100-150-200)
+    - 0.3 # (300, 400, 480, 600)
+    - 0.12 # (800, 1000/1200)
+    - 0.1 # (1500, 2000)
+    - 0.05 # larger N values
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 5
@@ -52,8 +56,3 @@ testing_parameters:
     - 150
     - 200
     - 300
-  max_clique_size_proportion_test:
-    - 0.4 # (100-150-200)
-    - 0.3 # (300, 400, 480, 600)
-    - 0.12 # (800, 1000/1200)
-    - 0.05 # larger N values

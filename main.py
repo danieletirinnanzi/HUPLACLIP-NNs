@@ -275,7 +275,7 @@ if __name__ == "__main__":
     tests()
 
     # running exp:
-    full_exp(resume=args.resume, exp_name_with_time=exp_name_with_time)  # MODIFIED: TO CHECK
+    full_exp(resume=args.resume, exp_name_with_time=exp_name_with_time)
 
     # DDP:
     torch.distributed.destroy_process_group()

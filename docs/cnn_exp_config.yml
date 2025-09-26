@@ -1,14 +1,14 @@
 exp_name: cnn_exp
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  - 100 
-  - 150 
-  - 200
-  - 300
-  - 400
-  - 480 
-  - 600
-  - 800 
+  # - 100 
+  # # - 150 
+  # # - 200
+  # # - 300
+  # - 400
+  # # - 480 
+  # # - 600
+  # # - 800 
   - 1200 
   
 # type of correction to use (in graphs_generation.py):
@@ -40,7 +40,7 @@ training_parameters:
 
 testing_parameters:
   max_clique_size_proportion_test: 0.7 # during testing, clique will be at most 70% of the graph size
-  num_test: 32  # number of graphs in each test iteration
+  num_test: 24  # number of graphs in each test iteration (NOTE: had to reduce this for memory issues with CNN_large)
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 16
 

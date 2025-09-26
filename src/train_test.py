@@ -771,6 +771,9 @@ def train_model(
         print(f"| Finished training {model_name} at {datetime.datetime.now()}.")
     # - close the writer (opened on all GPUs):
     writer.close()
+    # - free memory:
+    del model, optim, criterion, writer
+    torch.cuda.empty_cache()
 
 
 # TESTING FUNCTION:

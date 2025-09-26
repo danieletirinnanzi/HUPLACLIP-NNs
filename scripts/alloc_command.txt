@@ -12,6 +12,5 @@ salloc --nodes=1 --gres=gpu:2 --mem=64G --ntasks=2 --cpus-per-task=8 -A Sis25_pi
 torchrun --standalone --nproc_per_node=2 DDP_test.py
 torchrun --standalone --nproc_per_node=2 main.py
 
-To run SLURM job:
+To run SLURM job (from \scripts folder):
 sbatch cnn_exp_jobscript.sh
-sbatch mlp-vit_exp_jobscript.sh

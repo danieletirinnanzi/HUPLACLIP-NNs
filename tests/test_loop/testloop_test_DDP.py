@@ -30,7 +30,7 @@ def run_test_only():
         model for model in config["models"] if model["model_name"] == model_name
     ][0]
     # creating the model:
-    model = load_model(model_config, config["graph_size_values"][0],config["testing_parameters"]["num_test"], world_size, rank, device_id)
+    model = load_model(model_config, config["graph_size_values"][0],config["testing_parameters"]["num_test"], world_size, rank, device_id).to(device_id)
 
     # load the best model from the training process on all ranks
     # - defining file name and path:
@@ -40,7 +40,7 @@ def run_test_only():
         "..",
         "results",
         "data",
-        "cnn_exp_2025-09-03_14-42-36",  # CHANGE THIS
+        "cnn_exp_2025-09-05_11-06-38",  # CHANGE THIS
         f"N{config['graph_size_values'][0]}",
         model_name,
         f"{model_name}_N{config['graph_size_values'][0]}_trained.pth"

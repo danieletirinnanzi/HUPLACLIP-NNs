@@ -320,16 +320,19 @@ def load_temp_checkpoint(results_dir, model_name, graph_size, map_location=None)
     return torch.load(file_path, map_location=map_location)
 
 # Visualize features learned by model:
-def save_features(model, model_name, graph_size, p_correction, results_dir, device):
+def save_cnn_kernels_features(model, model_name, graph_size, p_correction, results_dir, device):
     """
-    Save the features extracted from a trained model and save the corresponding image in results folder.
+    Save both the learned kernels (weights) and the feature maps (activations) of the first convolutional layer of a trained CNN model.
+    This function saves two images:
+    1. Kernels: The 32 learned convolutional kernels (weights) of the first layer.
+    2. Feature maps: The activations of the 32 filters from the first convolutional layer for a sample input.
 
     Args:
-        model (torch.nn.Module): The trained model used for feature extraction.
+        model (torch.nn.Module): The trained model (wrapped in DDP).
         model_name (str): The name of the model.
         graph_size (int): The size of the graph.
         p_correction (str): The p-correction type.
-        results_dir (str): The directory where the features image will be saved.
+        results_dir (str): The directory where the images will be saved.
         device (torch.device): The device where the model is stored.
 
     Returns:
@@ -346,16 +349,36 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
 
     import src.graphs_generation as graphs_gen
 
+    # --- Save kernels (weights) ---
+    # Get the first conv layer weights (shape: [32, 1, K, K])
+    first_conv = base_model.model[0][0]
+    kernels = first_conv.weight.data.detach().cpu().numpy()  # shape: (32, 1, K, K)
+    print("First conv kernel shape:", kernels.shape)
+    assert kernels.shape[0] == 32, f"Expected 32 kernels, got {kernels.shape[0]}"
+    fig_k, axs_k = plt.subplots(4, 8, figsize=(32, 12))
+    axs_k = axs_k.flatten()
+    fig_k.suptitle(f"Kernels of first conv layer ({model_name}, N={graph_size})", fontsize=16)
+    for j in range(32):
+        kernel = kernels[j, 0, :, :]
+        epsilon = 1e-10
+        kernel_norm = (kernel - kernel.min()) / (kernel.max() - kernel.min() + epsilon)
+        axs_k[j].imshow(kernel_norm, cmap="gray_r")
+        axs_k[j].set_title(f"Kernel {j+1}")
+    plt.tight_layout()
+    file_path_kernels = os.path.join(results_dir, f"{model_name}_kernels_N{graph_size}.png")
+    plt.savefig(file_path_kernels, dpi=300)
+    plt.close(fig_k)
+
+    # --- Save feature maps (activations) ---
     #  generate single graph with clique (70% of graph size, can be modified)
     graph = graphs_gen.generate_batch(
         1, graph_size, [int(0.7 * graph_size)], p_correction, True, p_clique=1
     )[0]
     graph = graph.to(device)
-
     # Defining layers to extract features from:
     # - CNN features:
     # creating features extractor with relevant node names:
-    model = create_feature_extractor(
+    feature_extractor = create_feature_extractor(
         base_model,
         {
             "model.0.0": "layer1",
@@ -366,40 +389,37 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
             "model.5.0": "layer6",
         },
     )
-
     # performing prediction on the single graph:
-    out = model(graph)
+    out = feature_extractor(graph)
     # out["layer1"] shape: (1, 32, H, W)
     first_layer_features = out["layer1"]
     print("shape of layer features: ", first_layer_features.shape)
     # Control: check that there are 32 filters
     assert first_layer_features.shape[1] == 32, f"Expected 32 filters, got {first_layer_features.shape[1]}"
-
     # Prepare subplots: 3 rows x 11 columns = 33 subplots
-    fig, axs = plt.subplots(3, 11, figsize=(22, 6))
-    axs = axs.flatten()
-
+    fig_f, axs_f = plt.subplots(3, 11, figsize=(22, 6))
+    axs_f = axs_f.flatten()
+    fig_f.suptitle(f"Feature maps from first conv layer ({model_name}, N={graph_size})", fontsize=16)    
     # First subplot: raw input
-    axs[0].imshow(graph[0, 0].detach().cpu().numpy(), cmap="gray_r")
-    axs[0].set_title("Input")
-
+    axs_f[0].imshow(graph[0, 0].detach().cpu().numpy(), cmap="gray_r")
+    axs_f[0].set_title("Input")
     # Next 32 subplots: feature maps from first layer
     for j in range(32):
         feature_map = first_layer_features[0, j, :, :].detach().cpu().numpy()
         # Normalize feature map
         epsilon = 1e-10
         feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min() + epsilon)
-        axs[j + 1].imshow(feature_map, cmap="gray_r")
-        axs[j + 1].set_title(f"Filter {j+1}")
-
+        axs_f[j + 1].imshow(feature_map, cmap="gray_r")
+        axs_f[j + 1].set_title(f"Filter {j+1}")
     plt.tight_layout()
-
     # - Defining file path:
-    file_path = os.path.join(results_dir, f"{model_name}_features_N{graph_size}.png")
-    plt.savefig(file_path, dpi=300)
-
+    file_path_features = os.path.join(results_dir, f"{model_name}_features_N{graph_size}.png")
+    plt.savefig(file_path_features, dpi=300)
+    plt.close(fig_f)    
+    
     # deleting temporary variables from memory to save space:
     del graph
     torch.cuda.empty_cache()
 
-    print(f"- Features image saved successfully in {file_path}.")
+    print(f"- Kernels image saved in {file_path_kernels}.")
+    print(f"- Feature maps image saved in {file_path_features}.")

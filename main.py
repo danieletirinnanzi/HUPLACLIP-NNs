@@ -14,7 +14,7 @@ from src.utils import (
     save_exp_config,
     save_partial_time,
     save_test_results,
-    save_features
+    save_cnn_kernels_features
 )
 from src.train_test import (
     train_model,
@@ -232,7 +232,7 @@ def full_exp(resume=False, exp_name_with_time=None):
                 
                 # if CNN has been trained, save visualization of filters:
                 if model_specs["model_name"] == "CNN_large":
-                    save_features(
+                    save_cnn_kernels_features(
                         model,
                         model_specs["model_name"],
                         graph_size,

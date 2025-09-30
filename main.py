@@ -14,6 +14,7 @@ from src.utils import (
     save_exp_config,
     save_partial_time,
     save_test_results,
+    save_features
 )
 from src.train_test import (
     train_model,
@@ -228,8 +229,19 @@ def full_exp(resume=False, exp_name_with_time=None):
                     graph_size,
                     model_results_dir,
                 )
-
-            # TODO: implement GradCAM for CNN model + Attention Visualization for ViT model (otherwise performed on saved model after training is completed)
+                
+                # if CNN has been trained, save visualization of filters:
+                if model_specs["model_name"] == "CNN_large":
+                    save_features(
+                        model,
+                        model_specs["model_name"],
+                        graph_size,
+                        config["p_correction_type"],
+                        model_results_dir,
+                        device_id
+                    )
+                    
+                # TODO: implement GradCAM for CNN + Attention Visualization for ViT (otherwise performed on saved model after training is completed)
 
             # deleting model from device to free up memory:
             del model

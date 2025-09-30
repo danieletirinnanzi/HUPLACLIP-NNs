@@ -319,8 +319,7 @@ def load_temp_checkpoint(results_dir, model_name, graph_size, map_location=None)
         return None
     return torch.load(file_path, map_location=map_location)
 
-# --------------------------------------
-# UNUSED:
+# Visualize features learned by model:
 def save_features(model, model_name, graph_size, p_correction, results_dir, device):
     """
     Save the features extracted from a trained model and save the corresponding image in results folder.
@@ -337,9 +336,13 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
         None
     """
 
-    # # Uncomment this to visualize the names of the nodes in the graph (also print model to see the names of the nodes):
-    # names = get_graph_node_names(model)
-    # print(names)
+    # unwrapping DDP before extracting features
+    base_model = model.module if hasattr(model, "module") else model
+    
+    # Uncomment this to visualize the names of the nodes in the graph (also print model to see the names of the nodes):
+    names = get_graph_node_names(base_model)
+    print("Printing names of layers:")
+    print(names)
 
     import src.graphs_generation as graphs_gen
 
@@ -351,113 +354,43 @@ def save_features(model, model_name, graph_size, p_correction, results_dir, devi
 
     # Defining layers to extract features from:
     # - CNN features:
-    if "CNN" in model_name:
-        # differentiating CNN versions:
-        if model_name == "CNN_small_1":
-            # creating features extractor with relevant node names:
-            model = create_feature_extractor(
-                model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                    "model.4.0": "feat5",
-                },
-            )
-        elif model_name == "CNN_small_2":
-            model = create_feature_extractor(
-                model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                    "model.4.0": "feat5",
-                    "model.5.0": "feat6",
-                    "model.6.0": "feat7",
-                },
-            )
-        elif model_name == "CNN_large_1":
-            # creating features extractor with relevant node names:
-            model = create_feature_extractor(
-                model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                },
-            )
-        elif model_name == "CNN_large_2":
-            # creating features extractor with relevant node names:
-            model = create_feature_extractor(
-                model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                    "model.4.0": "feat5",
-                    "model.5.0": "feat6",
-                },
-            )
-        elif model_name == "CNN_medium_1":
-            # creating features extractor with relevant node names:
-            model = create_feature_extractor(
-                model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                },
-            )
-        elif model_name == "CNN_medium_2":
-            # creating features extractor with relevant node names:
-            model = create_feature_extractor(
-                model,
-                {
-                    "model.0.0": "feat1",
-                    "model.1.0": "feat2",
-                    "model.2.0": "feat3",
-                    "model.3.0": "feat4",
-                    "model.4.0": "feat5",
-                    "model.5.0": "feat6",
-                },
-            )
-        else:
-            raise ValueError("CNN Model not found. Model name might be incorrect.")
-
-    # TODO: Visualization of features for ViTs?
-
-    else:
-        raise ValueError("Model not found. Model name might be incorrect.")
+    # creating features extractor with relevant node names:
+    model = create_feature_extractor(
+        base_model,
+        {
+            "model.0.0": "layer1",
+            "model.1.0": "layer2",
+            "model.2.0": "layer3",
+            "model.3.0": "layer4",
+            "model.4.0": "layer5",
+            "model.5.0": "layer6",
+        },
+    )
 
     # performing prediction on the single graph:
     out = model(graph)
-    # Putting input as first element in the dictionary, before the features:
-    out = {"input": graph, **out}
+    # out["layer1"] shape: (1, 32, H, W)
+    first_layer_features = out["layer1"]
+    print("shape of layer features: ", first_layer_features.shape)
+    # Control: check that there are 32 filters
+    assert first_layer_features.shape[1] == 32, f"Expected 32 filters, got {first_layer_features.shape[1]}"
 
-    # Visualizing the input image and the saved features contained in "out" dictionary:
-    n_plots = len(out)
-    # - Create a figure with appropriate number of subplots
-    fig, axs = plt.subplots(1, n_plots, figsize=(20, 5))
+    # Prepare subplots: 3 rows x 11 columns = 33 subplots
+    fig, axs = plt.subplots(3, 11, figsize=(22, 6))
+    axs = axs.flatten()
 
-    # - Iterate over the feature maps and add them in places
-    for i, (name, feature_map) in enumerate(out.items()):
-        # Select the first feature map
-        feature_map = feature_map[0, 0, :, :].detach().cpu().numpy()
+    # First subplot: raw input
+    axs[0].imshow(graph[0, 0].detach().cpu().numpy(), cmap="gray_r")
+    axs[0].set_title("Input")
 
-        # normalizing the feature map
-        epsilon = 1e-10  # to avoid division by zero
-        feature_map = (feature_map - feature_map.min()) / (
-            feature_map.max() - feature_map.min() + epsilon
-        )
-
-        # Plot the feature map
-        axs[i].imshow(feature_map, cmap="gray")
-        axs[i].set_title(name)
+    # Next 32 subplots: feature maps from first layer
+    for j in range(32):
+        feature_map = first_layer_features[0, j, :, :].detach().cpu().numpy()
+        # Normalize feature map
+        epsilon = 1e-10
+        feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min() + epsilon)
+        axs[j + 1].imshow(feature_map, cmap="gray_r")
+        axs[j + 1].set_title(f"Filter {j+1}")
 
     plt.tight_layout()
 

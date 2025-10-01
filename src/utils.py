@@ -322,10 +322,10 @@ def load_temp_checkpoint(results_dir, model_name, graph_size, map_location=None)
 # Visualize features learned by model:
 def save_cnn_kernels_features(model, model_name, graph_size, p_correction, results_dir, device):
     """
-    Save both the learned kernels (weights) and the feature maps (activations) of the first convolutional layer of a trained CNN model.
+    Save both the learned kernels (weights) and the corresponding feature maps of the first convolutional layer of a trained CNN model.
     This function saves two images:
     1. Kernels: The 32 learned convolutional kernels (weights) of the first layer.
-    2. Feature maps: The activations of the 32 filters from the first convolutional layer for a sample input.
+    2. Feature maps: The output of the convolutional layer after the convolution on a sample input.
 
     Args:
         model (torch.nn.Module): The trained model (wrapped in DDP).
@@ -357,22 +357,23 @@ def save_cnn_kernels_features(model, model_name, graph_size, p_correction, resul
     assert kernels.shape[0] == 32, f"Expected 32 kernels, got {kernels.shape[0]}"
     fig_k, axs_k = plt.subplots(4, 8, figsize=(32, 12))
     axs_k = axs_k.flatten()
-    fig_k.suptitle(f"Kernels of first conv layer ({model_name}, N={graph_size})", fontsize=16)
+    fig_k.suptitle(f"First Convolutional Layer Kernels ({model_name}, N={graph_size})", fontsize=16)
     for j in range(32):
         kernel = kernels[j, 0, :, :]
         epsilon = 1e-10
         kernel_norm = (kernel - kernel.min()) / (kernel.max() - kernel.min() + epsilon)
         axs_k[j].imshow(kernel_norm, cmap="gray_r")
-        axs_k[j].set_title(f"Kernel {j+1}")
+        axs_k[j].set_title(f"Filter {j+1} Weights")
     plt.tight_layout()
     file_path_kernels = os.path.join(results_dir, f"{model_name}_kernels_N{graph_size}.png")
     plt.savefig(file_path_kernels, dpi=300)
     plt.close(fig_k)
 
-    # --- Save feature maps (activations) ---
-    #  generate single graph with clique (70% of graph size, can be modified)
+    # --- Save feature maps ---
+    clique_proportion = 0.05 #CHANGE THIS (tried 0.05, 0.1, 0.4, 0.5)    
+    #  generate single graph with clique
     graph = graphs_gen.generate_batch(
-        1, graph_size, [int(0.7 * graph_size)], p_correction, True, p_clique=1
+        1, graph_size, [int(clique_proportion * graph_size)], p_correction, True, p_clique=1
     )[0]
     graph = graph.to(device)
     # Defining layers to extract features from:
@@ -399,7 +400,7 @@ def save_cnn_kernels_features(model, model_name, graph_size, p_correction, resul
     # Prepare subplots: 3 rows x 11 columns = 33 subplots
     fig_f, axs_f = plt.subplots(3, 11, figsize=(22, 6))
     axs_f = axs_f.flatten()
-    fig_f.suptitle(f"Feature maps from first conv layer ({model_name}, N={graph_size})", fontsize=16)    
+    fig_f.suptitle(f"First Convolutional Layer Feature Maps ({model_name}, N={graph_size}, K={int(clique_proportion * graph_size)})", fontsize=16)    
     # First subplot: raw input
     axs_f[0].imshow(graph[0, 0].detach().cpu().numpy(), cmap="gray_r")
     axs_f[0].set_title("Input")
@@ -410,10 +411,10 @@ def save_cnn_kernels_features(model, model_name, graph_size, p_correction, resul
         epsilon = 1e-10
         feature_map = (feature_map - feature_map.min()) / (feature_map.max() - feature_map.min() + epsilon)
         axs_f[j + 1].imshow(feature_map, cmap="gray_r")
-        axs_f[j + 1].set_title(f"Filter {j+1}")
+        axs_f[j + 1].set_title(f"Feature Map: Filter {j+1}")
     plt.tight_layout()
     # - Defining file path:
-    file_path_features = os.path.join(results_dir, f"{model_name}_features_N{graph_size}.png")
+    file_path_features = os.path.join(results_dir, f"{model_name}_features_N{graph_size}_K{int(clique_proportion * graph_size)}.png")
     plt.savefig(file_path_features, dpi=300)
     plt.close(fig_f)    
     

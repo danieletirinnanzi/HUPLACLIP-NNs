@@ -1,0 +1,99 @@
+graph_sizes:
+  # - 100
+  # - 150
+  - 200
+  - 300
+  - 400
+  - 480
+  - 600
+  - 800
+  - 1200
+p_correction_type: "p_reduce"
+batch_size: 10
+max_radius: 10
+models:
+  - model_name: MLP
+    architecture:
+      layers: [200, 100, 25, 12]
+      dropout_prob: 0.2
+    
+  - model_name: ViTscratch
+
+  - model_name: ViTpretrained
+
+  # - model_name: CNN # NOTE: in original configuration files, named "CNN_large"
+  #   architecture:
+  #     num_conv_layers: 6
+  #     c0: 1
+  #     c1: 32
+  #     c2: 64
+  #     c3: 128
+  #     c4: 256
+  #     c5: 512
+  #     c6: 512
+  #     l1: 1024
+  #     kernel_size_conv: [30, 30, 30, 30, 30, 30]
+  #     stride_conv: [1, 1, 1, 1, 1, 1]
+  #     padding_conv: [1, 1, 1, 1, 1, 1]
+  #     kernel_size_pool: 2
+  #     stride_pool: 2
+  #     dropout_prob: 0.3 
+  #     # OUT: (512, 10, 10)  
+  
+# Empirical K0 values for different graph sizes, coming from the ANN experiments
+# These are the K0 values from "2025-04_only-new-pipeline"
+empirical_K0s:
+  - N: 100
+    values:
+      MLP: 21.998025
+      ViTscratch: 25.520875
+      ViTpretrained: 20.217002
+      CNN: 18.451130
+  - N: 150
+    values:
+      MLP: 33.749709
+      ViTscratch: 31.171468
+      ViTpretrained: 26.291746
+      CNN: 24.303692
+  - N: 200
+    values:
+      MLP: 42.587045
+      ViTscratch: 37.162786
+      ViTpretrained: 32.342791
+      CNN: 140.000000
+  - N: 300
+    values:
+      MLP: 65.178948
+      ViTscratch: 47.266594
+      ViTpretrained: 43.743450
+      CNN: 210.000000
+  - N: 400
+    values:
+      MLP: 84.288455
+      ViTscratch: 60.394583
+      ViTpretrained: 50.694126
+      CNN: 280.000000
+  - N: 480
+    values:
+      MLP: 103.193010
+      ViTscratch: 65.402948
+      ViTpretrained: 58.236594
+      CNN: 58.524541
+  - N: 600
+    values:
+      MLP: 126.279423
+      ViTscratch: 81.616319
+      ViTpretrained: 71.327878
+      CNN: 69.952164
+  - N: 800
+    values:
+      MLP: 173.507788
+      ViTscratch: 102.602703
+      ViTpretrained: 86.559527
+      CNN: 69.864709
+  - N: 1200
+    values:
+      MLP: 264.728229
+      ViTscratch: 146.588109
+      ViTpretrained: 166.344459
+      CNN: 167.722373

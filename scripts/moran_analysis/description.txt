@@ -1,0 +1,7 @@
+This code recapitulates the Moran analysis performed on human data. For each model, the code:
+- loads the trained model
+- presents it a batch of graphs only with the clique, contextually measuring the Moran's i
+- performs this for a range of K values
+- stores the results
+
+The functions are implemented to be compatible with execution on a normal laptop (not on a cluster using DistributedDataParallel)

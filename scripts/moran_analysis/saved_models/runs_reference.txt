@@ -1,0 +1,32 @@
+The new training pipeline features the leaky integrator early stopper and the learning rate scheduling.
+
+NEW TRAINING PIPELINE:
+* MLP data:
+    - N100-N480: mlp_exp_2025-03-03_12-36-32
+    - N600: mlp_exp_2025-03-05_17-31-07
+    - N800: mlp_exp_2025-03-04_13-43-04
+    - N1200: mlp_exp_2025-03-06_18-30-37
+
+* ViT data (ViTpretrained, ViTscratch):
+    - N100-N400: vit_exp_2025-04-01_20-01-40
+    - N480: vit_exp_2025-04-06_00-23-29
+    - N600-N800(scratch): vit_exp_2025-04-03_00-38-02
+    - N800(pretrained): vit_exp_2025-04-06_00-12-56
+    - N1200(scratch): vit_exp_2025-04-03_23-42-13
+    - N1200(pretrained): vit_exp_2025-04-04_19-41-33
+
+* CNN data (CNN-new-pipeline):
+    - TO UPDATE, NOW IT IS THE OLD data
+        Same data as "2025-03-05_CNS-abstract":
+        - N100: cnn_exp_2024-12-09_14-14-42
+        - N150: cnn_exp_2025-01-09_16-01-51
+        - N200: cnn_exp_2025-01-10_20-25-49
+        - N300: cnn_exp_2025-01-13_12-18-11
+        - N400: cnn_exp_2025-01-16_18-10-54
+        - N480: cnn_exp_2025-01-21_18-59-44
+        - N600: cnn_exp_2025-01-28_13-13-57
+        - N800: cnn_exp_2025-01-14_15-32-41
+        - N1200: cnn_exp_2025-01-12_00-03-44
+
+* AMP algo data:
+    - Obtained using script at: "HUPLACLIP-NNs\scripts\AMP-algo_performance\AMP-algo_performance.ipynb"

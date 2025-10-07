@@ -1,44 +1,45 @@
 graph_sizes:
-  # - 100
-  # - 150
-  - 200
-  - 300
-  - 400
+  - 100
+  - 150
+  # - 200
+  # - 300
+  # - 400
   - 480
   - 600
   - 800
   - 1200
 p_correction_type: "p_reduce"
-batch_size: 10
+batch_size: 100
+num_iterations: 10  # dividing batch into iterations, for memory constraints (for CNN, but applied to all models for consistency)
 max_radius: 10
 models:
-  - model_name: MLP
-    architecture:
-      layers: [200, 100, 25, 12]
-      dropout_prob: 0.2
-    
-  - model_name: ViTscratch
-
-  - model_name: ViTpretrained
-
-  # - model_name: CNN # NOTE: in original configuration files, named "CNN_large"
+  # - model_name: MLP
   #   architecture:
-  #     num_conv_layers: 6
-  #     c0: 1
-  #     c1: 32
-  #     c2: 64
-  #     c3: 128
-  #     c4: 256
-  #     c5: 512
-  #     c6: 512
-  #     l1: 1024
-  #     kernel_size_conv: [30, 30, 30, 30, 30, 30]
-  #     stride_conv: [1, 1, 1, 1, 1, 1]
-  #     padding_conv: [1, 1, 1, 1, 1, 1]
-  #     kernel_size_pool: 2
-  #     stride_pool: 2
-  #     dropout_prob: 0.3 
-  #     # OUT: (512, 10, 10)  
+  #     layers: [200, 100, 25, 12]
+  #     dropout_prob: 0.2
+    
+  # - model_name: ViTscratch
+
+  # - model_name: ViTpretrained
+
+  - model_name: CNN # NOTE: in original configuration files, named "CNN_large"
+    architecture:
+      num_conv_layers: 6
+      c0: 1
+      c1: 32
+      c2: 64
+      c3: 128
+      c4: 256
+      c5: 512
+      c6: 512
+      l1: 1024
+      kernel_size_conv: [30, 30, 30, 30, 30, 30]
+      stride_conv: [1, 1, 1, 1, 1, 1]
+      padding_conv: [1, 1, 1, 1, 1, 1]
+      kernel_size_pool: 2
+      stride_pool: 2
+      dropout_prob: 0.3 
+      # OUT: (512, 10, 10)  
   
 # Empirical K0 values for different graph sizes, coming from the ANN experiments
 # These are the K0 values from "2025-04_only-new-pipeline"

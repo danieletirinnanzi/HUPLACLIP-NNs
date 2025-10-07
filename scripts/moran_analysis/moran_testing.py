@@ -37,9 +37,9 @@ for graph_size in config["graph_sizes"]:
     max_K0 = max(K0_values)
     # in the cases where CNN failed, excluding maximum K0 value:
     if graph_size in [200, 300, 400]:
-        max_K0 = sorted(K0_values)[-2]
-    K_range = range(int(min_K0) - 10, int(max_K0) + 11)    
-    print(f"| K range: {K_range.start} to {K_range.stop-1}")    
+        max_K0 = sorted(K0_values)[-2]    
+    K_range = np.linspace(int(min_K0) - 10, int(max_K0) + 10, 8, dtype=int)
+    print(f"| K range: {K_range[0]} to {K_range[-1]}")    
     for model_specs in config["models"]:
         model_name = model_specs["model_name"]
         model_results = []
@@ -73,62 +73,70 @@ for graph_size in config["graph_sizes"]:
 
         for K_value in K_range:
             
-            # (OPTIONAL): add external loop for additional iterations
-            
             print("||| K value is: ", K_value)
-            # Generate "batch_size" graphs with clique
-            clique_size_array = graphs_gen.generate_batch_clique_sizes(
-                np.array([K_value]),
-                config["batch_size"],
-            )
-            graphs, labels = graphs_gen.generate_batch(
-                config["batch_size"],
-                graph_size,
-                clique_size_array,
-                config["p_correction_type"],
-                input_magnification=True if model_name == "CNN" else False,
-                p_clique=1  # generating only graphs with clique
-            )   # graphs: shape (batch_size, 1, graph_size, graph_size)
-            labels = np.array(labels)
+            
+            # Split the batch into num_iterations
+            # NOTE: needed for "CNN" for memory constraints, but applied to all models for consistency
+            num_iterations = config["num_iterations"]
+            batch_size = config["batch_size"]
+            iter_size = batch_size // num_iterations
+            assert iter_size == 10, f"Iter size should be 10, it is: {iter_size}"
+            all_graphs = []
+            all_labels = []
+            all_morans_I_results = []
+            all_soft_outputs = []
+
+            for iter_idx in range(num_iterations):
+                # Generate a subset of the batch
+                clique_size_array = graphs_gen.generate_batch_clique_sizes(
+                    np.array([K_value]),
+                    iter_size,
+                )
+                graphs, labels = graphs_gen.generate_batch(
+                    iter_size,
+                    graph_size,
+                    clique_size_array,
+                    config["p_correction_type"],
+                    input_magnification=True if model_name == "CNN" else False,
+                    p_clique=1
+                )
+                labels = np.array(labels)
+                adj_matrices = graphs[:, 0].cpu().numpy()
+                if model_name == "CNN":
+                    assert adj_matrices.shape == (iter_size, 2400, 2400), f"adj_matrices shape {adj_matrices.shape} does not match expected ({iter_size}, {graph_size}, {graph_size})"
+                else:
+                    assert adj_matrices.shape == (iter_size, graph_size, graph_size), f"adj_matrices shape {adj_matrices.shape} does not match expected ({iter_size}, {graph_size}, {graph_size})"                    
+                # Moran's I
+                morans_I_results = np.array([morans_I.morans_I_numba(adj, config["max_radius"]) for adj in adj_matrices])
+                # Model predictions
+                with torch.no_grad():
+                    graphs_tensor = torch.tensor(graphs, dtype=torch.float32, device=device)
+                    soft_outputs = model(graphs_tensor).squeeze().cpu().numpy()
+                # Collect all
+                all_graphs.append(graphs)
+                all_labels.append(labels)
+                all_morans_I_results.append(morans_I_results)
+                all_soft_outputs.append(soft_outputs)
+                # Delete unused variables from memory
+                del graphs, labels, adj_matrices, morans_I_results, graphs_tensor, soft_outputs
+                torch.cuda.empty_cache()
+
+            # Concatenate all iterations
+            graphs = np.concatenate(all_graphs, axis=0)
+            labels = np.concatenate(all_labels, axis=0)
+            morans_I_results = np.concatenate(all_morans_I_results, axis=0)
+            soft_outputs = np.concatenate(all_soft_outputs, axis=0)
             batch_size = graphs.shape[0]
             assert batch_size == config["batch_size"], f"Number of generated graphs ({batch_size}) does not match config batch size ({config['batch_size']})"
-            # Remove batch dimension from graphs:
-            adj_matrices = graphs[:, 0].cpu().numpy()
-            if model_name == "CNN":
-                assert adj_matrices.shape == (config["batch_size"], 2400, 2400), f"adj_matrices shape {adj_matrices.shape} does not match expected ({config['batch_size']}, {graph_size}, {graph_size})"
-            else:
-                assert adj_matrices.shape == (config["batch_size"], graph_size, graph_size), f"adj_matrices shape {adj_matrices.shape} does not match expected ({config['batch_size']}, {graph_size}, {graph_size})"                
-            # Calculate Moran's I for all graphs in batch (vectorized with apply along axis 0)
-            def morans_I_row(adj):
-                return morans_I.morans_I_numba(adj, config["max_radius"])
-            # Use list comprehension for speed with numba
-            morans_I_results = np.array([morans_I_row(adj) for adj in adj_matrices])
-            print(f"    - Moran's I results shape: {morans_I_results.shape}")
             # Prepare DataFrame columns for Moran's I
             morans_I_cols = [f"morans_I_lambda_{r}" for r in range(1, config["max_radius"] + 1)]
             morans_I_df = pd.DataFrame(morans_I_results[:, 1:], columns=morans_I_cols)  # skip radius 0
-
-            # print("Moran's I df:")
-            # print(morans_I_df)
-            
-            # Model predictions (soft outputs)
-            with torch.no_grad():
-                graphs_tensor = torch.tensor(graphs, dtype=torch.float32, device=device)
-                soft_outputs = model(graphs_tensor).squeeze().cpu().numpy()
-            print(f"    - Soft outputs shape: {soft_outputs.shape}")
 
             # Hard predictions (threshold 0.5)
             hard_outputs = (soft_outputs > 0.5).astype(int)
             labels_int = labels.astype(int)
             correct = (hard_outputs == labels_int)
 
-            print("Labels:", labels)
-            print("Soft outputs:", soft_outputs)
-            print("Hard outputs:", hard_outputs)
-            print("Correct predictions:", correct)
-            print(f"Correct in batch: {correct.sum()}/{batch_size}")
-
-            # Build DataFrame for this batch
             batch_df = pd.DataFrame({
                 "model": model_name,
                 "N": graph_size,
@@ -138,11 +146,7 @@ for graph_size in config["graph_sizes"]:
                 "label": labels,
                 "correct": correct,
             })
-            # Concatenate Moran's I columns
             batch_df = pd.concat([batch_df, morans_I_df], axis=1)
-
-            # print("Batch df print:")
-            # print(batch_df)
             
             # Sanity check print
             print(f"    - Batch DataFrame shape: {batch_df.shape}, correct: {correct.sum()}/{batch_size}")
@@ -154,12 +158,4 @@ for graph_size in config["graph_sizes"]:
         save_path = os.path.join(os.getcwd(),"results",f"N{graph_size}",f"{model_name}_N{graph_size}_moran_results.csv")
         model_results_df.to_csv(save_path, index=False)
         print(f"|| Results for model {model_name} saved to {save_path}")
-        
-        # SCRIPT OUTLINE:
-        # # For each graph in the batch, calculate Moran's I for each lambda value up to max_radius
-        # mi = morans_I.morans_I_numba(img_array, config["max_radius"])  # returns array of length max_radius+1
-        # morans_I_dict = {f'morans_I_lambda_{r}': mi[r] for r in range(1, config["max_radius"] + 1)}  # skipping radius 0
-        # perform prediction
-        
-        # store: model_name, K value; Moran's I of graph (varying lambdas); correct/incorrect
             

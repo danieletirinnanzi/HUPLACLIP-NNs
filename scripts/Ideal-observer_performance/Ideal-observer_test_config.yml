@@ -16,7 +16,7 @@ graph_size_values:
   # - 2000
   # - 3000
   # - 5000
-  - 10000 # tested with batch_size = 20; clique_testing_levels = 50; test_iterations = 1
+  - 10000
 
 
 # type of correction to use (in graphs_generation.py):
@@ -31,10 +31,10 @@ testing_parameters:
     - 0.12 # (800, 1000/1200)
     - 0.1 # (1500, 2000)
     - 0.05 # (3000, 5000)
-    - 0.02 # (10000)
-  num_test: 20  # number of graphs in each test iteration
-  clique_testing_levels: 50  # number of different clique sizes to test (will be the number of datapoints in the test set)
-  test_iterations: 1
+    - 0.025 # (10000)
+  num_test: 32  # number of graphs in each test iteration
+  clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
+  test_iterations: 5
 
 # DIFFERENTIATING MODELS AND USING UNIQUE TEST LOOP (TO IMPLEMENT)
 # model: ideal-observer-k-known

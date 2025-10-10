@@ -24,7 +24,7 @@ cd $HOME/HUPLACLIP-NNs/
 # - STANDARD CASE:
 # torchrun --standalone --nproc_per_node=4 main.py --config docs/cnn_exp_config.yml
 # - RESUME CASE (for continuing a previous experiment):
-# torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name cnn_exp_2025-09-05_11-06-38
+torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name cnn_exp_2025-10-02_13-22-12
 # - TESTING TRAINED MODEL:
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True # to avoid CUDA out of memory error
-torchrun --standalone --nproc_per_node=4 -m tests.test_loop.testloop_test_DDP
+# export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True # to avoid CUDA out of memory error
+# torchrun --standalone --nproc_per_node=4 -m tests.test_loop.testloop_test_DDP

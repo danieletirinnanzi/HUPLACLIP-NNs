@@ -5,11 +5,11 @@ graph_size_values:
   # # - 150 
   # # - 200
   # # - 300
-  # - 400
+  - 400
   # # - 480 
   # # - 600
   # # - 800 
-  - 1200 
+  # - 1200 
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -34,7 +34,7 @@ training_parameters:
   loss_function: BCELoss
   # early stopping (leaky integrator):
   alpha: 0.9  # leak rate
-  patience: 40
+  patience: 30
   min_delta: 0.01
   val_exit_loss: 0.1
 

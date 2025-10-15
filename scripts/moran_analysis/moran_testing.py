@@ -24,24 +24,33 @@ with open(config_path, "r") as stream:
     config = yaml.safe_load(stream)
     print("Configuration file loaded successfully.")
 
+# defining grid to be tested:
+K_grid = "finer" # or "finer"
+
 for graph_size in config["graph_sizes"]:
     
     print("| Graph size = ", graph_size)
+    
+    if graph_size == 1000:
+        continue
     # for each N value, defining grid of K values where testing will occur:
     # - for each N value, range [ minK0 - 10; maxk0 + 10]
-    # Find empirical K0s for this graph_size
-    empirical_K0_entry = next(e for e in config["empirical_K0s"] if e["N"] == graph_size)
-    K0_values = list(empirical_K0_entry["values"].values())
-    print("| K0 values are: ", K0_values)
-    min_K0 = min(K0_values)
-    max_K0 = max(K0_values)
-    # in the cases where CNN failed, excluding maximum K0 value:
-    if graph_size in [200, 300, 400]:
-        max_K0 = sorted(K0_values)[-2]    
-    K_range = np.linspace(int(min_K0) - 10, int(max_K0) + 10, 8, dtype=int)
-    print(f"| K range: {K_range[0]} to {K_range[-1]}")    
-    for model_specs in config["models"]:
+    if K_grid == "common":
+        # Find empirical K0s for this graph_size
+        empirical_K0_entry = next(e for e in config["empirical_K0s"] if e["N"] == graph_size)
+        K0_values = list(empirical_K0_entry["values"].values())
+        print("| K0 values are: ", K0_values)
+        min_K0 = min(K0_values)
+        max_K0 = max(K0_values)
+        # in the cases where CNN failed, excluding maximum K0 value:
+        if graph_size in [200, 300, 400]:
+            max_K0 = sorted(K0_values)[-2]    
+        K_range = np.linspace(round(min_K0) - 10, round(max_K0) + 10, 8, dtype=int)
+        print(f"| K range: {K_range[0]} to {K_range[-1]}")            
+    for model_specs in config["models"]:        
         model_name = model_specs["model_name"]
+        if model_name == "Humans":
+            continue
         model_results = []
         # - building requested model
         match model_name:
@@ -71,6 +80,17 @@ for graph_size in config["graph_sizes"]:
         model.eval()        
         print(f"|| {model_name} Model loaded successfully.")
 
+        if K_grid == "finer":
+            # Find empirical K0 of this model
+            empirical_K0_entry = next(e for e in config["empirical_K0s"] if e["N"] == graph_size)
+            K0_value = empirical_K0_entry["values"][model_name]
+            print(f"| K0 value for {model_name} is: {K0_value}")
+            # in the cases where CNN failed, excluding maximum K0 value:
+            if (graph_size in [200, 300, 400] and model_name == "CNN"):
+                continue 
+            K_range = np.arange(round(K0_value) - 3, round(K0_value) + 4, dtype=int)
+            print(f"| K range: {K_range}")                
+        
         for K_value in K_range:
             
             print("||| K value is: ", K_value)
@@ -155,7 +175,6 @@ for graph_size in config["graph_sizes"]:
 
         # After all K for this model, concatenate and save
         model_results_df = pd.concat(model_results, ignore_index=True)
-        save_path = os.path.join(os.getcwd(),"results",f"N{graph_size}",f"{model_name}_N{graph_size}_moran_results.csv")
+        save_path = os.path.join(os.getcwd(),"results" if K_grid == "common" else "results_finer_grid",f"N{graph_size}",f"{model_name}_N{graph_size}_moran_results.csv")
         model_results_df.to_csv(save_path, index=False)
         print(f"|| Results for model {model_name} saved to {save_path}")
-            

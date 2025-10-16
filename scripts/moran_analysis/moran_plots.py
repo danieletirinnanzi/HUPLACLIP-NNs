@@ -28,7 +28,7 @@ models_legend = {
         "marker": "o",
     },
     "Humans": {
-        "color": sns.color_palette("flare", 9)[0],
+        "color": sns.color_palette("flare", 9),
         "marker": "*"    
         }
 }
@@ -44,6 +44,7 @@ fig, axes = plt.subplots(1, len(config["graph_sizes"]), figsize=(4 * len(config[
 
 for i, graph_size in enumerate(config["graph_sizes"]):
     print("N = ", graph_size)
+    
     ax = axes[i]
     for model_specs in config["models"]:
         
@@ -57,7 +58,10 @@ for i, graph_size in enumerate(config["graph_sizes"]):
             continue
 
         # Plot specs:
-        color = models_legend[model_name]["color"]
+        if model_name == "Humans":
+            color = models_legend[model_name]["color"][i]
+        else:
+            color = models_legend[model_name]["color"]
         
         # Empirical K0:
         empirical_K0_entry = next(e for e in config["empirical_K0s"] if e["N"] == graph_size)
@@ -70,18 +74,18 @@ for i, graph_size in enumerate(config["graph_sizes"]):
         # ANNs:
         if model_name != "Humans":
             # Load dataframe for current model, N and clique condition
-            df_path = os.path.join(os.getcwd(), "results", f"N{graph_size}", f"{model_name}_N{graph_size}_moran_results.csv")
+            df_path = os.path.join(os.getcwd(), "results_finer_grid", f"N{graph_size}", f"{model_name}_N{graph_size}_moran_results.csv")
             df = pd.read_csv(df_path)
 
-            # Isolate trials around empirical K0 (one above, one below)            
+            # Isolate trials around empirical K0 (three above, three below)            
             K_array = df['K'].unique()
             print("K values: ", K_array)
             distances = abs(K_array - K0_value)
             min_idx = np.argmin(distances)
             closest_K = K_array[min_idx]
             print(f"Closest K to empirical K0 for N={graph_size}: {closest_K} (empirical K0={K0_value})")
-            # Selecting K values to show on the plot (1 below closest_K, 1 above closest_K)
-            K_array_plot = K_array[(min_idx-1):(min_idx+2)]
+            # Selecting K values to show on the plot (2 below closest_K, 2 above closest_K)
+            K_array_plot = K_array[(min_idx-2):(min_idx+3)]
             print("K values to plot: ", K_array_plot)                 
 
             for K_value in K_array_plot:
@@ -114,8 +118,8 @@ for i, graph_size in enumerate(config["graph_sizes"]):
             closest_K = K_array[min_idx]
             print(f"Closest K to empirical K0 for N={graph_size}: {closest_K} (empirical K0={K0_value})")
 
-            # Selecting K values to show on the plot (1 below closest_K, 1 above closest_K)
-            K_array_plot = K_array[(min_idx-1):(min_idx+2)]
+            # Selecting K values to show on the plot (2 below closest_K, 2 above closest_K)
+            K_array_plot = K_array[(min_idx-2):(min_idx+3)]
             print("K values to plot: ", K_array_plot)            
 
             for K_value in K_array_plot:
@@ -124,19 +128,19 @@ for i, graph_size in enumerate(config["graph_sizes"]):
                 # only plot if there is data available
                 if not (df_sub_correct.empty or df_sub_incorrect.empty):
                     means_difference = df_sub_correct[f'morans_I_lambda_{lambda_value}'].mean() - df_sub_incorrect[f'morans_I_lambda_{lambda_value}'].mean()
-                    # NOTE: standard error of difference might be inaccurate for Humans (independent stimuli, but for a given K, data also coming from same subject)
+                    # NOTE: standard error of difference might be inaccurate for Humans (independent stimuli, but for a given K, data also coming from same subject. Alternative can be to compute for single subjects and plot distribution, but only 12 trials per subject for each K value)
                     standard_error_difference = np.sqrt( ( np.var(df_sub_correct[f'morans_I_lambda_{lambda_value}'], ddof=1) / df_sub_correct[f'morans_I_lambda_{lambda_value}'].count() ) + ( (np.var(df_sub_incorrect[f'morans_I_lambda_{lambda_value}'], ddof=1) / df_sub_incorrect[f'morans_I_lambda_{lambda_value}'].count()) ) )
                     ax.errorbar(
                         K_value, means_difference, yerr=standard_error_difference,
                         fmt=models_legend[model_name]["marker"],
                         color=color,
                         alpha=1,
-                        markersize=4,
-                        label=f"{model_name}" if (K_value == K_array_plot[0]) else "" # only add label to first K value
+                        markersize=8,
+                        label=f"{model_name}" # only add label to first K value
                     )
                 else:
-                    raise ValueError("Missing correct or incorrec trials. Check mistakes in data.")            
-            
+                    raise ValueError("Missing correct or incorrec trials. Check mistakes in data.")  
+                    
     ax.set_xlabel('Clique size (K)', fontsize=12)
     ax.set_ylabel("Moran's I difference (correct - incorrect)", fontsize=12)
     ax.set_title(f"N = {graph_size}", fontsize=14)
@@ -149,7 +153,7 @@ for i, graph_size in enumerate(config["graph_sizes"]):
 
 plt.tight_layout(rect=[0, 0, 1, 0.93])
 plt.suptitle(f"Moran's I difference (lambda = {lambda_value}) between correct and incorrect trials with clique", fontsize=18)    
-base_path = os.path.join(os.getcwd(), f'plots','NNs_humans-visual-strategy-moransI')
+base_path = os.path.join(os.getcwd(), f'plots','NNs_humans-visual-strategy-moransI_finergrid')
 # plt.savefig(base_path + '.svg', dpi=300, bbox_inches="tight")
 plt.savefig(base_path + '.png', dpi=300, bbox_inches="tight")
 # plt.show()

@@ -25,7 +25,7 @@ with open(config_path, "r") as stream:
     print("Configuration file loaded successfully.")
 
 # defining grid to be tested:
-K_grid = "finer" # or "finer"
+K_grid = "finer" # or "common"
 
 for graph_size in config["graph_sizes"]:
     

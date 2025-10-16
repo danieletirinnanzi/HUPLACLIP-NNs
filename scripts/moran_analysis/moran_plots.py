@@ -136,7 +136,7 @@ for i, graph_size in enumerate(config["graph_sizes"]):
                         color=color,
                         alpha=1,
                         markersize=8,
-                        label=f"{model_name}" # only add label to first K value
+                        label=f"{model_name}"  if (K_value == K_array_plot[0]) else "" # only add label to first K value
                     )
                 else:
                     raise ValueError("Missing correct or incorrec trials. Check mistakes in data.")  

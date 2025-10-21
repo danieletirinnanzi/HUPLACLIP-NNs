@@ -56,14 +56,15 @@ def evaluate_K(K_value):
         adj_matrices = graphs[:, 0].cpu().numpy()
         assert adj_matrices.shape == (iter_size, graph_size, graph_size)
         morans_I_results = np.array([morans_I.morans_I_numba(adj, config["max_radius"]) for adj in adj_matrices])
+        del adj_matrices
         if model_name == "CNN":
             # magnify the graphs to 2400x2400 after calculating Moran's I
             magnified = torch.zeros((iter_size, 1, 2400, 2400), dtype=graphs.dtype)
             for jj in range(iter_size):
-                magnified[jj, 0] = magnify_input(graphs[jj], 0)
+                magnified[jj, 0] = magnify_input(graphs[jj].squeeze(0)) # default output is 2400x2400
             graphs = magnified
         with torch.no_grad():
-            graphs_tensor = graphs.clone().detach() # added to avoid userwarning (copy from tensor)
+            graphs_tensor = graphs.clone().detach().to(device) # added to avoid userwarning (copy from tensor)
             soft_outputs = model(graphs_tensor).squeeze().cpu().numpy()
 
         all_graphs.append(graphs)
@@ -71,8 +72,8 @@ def evaluate_K(K_value):
         all_morans_I_results.append(morans_I_results)
         all_soft_outputs.append(soft_outputs)
 
-        # free intermediate memory promptly
-        del graphs, labels, adj_matrices, morans_I_results, graphs_tensor, soft_outputs
+        # free intermediate memory
+        del graphs, labels, morans_I_results, graphs_tensor, soft_outputs
         torch.cuda.empty_cache()
 
     graphs_cat = np.concatenate(all_graphs, axis=0)

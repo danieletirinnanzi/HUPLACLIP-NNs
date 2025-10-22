@@ -14,14 +14,14 @@ batch_size: 100
 num_iterations: 10  # dividing batch into iterations, for memory constraints (for CNN, but applied to all models for consistency)
 max_radius: 10
 models:
-  # - model_name: MLP
-  #   architecture:
-  #     layers: [200, 100, 25, 12]
-  #     dropout_prob: 0.2
+  - model_name: MLP
+    architecture:
+      layers: [200, 100, 25, 12]
+      dropout_prob: 0.2
     
-  # - model_name: ViTscratch
+  - model_name: ViTscratch
 
-  # - model_name: ViTpretrained
+  - model_name: ViTpretrained
 
   - model_name: CNN # NOTE: in original configuration files, named "CNN_large"
     architecture:

@@ -130,17 +130,15 @@ class ViT_scratch(nn.Module):
         patch_size = find_patch_size(graph_size)
         print(f"Using patch size = {patch_size}")
 
-        # Define model architecture with the desired img_size and patch_size
+        # Define model architecture with required img_size and patch_size
         self.model = create_model(
-            "vit_base_patch16_224",  # ViT base model with patch size 16 and image_size 224, overwritten by chosen patch_size and img_size
-            pretrained=False,
+            "vit_base_patch16_224",  # ViT base model
             img_size=graph_size,
             patch_size=patch_size,
             in_chans=1,
-            dynamic_img_size=True,  # Enable dynamic image size
         )
 
-        # Modify the head for binary classification
+        # Modify the head for binary classification (single output neuron followed by sigmoid function to have output between 0 and 1)
         self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
     def forward(self, x, **kwargs):
@@ -156,33 +154,34 @@ class ViT_pretrained(nn.Module):
         patch_size = find_patch_size(graph_size)
         print(f"Using patch size: {patch_size}")
 
-        # Initialize the model with the desired img_size and patch_size
+        # Initialize the model with the required img_size and patch_size
         self.model = create_model(
             "vit_base_patch16_224",
             pretrained=True,
             img_size=graph_size,
             patch_size=patch_size,
             in_chans=1,
-            dynamic_img_size=True,  # Enable dynamic image size
         )
 
         # Freeze the architecture
         for param in self.model.parameters():
             param.requires_grad = False
 
-        # Modify the head for binary classification
+        # Modify the head for binary classification (single output neuron followed by sigmoid function to have output between 0 and 1)
         self.model.head = nn.Sequential(nn.Linear(768, 1), nn.Sigmoid())
 
-        # Set the positional encoding layers and the head to require grad:
+        # Set the positional encoding layers and the head to require grad
+        # NOTE: Positional encoding layers are made trainable because:
+        # (1) the spatial relationships relevant for ImageNet are different from the ones of the current task;
+        # (2) timm interpolates the positional embeddings to adapt them to the provided patch/image proportions. By training these parameters we're starting from pre-trained positional embedding and adapting them to the current setting
         for name, param in self.model.named_parameters():
             if any(
                 key in name for key in ["cls_token", "embed", "head"]
-            ):  # add more layers here if needed
+            ):
                 param.requires_grad = True
 
     def forward(self, x, **kwargs):
         return self.model(x)
-
 
 # ADDITIONAL MODELS from timm library:
 # https://github.com/huggingface/pytorch-image-models/tree/e35ea733ab1ee9cc35b29b88bf10fc841421eedf/timm/models

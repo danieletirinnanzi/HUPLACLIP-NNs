@@ -46,7 +46,7 @@ with open(config_path, "r") as stream:
     print("Configuration file loaded successfully.")
 # Define the range for fraction correct
 fraction_correct_range = {
-    "min": 0.55,
+    "min": 0.5,
     "max": 0.9
 }
 
@@ -128,8 +128,9 @@ for i, graph_size in enumerate(config["graph_sizes"]):
     print("---------")
 
 plt.tight_layout(rect=[0, 0, 1, 0.93])
-plt.suptitle(f"Normalized Moran's I difference (lambda = {lambda_value}) between correct and incorrect trials with clique (fc range: {fraction_correct_range['min']}-{fraction_correct_range['max']})", fontsize=12)    
+# plt.suptitle(f"Normalized Moran's I difference (lambda = {lambda_value}) between correct and incorrect trials with clique (fc range: {fraction_correct_range['min']}-{fraction_correct_range['max']})", fontsize=12)    
 base_path = os.path.join(os.getcwd(), f'plots',f'NNs_humans-visual-strategy-moransI_range{fraction_correct_range["min"]}-{fraction_correct_range["max"]}')
 # plt.savefig(base_path + '.svg', dpi=300, bbox_inches="tight")
 plt.savefig(base_path + '.png', dpi=300, bbox_inches="tight")
+plt.savefig(base_path + '.pdf', dpi=300, bbox_inches="tight")
 print("|Completed generating visual strategy graphs for correct/incorrect responses.")

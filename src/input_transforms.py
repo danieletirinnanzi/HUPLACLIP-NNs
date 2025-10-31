@@ -1,6 +1,3 @@
-import math
-
-
 # Function needed to resize images to 2400x2400 tensors (for ConvNets and all other models except MLP)
 def magnify_input(adjacency_matrix, output_size=(2400, 2400)):
     """

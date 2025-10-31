@@ -370,7 +370,13 @@ def save_cnn_kernels_features(model, model_name, graph_size, p_correction, resul
     plt.close(fig_k)
 
     # --- Save feature maps ---
-    clique_proportion = 0.05 #CHANGE THIS (tried 0.05, 0.1, 0.4, 0.5)    
+    # define clique_proportion based on graph_size
+    if graph_size <= 300:
+        clique_proportion = 0.25
+    elif graph_size >=400 and graph_size <=800:
+        clique_proportion = 0.15 
+    else:    
+        clique_proportion = 0.1  
     #  generate single graph with clique
     graph = graphs_gen.generate_batch(
         1, graph_size, [int(clique_proportion * graph_size)], p_correction, True, p_clique=1

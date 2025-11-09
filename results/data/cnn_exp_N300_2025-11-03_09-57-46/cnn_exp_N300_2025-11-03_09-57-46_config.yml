@@ -1,0 +1,62 @@
+exp_name: cnn_exp_N300
+graph_size_values:
+- 300
+models:
+- architecture:
+    c0: 1
+    c1: 32
+    c2: 64
+    c3: 128
+    c4: 256
+    c5: 512
+    c6: 512
+    dropout_prob: 0.3
+    kernel_size_conv:
+    - 30
+    - 30
+    - 30
+    - 30
+    - 30
+    - 30
+    kernel_size_pool: 2
+    l1: 1024
+    num_conv_layers: 6
+    padding_conv:
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    stride_conv:
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    - 1
+    stride_pool: 2
+  model_name: CNN_large
+p_correction_type: p_reduce
+testing_parameters:
+  clique_testing_levels: 100
+  max_clique_size_proportion_test: 0.7
+  num_test: 24
+  test_iterations: 16
+training_parameters:
+  alpha: 0.9
+  clique_training_levels: 10
+  learning_rates:
+  - 1e-4
+  - 1e-5
+  - 1e-6
+  loss_function: BCELoss
+  max_clique_size_proportion: 0.5
+  min_delta: 0.01
+  num_train: 32
+  num_training_steps: 3000
+  num_val: 32
+  optimizer: AdamW
+  patience: 30
+  save_step: 10
+  val_exit_loss: 0.1

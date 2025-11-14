@@ -33,7 +33,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train or resume experiment.")
     parser.add_argument('--resume', action='store_true', help='Resume interrupted experiment')
     parser.add_argument('--exp_name', type=str, default=None, help='Name of experiment to resume (required if --resume)')
-    parser.add_argument('--config', type=str, default=os.path.join("docs", "cnn_exp_config.yml"), help='Config file to use')
+    parser.add_argument('--config', type=str, default=None, help='Config file to use')
     return parser.parse_args()
 
 args = parse_args()
@@ -44,13 +44,21 @@ if args.resume:
     if not args.exp_name:
         print("You must specify --exp_name when using --resume mode.")
         sys.exit(1)
-    # Loading config file (assumes config file is the same in first and resumed training)
-    config = load_config(args.config)
+    # Loading config file saved in "results" folder
     exp_name_with_time = args.exp_name
     current_dir = os.path.dirname(os.path.realpath(__file__))
     experiment_results_dir = os.path.join(current_dir, "results", "data", exp_name_with_time)
     config_file_path = os.path.join(experiment_results_dir, f"{exp_name_with_time}_config.yml")
+    if os.path.exists(config_file_path):
+        config = load_config(config_file_path)
+    else:
+        print("No configuration file to be read for experiment to be resumed. Configuration file should be stored in \results folder.")
+        sys.exit(1)   
 else:
+    # Standard case:
+    if not args.config:
+        print("You must specify --config when using standard mode (not --resume).")
+        sys.exit(1)
     config = load_config(args.config)
     exp_name_with_time = None  # Will be set in full_exp
 
@@ -106,6 +114,13 @@ def full_exp(resume=False, exp_name_with_time=None):
         experiment_results_dir = os.path.join(current_dir, "results", "data", exp_name_with_time)
         if rank == 0:
             os.makedirs(experiment_results_dir)
+            # save a copy of config file immediately, so that it can be read in --resume case
+            save_exp_config(
+                config,
+                experiment_results_dir,
+                exp_name_with_time,
+                False 
+            )            
         experiment_runs_dir = os.path.join(current_dir, "runs", exp_name_with_time)
 
     # looping over the different graph sizes in the experiment:
@@ -262,15 +277,16 @@ def full_exp(resume=False, exp_name_with_time=None):
         # synchronizing all processes before moving on with training:
         torch.distributed.barrier()
 
-    # saving copy of the configuration file in the experiment folder, adding the time elapsed from the start of the experiment:
+    # saving copy of the configuration file in the experiment folder (adding the time elapsed from the start of the experiment)
     end_time = datetime.datetime.now()
     if rank == 0:
         save_exp_config(
             config,
             experiment_results_dir,
             exp_name_with_time,
+            True,
             start_time,
-            end_time,
+            end_time,   # used to calculate the time elapsed from the start of the experiment
         )
 
 

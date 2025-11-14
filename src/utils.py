@@ -120,30 +120,37 @@ def save_partial_time(
 
 
 # save experiment configuration file in results folder:
-def save_exp_config(config, results_dir, exp_name_with_time, start_time, end_time):
+def save_exp_config(config, results_dir, exp_name_with_time, save_elapsed_time_flag, start_time=None, end_time=None):
     """
-    Save a copy of the configuration file in the experiment folder, adding a line where the time needed for the whole experiment is reported.
+    Save a copy of the configuration file in the experiment folder.
+    If save_elapsed_time_flag == True, start_time and end_time must be provided
+    (datetime objects) and an "elapsed_time" field will be added to the saved config.
 
     Args:
     config (dict): The configuration settings.
     results_dir (str): The directory where the results will be saved.
     exp_name_with_time (str): The name of the experiment with starting time.
-    start_time (datetime): The time when the experiment started.
-    end_time (datetime): The time when the experiment ended.
+    save_elapsed_time_flag (bool): Whether to save elapsed time or not.
+    start_time (datetime, optional): The time when the experiment started.
+    end_time (datetime, optional): The time when the experiment ended.
 
     Returns:
     None
     """
     config_file_path = os.path.join(results_dir, f"{exp_name_with_time}_config.yml")
-    # Calculate the elapsed time
-    elapsed_time = end_time - start_time
-
-    # Convert the elapsed time to a string format
-    elapsed_time_str = str(elapsed_time)
-    # adding elapsed time to the configuration dictionary and saving it to the file
-    config["elapsed_time"] = elapsed_time_str
+    # Work on a copy to avoid mutating the caller's dict
+    cfg_to_save = dict(config) 
+    
+    if save_elapsed_time_flag:
+        if start_time is None or end_time is None:
+            raise ValueError("start_time and end_time must be provided when save_elapsed_time_flag is True")
+        # Calculate the elapsed time and add to the copy
+        elapsed_time = end_time - start_time
+        cfg_to_save["elapsed_time"] = str(elapsed_time)    
+       
+    # Saving file (overwriting if a file with the same name exists)
     with open(config_file_path, "w") as file:
-        yaml.dump(config, file)
+        yaml.dump(cfg_to_save, file)       
 
 
 # Save test results to .csv files:

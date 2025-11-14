@@ -1,5 +1,5 @@
-clique_idx: 8
+clique_idx: 9
 lr_idx: 0
 min_avg_val_loss: 0.39410715252161027
-saved_steps: 5553
-step: 1369
+saved_steps: 6489
+step: 1693

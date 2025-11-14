@@ -1,27 +1,27 @@
 graph_sizes:
-  - 100
-  - 150
-  - 200
-  - 300
-  - 400
+  # - 100
+  # - 150
+  # - 200
+  # - 300
+  # - 400
   - 480
   - 600
   - 800
-  - 1000
+  # - 1000
   - 1200
 p_correction_type: "p_reduce"
 batch_size: 100
 num_iterations: 10  # dividing batch into iterations, for memory constraints (for CNN, but applied to all models for consistency)
 max_radius: 10
 models:
-  - model_name: MLP
-    architecture:
-      layers: [200, 100, 25, 12]
-      dropout_prob: 0.2
+  # - model_name: MLP
+  #   architecture:
+  #     layers: [200, 100, 25, 12]
+  #     dropout_prob: 0.2
     
-  - model_name: ViTscratch
+  # - model_name: ViTscratch
 
-  - model_name: ViTpretrained
+  # - model_name: ViTpretrained
 
   - model_name: CNN # NOTE: in original configuration files, named "CNN_large"
     architecture:
@@ -52,56 +52,56 @@ empirical_K0s:
       MLP: 21.998025
       ViTscratch: 25.520875
       ViTpretrained: 20.217002
-      CNN: 18.451130
+      CNN: 25.66
       Humans: 29.87
   - N: 150
     values:
       MLP: 33.749709
       ViTscratch: 31.171468
       ViTpretrained: 26.291746
-      CNN: 24.303692
+      CNN: 36.743036
       Humans: 39.75
   - N: 200
     values:
       MLP: 42.587045
       ViTscratch: 37.162786
       ViTpretrained: 32.342791
-      CNN: 140.000000
+      CNN: 38.869122
       Humans: 47.62
   - N: 300
     values:
       MLP: 65.178948
       ViTscratch: 47.266594
       ViTpretrained: 43.743450
-      CNN: 210.000000
+      CNN: 62.526665
       Humans: 61.38
   - N: 400
     values:
       MLP: 84.288455
       ViTscratch: 60.394583
       ViTpretrained: 50.694126
-      CNN: 280.000000
+      CNN: 75.392737
       Humans: 74.84
   - N: 480
     values:
       MLP: 103.193010
       ViTscratch: 65.402948
       ViTpretrained: 58.236594
-      CNN: 58.524541
+      CNN: 58.524541  # OLD PIPELINE, TO UPDATE
       Humans: 83.22
   - N: 600
     values:
       MLP: 126.279423
       ViTscratch: 81.616319
       ViTpretrained: 71.327878
-      CNN: 69.952164
+      CNN: 69.952164  # OLD PIPELINE, TO UPDATE
       Humans: 90.19
   - N: 800
     values:
       MLP: 173.507788
       ViTscratch: 102.602703
       ViTpretrained: 86.559527
-      CNN: 69.864709
+      CNN: 69.864709  # OLD PIPELINE, TO UPDATE
       Humans: 114.93
   - N: 1000
     values:
@@ -111,4 +111,4 @@ empirical_K0s:
       MLP: 264.728229
       ViTscratch: 146.588109
       ViTpretrained: 166.344459
-      CNN: 167.722373
+      CNN: 109.900577

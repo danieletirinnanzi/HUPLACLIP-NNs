@@ -27,7 +27,7 @@ with open(config_path, "r") as stream:
 
 # Define the range for fraction correct
 fraction_correct_range = {
-    "min": 0.60,
+    "min": 0.50,
     "max": 0.90
 }
 
@@ -115,9 +115,6 @@ for graph_size in config["graph_sizes"]:
         model_name = model_specs["model_name"]
         if model_name == "Humans":
             continue
-        elif model_name == "CNN" and graph_size in [200, 300, 400]:
-            # skipping CNN testing where it failed
-            continue 
 
         # - loading requested model
         match model_name:
@@ -151,9 +148,6 @@ for graph_size in config["graph_sizes"]:
         empirical_K0_entry = next(e for e in config["empirical_K0s"] if e["N"] == graph_size)
         K0_value = empirical_K0_entry["values"][model_name]
         print(f"| K0 value for {model_name} is: {K0_value}")
-        # in the cases where CNN failed, excluding maximum K0 value:
-        if (graph_size in [200, 300, 400] and model_name == "CNN"):
-            continue 
         # testing will start from K_closest and go below/above up until within fraction correct range
         K_closest = round(K0_value)
         print(f"| Testing will start from: {K_closest}")              

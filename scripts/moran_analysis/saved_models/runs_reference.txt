@@ -16,17 +16,12 @@ NEW TRAINING PIPELINE:
     - N1200(pretrained): vit_exp_2025-04-04_19-41-33
 
 * CNN data (CNN-new-pipeline):
-    - TO UPDATE, NOW IT IS THE OLD data
-        Same data as "2025-03-05_CNS-abstract":
-        - N100: cnn_exp_2024-12-09_14-14-42
-        - N150: cnn_exp_2025-01-09_16-01-51
-        - N200: cnn_exp_2025-01-10_20-25-49
-        - N300: cnn_exp_2025-01-13_12-18-11
-        - N400: cnn_exp_2025-01-16_18-10-54
-        - N480: cnn_exp_2025-01-21_18-59-44
-        - N600: cnn_exp_2025-01-28_13-13-57
-        - N800: cnn_exp_2025-01-14_15-32-41
-        - N1200: cnn_exp_2025-01-12_00-03-44
-
-* AMP algo data:
-    - Obtained using script at: "HUPLACLIP-NNs\scripts\AMP-algo_performance\AMP-algo_performance.ipynb"
+    - N100: cnn_exp_2025-10-13_13-54-52
+    - N150: cnn_exp_N150_2025-11-03_09-57-46
+    - N200: cnn_exp_2025-10-23_12-46-36
+    - N300: cnn_exp_N300_2025-11-03_09-57-46
+    - N400: cnn_exp_2025-10-02_13-22-12
+    - N480: cnn_exp_N480_2025-11-15_01-27-50
+    - N600: cnn_exp_N600_2025-11-14_21-56-42
+    - N800: cnn_exp_N800_2025-11-15_01-40-30
+    - N1200: cnn_exp_2025-09-05_11-06-38

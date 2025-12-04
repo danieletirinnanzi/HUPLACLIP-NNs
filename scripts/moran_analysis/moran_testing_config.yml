@@ -8,7 +8,7 @@ graph_sizes:
   - 600
   - 800
   # - 1000
-  - 1200
+  # - 1200
 p_correction_type: "p_reduce"
 batch_size: 100
 num_iterations: 10  # dividing batch into iterations, for memory constraints (for CNN, but applied to all models for consistency)
@@ -87,21 +87,21 @@ empirical_K0s:
       MLP: 103.193010
       ViTscratch: 65.402948
       ViTpretrained: 58.236594
-      CNN: 58.524541  # OLD PIPELINE, TO UPDATE
+      CNN: 71.847871
       Humans: 83.22
   - N: 600
     values:
       MLP: 126.279423
       ViTscratch: 81.616319
       ViTpretrained: 71.327878
-      CNN: 69.952164  # OLD PIPELINE, TO UPDATE
+      CNN: 72.147736
       Humans: 90.19
   - N: 800
     values:
       MLP: 173.507788
       ViTscratch: 102.602703
       ViTpretrained: 86.559527
-      CNN: 69.864709  # OLD PIPELINE, TO UPDATE
+      CNN: 112.086745
       Humans: 114.93
   - N: 1000
     values:
@@ -111,4 +111,4 @@ empirical_K0s:
       MLP: 264.728229
       ViTscratch: 146.588109
       ViTpretrained: 166.344459
-      CNN: 109.900577
+      CNN: 109.924732

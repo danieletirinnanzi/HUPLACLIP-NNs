@@ -1,27 +1,27 @@
 graph_sizes:
-  # - 100
-  # - 150
-  # - 200
-  # - 300
-  # - 400
+  - 100
+  - 150
+  - 200
+  - 300
+  - 400
   - 480
   - 600
   - 800
-  # - 1000
-  # - 1200
+  - 1000
+  - 1200
 p_correction_type: "p_reduce"
 batch_size: 100
 num_iterations: 10  # dividing batch into iterations, for memory constraints (for CNN, but applied to all models for consistency)
 max_radius: 10
 models:
-  # - model_name: MLP
-  #   architecture:
-  #     layers: [200, 100, 25, 12]
-  #     dropout_prob: 0.2
+  - model_name: MLP
+    architecture:
+      layers: [200, 100, 25, 12]
+      dropout_prob: 0.2
     
-  # - model_name: ViTscratch
+  - model_name: ViTscratch
 
-  # - model_name: ViTpretrained
+  - model_name: ViTpretrained
 
   - model_name: CNN # NOTE: in original configuration files, named "CNN_large"
     architecture:

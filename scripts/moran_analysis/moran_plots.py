@@ -46,11 +46,11 @@ with open(config_path, "r") as stream:
     print("Configuration file loaded successfully.")
 # Define the range for fraction correct
 fraction_correct_range = {
-    "min": 0.5,
+    "min": 0.6,
     "max": 0.9
 }
 
-fig, ax = plt.subplots(1, 1, figsize=(7, 4))
+fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 # Draw a horizontal dashed gray line at y=0
 ax.axhline(0, color="gray", linestyle="--", linewidth=0.5, alpha=0.1)
 
@@ -66,9 +66,6 @@ for i, graph_size in enumerate(config["graph_sizes"]):
         if graph_size == 1000 and model_name != "Humans":
             continue
         elif graph_size == 1200 and model_name == "Humans":
-            continue
-        # CNN failed at some N values:
-        if model_name == "CNN" and graph_size in [200, 300, 400]:
             continue
         
         # Empirical K0:
@@ -108,7 +105,7 @@ for i, graph_size in enumerate(config["graph_sizes"]):
             ax.errorbar(
                 x_jittered, means_difference_normalized, yerr=standard_error_difference_normalized,
                 fmt=models_legend[model_name]["marker"],
-                color=models_legend[model_name]["color"] if model_name != "Humans" else models_legend[model_name]["color"][i],
+                color=models_legend[model_name]["color"] if model_name != "Humans" else models_legend[model_name]["color"][1],
                 alpha=1,
                 markersize=models_legend[model_name]["markersize"],
                 label=f"{model_name}" if (i == 0) else "" # only add label to first K value
@@ -129,8 +126,8 @@ for i, graph_size in enumerate(config["graph_sizes"]):
 
 plt.tight_layout(rect=[0, 0, 1, 0.93])
 # plt.suptitle(f"Normalized Moran's I difference (lambda = {lambda_value}) between correct and incorrect trials with clique (fc range: {fraction_correct_range['min']}-{fraction_correct_range['max']})", fontsize=12)    
-base_path = os.path.join(os.getcwd(), f'plots',f'NNs_humans-visual-strategy-moransI_range{fraction_correct_range["min"]}-{fraction_correct_range["max"]}')
-# plt.savefig(base_path + '.svg', dpi=300, bbox_inches="tight")
+base_path = os.path.join(os.getcwd(), f'plots',f'NNs_humans-visual-strategy-moransI_lambda{lambda_value}_range{fraction_correct_range["min"]}-{fraction_correct_range["max"]}')
 plt.savefig(base_path + '.png', dpi=300, bbox_inches="tight")
-plt.savefig(base_path + '.pdf', dpi=300, bbox_inches="tight")
+plt.savefig(base_path + '.svg', dpi=300, bbox_inches="tight")
+# plt.savefig(base_path + '.pdf', dpi=300, bbox_inches="tight")
 print("|Completed generating visual strategy graphs for correct/incorrect responses.")

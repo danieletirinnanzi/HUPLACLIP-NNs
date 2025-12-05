@@ -16,6 +16,15 @@ from src.models import (
 import src.graphs_generation as graphs_gen
 from src.input_transforms import magnify_input
 
+# DESCRIPTION:
+# This code recapitulates the Moran analysis performed on human data. For each model, the code:
+# - loads the trained model
+# - presents it a batch of graphs only with the clique, contextually measuring model's output (can be correct/incorrect) and the input's Moran's I
+# - the first K value to be tested is the K0 obtained from testing the model
+# - easier/harder instances (larger/smaller values of K) are then presented, until the fraction of correct responses is within the indicated range
+# - saves the results in a csv file
+# Ths is designed to be compatible with execution on a normal laptop (not on a cluster using DistributedDataParallel)
+
 # This will be usually run on regular laptop
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

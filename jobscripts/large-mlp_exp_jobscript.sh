@@ -22,9 +22,9 @@ cd $HOME/HUPLACLIP-NNs/
 # --------- HOW TO RUN THIS SCRIPT (uncomment the line corresponding to the experiment to be run) ---------
 # NOTE: in both cases, the configuration file in "test_models.py" (line 16) must match the one used here
 # - STANDARD CASE:
-torchrun --standalone --nproc_per_node=4 main.py --config docs/large-mlp_exp_config.yml
+# torchrun --standalone --nproc_per_node=4 main.py --config docs/large-mlp_exp_config.yml
 # - RESUME CASE (for continuing a previous experiment):
-# torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name large-mlp_exp_YYYY-MM-DD_HH-MM-SS
+torchrun --standalone --nproc_per_node=4 main.py --resume --exp_name large-mlp_exp_2025-12-09_16-09-48
 # - TESTING TRAINED MODEL:
 # export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True # to avoid CUDA out of memory error
 # torchrun --standalone --nproc_per_node=4 -m tests.test_loop.testloop_test_DDP

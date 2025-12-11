@@ -1,0 +1,38 @@
+elapsed_time: '11:02:59.077218'
+exp_name: large-mlp_exp
+graph_size_values:
+- 1200
+models:
+- architecture:
+    dropout_prob: 0.2
+    layers:
+    - 309
+    - 270
+    - 250
+    - 100
+    - 50
+    - 25
+  model_name: MLP_li-earlystop-scatter-pt40
+p_correction_type: p_reduce
+testing_parameters:
+  clique_testing_levels: 100
+  max_clique_size_proportion_test: 0.7
+  num_test: 32
+  test_iterations: 16
+training_parameters:
+  alpha: 0.9
+  clique_training_levels: 10
+  learning_rates:
+  - 1e-3
+  - 1e-4
+  - 1e-5
+  loss_function: BCELoss
+  max_clique_size_proportion: 0.5
+  min_delta: 0.01
+  num_train: 32
+  num_training_steps: 3000
+  num_val: 32
+  optimizer: AdamW
+  patience: 40
+  save_step: 10
+  val_exit_loss: 0.1

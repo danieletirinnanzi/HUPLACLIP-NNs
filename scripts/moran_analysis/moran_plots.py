@@ -6,7 +6,6 @@ import colorcet as cc
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 # Moran's I for K values around K0s of all models, only for graphs with clique (correct/incorrect distribution)
 # PLOT SETTINGS:
@@ -46,14 +45,15 @@ with open(config_path, "r") as stream:
     print("Configuration file loaded successfully.")
 # Define the range for fraction correct
 fraction_correct_range = {
-    "min": 0.6,
-    "max": 0.9
+    "min": 0.5,
+    "max": 0.85
 }
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 # Draw a horizontal dashed gray line at y=0
 ax.axhline(0, color="gray", linestyle="--", linewidth=0.5, alpha=0.1)
 
+means_differences_per_model = {model["model_name"]: [] for model in config["models"]}
 for i, graph_size in enumerate(config["graph_sizes"]):
     print("N = ", graph_size)
     
@@ -101,15 +101,17 @@ for i, graph_size in enumerate(config["graph_sizes"]):
             means_difference_normalized = means_difference / mean_morans_I_all if mean_morans_I_all != 0 else 0         
             standard_error_difference_normalized = standard_error_difference / mean_morans_I_all
             # NOTE: find a way to represent human datapoints with violin plot for consistency?  
-            x_jittered = graph_size + random.uniform(-1.0, 1.0) * (graph_size * 0.03)
+            # x_jittered = graph_size + random.uniform(-1.0, 1.0) * (graph_size * 0.02)
             ax.errorbar(
-                x_jittered, means_difference_normalized, yerr=standard_error_difference_normalized,
+                graph_size, means_difference_normalized, yerr=standard_error_difference_normalized,
                 fmt=models_legend[model_name]["marker"],
                 color=models_legend[model_name]["color"] if model_name != "Humans" else models_legend[model_name]["color"][1],
-                alpha=1,
+                alpha=0.65,
                 markersize=models_legend[model_name]["markersize"],
-                label=f"{model_name}" if (i == 0) else "" # only add label to first K value
+                label=f"{model_name}" if (i == 0) else "",  # only add label to first K value
+                zorder=3
             )
+            means_differences_per_model[model_name].append((graph_size, means_difference_normalized))
         else:
             raise ValueError("No data available for plotting with current selection criterion. This is unexpected, check for mistakes")
 
@@ -124,9 +126,16 @@ for i, graph_size in enumerate(config["graph_sizes"]):
     
     print("---------")
 
+# After all N/model plotting, draw lines connecting mean points across Ns separately for each model (keeping color-coding):
+for model_name, points in means_differences_per_model.items():
+    points = sorted(points, key=lambda x: x[0])  # sort by N
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    ax.plot(xs, ys, color=models_legend[model_name]["color"] if model_name != "Humans" else models_legend[model_name]["color"][1], alpha=0.65, linewidth=0.5, zorder=2)
+
 plt.tight_layout(rect=[0, 0, 1, 0.93])
 # plt.suptitle(f"Normalized Moran's I difference (lambda = {lambda_value}) between correct and incorrect trials with clique (fc range: {fraction_correct_range['min']}-{fraction_correct_range['max']})", fontsize=12)    
-base_path = os.path.join(os.getcwd(), f'plots',f'NNs_humans-visual-strategy-moransI_lambda{lambda_value}_range{fraction_correct_range["min"]}-{fraction_correct_range["max"]}')
+base_path = os.path.join(os.getcwd(), f'plots',f'NNs_humans-visual-strategy-moransI_lambda{lambda_value}_range{fraction_correct_range["min"]}-{fraction_correct_range["max"]}_connected')
 plt.savefig(base_path + '.png', dpi=300, bbox_inches="tight")
 plt.savefig(base_path + '.svg', dpi=300, bbox_inches="tight")
 # plt.savefig(base_path + '.pdf', dpi=300, bbox_inches="tight")

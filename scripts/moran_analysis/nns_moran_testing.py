@@ -34,11 +34,14 @@ with open(config_path, "r") as stream:
     config = yaml.safe_load(stream)
     print("Configuration file loaded successfully.")
 
-# Define the range for fraction correct
+# PARAMETERS:
+# - Define the range for fraction correct
 fraction_correct_range = {
     "min": 0.50,
     "max": 0.90
 }
+# - Define if performing analysis only on graphs with clique (True) or also on graphs without clique (False)
+only_clique_graphs = False
 
 # HELPER FUNCTION: evaluate model on one K (runs the num_iterations loop, returns concatenated df for current batch)
 def evaluate_K(K_value):
@@ -59,7 +62,7 @@ def evaluate_K(K_value):
             clique_size_array,
             config["p_correction_type"],
             input_magnification=False,
-            p_clique=1
+            p_clique=1 if only_clique_graphs else 0.5
         )
         labels = np.array(labels)
         adj_matrices = graphs[:, 0].cpu().numpy()
@@ -103,7 +106,7 @@ def evaluate_K(K_value):
         "N": graph_size,
         "K": K_value,
         "soft_output": soft_outputs_cat,
-        "hard_output": hard_outputs,
+        "hard_output": hard_outputs,    # 1 if model predicts clique, 0 otherwise
         "label": labels_cat,
         "correct": correct,
     })
@@ -191,6 +194,6 @@ for graph_size in config["graph_sizes"]:
 
         # After both phases concatenate and save
         model_results_df = pd.concat(model_results, ignore_index=True)
-        save_path = os.path.join(os.getcwd(),"nns_moran_results" ,f"N{graph_size}",f"{model_name}_N{graph_size}_moran_results.csv")
+        save_path = os.path.join(os.getcwd(),"nns_moran_results", "CLIQUE" if only_clique_graphs else "BOTH", f"N{graph_size}",f"{model_name}_N{graph_size}_moran_results_{'CLIQUE' if only_clique_graphs else ''}.csv")
         model_results_df.to_csv(save_path, index=False)
         print(f"|| Results for model {model_name} saved to {save_path}")

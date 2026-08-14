@@ -46,7 +46,7 @@ K_range_dict = {
     800: {"min": 1, "max": 270},
     1200: {"min": 1, "max": 500},
 }
-
+                                                                                                                                                        
 # HELPER FUNCTION: evaluate model on one K (runs the num_iterations loop, returns concatenated df for current batch)
 def evaluate_K(K_value):
     all_graphs = []
@@ -160,14 +160,20 @@ for graph_size in config["graph_sizes"]:
         model.eval()        
         print(f"|| {model_name} Model loaded successfully.")
         
-        # Start testing in K range defined in K_range_dict
-        for K in np.linspace(K_range_dict[graph_size]["min"], K_range_dict[graph_size]["max"] + 1, 100, endpoint=True):
+        # Start testing in K range defined in K_range_dict (100 values between min and max K, inclusive)
+        K_values = np.rint(
+            np.linspace(
+                K_range_dict[graph_size]["min"],
+                K_range_dict[graph_size]["max"],
+                100,
+                endpoint=True,
+            )
+        ).astype(int)
+        model_results = []
+        for K in K_values:
             print("||| Evaluating K: ", K)
             batch_df = evaluate_K(K)
-            if K == K_range_dict[graph_size]["min"]:
-                model_results = [batch_df]
-            else:
-                model_results.append(batch_df)
+            model_results.append(batch_df)
 
         # After both phases concatenate and save
         model_results_df = pd.concat(model_results, ignore_index=True)

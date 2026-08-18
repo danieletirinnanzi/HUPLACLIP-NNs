@@ -1,0 +1,1 @@
+This folder contains the results of testing the AMP algo on the same grid of K values used for NNs (used to have a "fraction correct" histogram that reflects the better performance of IOs and AMP compared to humans and DNNs).

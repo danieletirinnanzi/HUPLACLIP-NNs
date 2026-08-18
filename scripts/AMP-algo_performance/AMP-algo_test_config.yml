@@ -1,21 +1,21 @@
 exp_name: AMP_algo_test
 graph_size_values: 
 # NOTE: to perform single experiments, simply comment the graph size values that are not needed
-  # - 100 
-  # - 150 
-  # - 200
-  # - 300
-  # - 400
-  # - 480 
-  # - 600
-  # - 800 
+  - 100 
+  - 150 
+  - 200
+  - 300
+  - 400
+  - 480 
+  - 600
+  - 800 
   # - 1000
-  # - 1200 
+  - 1200 
   # - 1500
   # - 2000
-  - 3000
-  - 5000
-  - 10000
+  # - 3000
+  # - 5000
+  # - 10000
   
 # type of correction to use (in graphs_generation.py):
 # - p_increase (old correction): increasing the p value of the graph without the clique so that the average degree is matched between the two graphs
@@ -23,13 +23,23 @@ graph_size_values:
 p_correction_type: p_reduce
 
 testing_parameters:
+
+  # VALUES FOR FRACTION CORRECT PLOT ON UNIFORM K RANGE (up to N=1200):
+  # NOTE: these were used to generate the results in "nns-k-grid" 
   max_clique_size_proportion_test:
-    - 0.4 # (100-150-200)
-    - 0.3 # (300, 400, 480, 600)
-    - 0.12 # (800, 1000/1200)
-    - 0.1 # (1500, 2000)
-    - 0.05 # (3000, 5000)
-    - 0.02 # (10000)
+    - 0.7 # (100-150-200)
+    - 0.7 # (300, 400, 480, 600)
+    - 0.7 # (800, 1000/1200)
+
+  # VALUES FOR K0 FITTING:
+  # max_clique_size_proportion_test:
+  #   - 0.4 # (100-150-200)
+  #   - 0.3 # (300, 400, 480, 600)
+  #   - 0.12 # (800, 1000/1200)
+  #   - 0.1 # (1500, 2000)
+  #   - 0.05 # (3000, 5000)
+  #   - 0.02 # (10000)
+
   num_test: 32  # number of graphs in each test iteration
   clique_testing_levels: 100  # number of different clique sizes to test (will be the number of datapoints in the test set)
   test_iterations: 5

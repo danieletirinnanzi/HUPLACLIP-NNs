@@ -73,7 +73,7 @@ def evaluate_K(K_value):
         assert adj_matrices.shape == (iter_size, graph_size, graph_size)
         morans_I_results = np.array([morans_I.morans_I_numba(adj, config["max_radius"]) for adj in adj_matrices])
         del adj_matrices
-        if model_name == "CNN":
+        if model_name == "CNN_large":
             # magnify the graphs to 2400x2400 after calculating Moran's I
             magnified = torch.zeros((iter_size, 1, 2400, 2400), dtype=graphs.dtype)
             for jj in range(iter_size):
@@ -136,7 +136,7 @@ for graph_size in config["graph_sizes"]:
         match model_name:
             case "MLP":
                 model = MLP(graph_size, model_specs["architecture"])
-            case "CNN":
+            case "CNN_large":
                 model = CNN(graph_size, model_specs["architecture"])
             case "ViTscratch":
                 model = ViT_scratch(graph_size)

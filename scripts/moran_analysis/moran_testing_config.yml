@@ -7,7 +7,7 @@ graph_sizes:
   - 480
   - 600
   - 800
-  - 1000
+  # - 1000
   - 1200
 p_correction_type: "p_reduce"
 batch_size: 100
